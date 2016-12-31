@@ -1,0 +1,10 @@
+# All builds and intermediate build files
+bin/*
+
+# Visual Studio
+build/vs*/*
+build/vs*/*.user
+!build/vs*/*.sln
+!build/vs*/*.vcxproj
+!build/vs*/*.filters
+!build/vs*/*.props
