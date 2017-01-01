@@ -29,11 +29,6 @@
 	#define if_unlikely(e) if(!!(e))
 #endif
 
-#ifndef IM3D_ASSERT
-	#include <assert.h>
-	#define IM3D_ASSERT(e) assert(e)
-#endif
-
 #define IM3D_STATIC_ASSERT(e) { (void)sizeof(char[(e) ? 1 : -1]); }
 
 #endif // im3d_internal_h
