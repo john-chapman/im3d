@@ -4,7 +4,7 @@
 
 // Compiler
 #if defined(__GNUC__)
-	#define IM3d_COMPILER_GNU
+	#define IM3D_COMPILER_GNU
 #elif defined(_MSC_VER)
 	#define IM3D_COMPILER_MSVC
 #else

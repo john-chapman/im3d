@@ -74,6 +74,7 @@ Vector<T>::~Vector()
 template <typename T>
 void Vector<T>::reserve(U32 _capacity)
 {
+	_capacity = _capacity < 8 ? 8 : _capacity;
 	if (_capacity < m_capacity) {
 		return;
 	}
@@ -102,20 +103,20 @@ Context* Im3d::internal::g_CurrentContext = &s_DefaultContext;
 
 void Context::begin(PrimitiveMode _mode)
 {
-	IM3D_ASSERT(m_primMode == kNone);
+	IM3D_ASSERT(m_primMode == kPrimitiveMode_None);
 	m_primMode = _mode;
 	m_vertCountThisPrim = 0;
 	switch (m_primMode) {
-	case kPoints:
+	case kPrimitiveMode_Points:
 		m_firstVertThisPrim = m_points[m_primList].size();
 		break;
-	case kLines:
-	case kLineStrip:
-	case kLineLoop:
+	case kPrimitiveMode_Lines:
+	case kPrimitiveMode_LineStrip:
+	case kPrimitiveMode_LineLoop:
 		m_firstVertThisPrim = m_lines[m_primList].size();
 		break;
-	case kTriangles:
-	case kTriangleStrip:
+	case kPrimitiveMode_Triangles:
+	case kPrimitiveMode_TriangleStrip:
 		m_firstVertThisPrim = m_triangles[m_primList].size();
 		break;
 	default:
@@ -125,59 +126,59 @@ void Context::begin(PrimitiveMode _mode)
 
 void Context::end()
 {
-	IM3D_ASSERT(m_primMode != kNone);
+	IM3D_ASSERT(m_primMode != kPrimitiveMode_None);
 	switch (m_primMode) {
-	case kPoints:
+	case kPrimitiveMode_Points:
 		break;
 
-	case kLines:
+	case kPrimitiveMode_Lines:
 		IM3D_ASSERT(m_vertCountThisPrim % 2 == 0);
 		break;
-	case kLineStrip:
+	case kPrimitiveMode_LineStrip:
 		IM3D_ASSERT(m_vertCountThisPrim > 1);
 		break;
-	case kLineLoop:
+	case kPrimitiveMode_LineLoop:
 		IM3D_ASSERT(m_vertCountThisPrim > 1);
 		m_lines[m_primList].push_back(m_lines[m_primList].back());
 		m_lines[m_primList].push_back(m_lines[m_primList][m_firstVertThisPrim]);
 		break;
-	case kTriangles:
+	case kPrimitiveMode_Triangles:
 		IM3D_ASSERT(m_vertCountThisPrim % 3 == 0);
 		break;
-	case kTriangleStrip:
+	case kPrimitiveMode_TriangleStrip:
 		IM3D_ASSERT(m_vertCountThisPrim >= 3);
 		break;
 	default:
 		break;
 	};
-	m_primMode = kNone;
+	m_primMode = kPrimitiveMode_None;
 }
 
 void Context::vertex(const Vec3& _position, float _size, Color _color)
 {	
-	IM3D_ASSERT(m_primMode != kNone);
+	IM3D_ASSERT(m_primMode != kPrimitiveMode_None);
 
 	VertexData vd(m_matrixStack.back() * _position, _size, _color);
 	
 	switch (m_primMode) {
-	case kPoints:
+	case kPrimitiveMode_Points:
 		m_points[m_primList].push_back(vd);
 		break;
-	case kLines:
+	case kPrimitiveMode_Lines:
 		m_lines[m_primList].push_back(vd);
 		break;
-	case kLineStrip:
-	case kLineLoop:
+	case kPrimitiveMode_LineStrip:
+	case kPrimitiveMode_LineLoop:
 		if (m_vertCountThisPrim >= 2) {
 			m_lines[m_primList].push_back(m_lines[m_primList].back());
 			++m_vertCountThisPrim;
 		}
 		m_lines[m_primList].push_back(vd);
 		break;
-	case kTriangles:
+	case kPrimitiveMode_Triangles:
 		m_triangles[m_primList].push_back(vd);
 		break;
-	case kTriangleStrip:
+	case kPrimitiveMode_TriangleStrip:
 		if (m_vertCountThisPrim >= 3) {
 			m_triangles[m_primList].push_back(*(m_triangles[m_primList].end() - 2));
 			m_triangles[m_primList].push_back(*(m_triangles[m_primList].end() - 2));
@@ -191,15 +192,44 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 	++m_vertCountThisPrim;
 }
 
+void Context::reset()
+{
+	IM3D_ASSERT(m_primMode == kPrimitiveMode_None);
+	m_primMode = kPrimitiveMode_None;
+
+	for (int i = 0; i < 2; ++i) {
+		m_points[i].clear();
+		m_lines[i].clear();
+		m_triangles[i].clear();
+	}
+}
+
+void Context::draw()
+{
+ // draw unsorted prims first
+	if (m_triangles[0].size() > 0) {
+		drawPrimitives(kDrawPrimitive_Triangles, m_triangles[0].data(), m_triangles[0].size());
+	}
+	if (m_lines[0].size() > 0) {
+		drawPrimitives(kDrawPrimitive_Lines, m_lines[0].data(), m_lines[0].size());
+	}
+	if (m_points[0].size() > 0) {
+		drawPrimitives(kDrawPrimitive_Points, m_points[0].data(), m_points[0].size());
+	}
+
+ // draw sorted primitives on top
+ // \todo need to sort *all* primitives together
+}
+
 void Context::enableSorting(bool _enable)
 {
-	IM3D_ASSERT(m_primMode == kNone);
+	IM3D_ASSERT(m_primMode == kPrimitiveMode_None);
 	m_primList  = _enable ? 1 : 0;
 }
 
 Context::Context()
 {
-	m_primMode = kNone;
+	m_primMode = kPrimitiveMode_None;
 	m_primList = 0; // sorting disabled by default
 	m_firstVertThisPrim = 0;
 	m_vertCountThisPrim = 0;

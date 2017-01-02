@@ -19,6 +19,7 @@ struct Vec3;
 struct Vec4;
 struct Mat4;
 struct Color;
+struct VertexData;
 class  Context;
 
 extern const Color kColorBlack;
@@ -74,6 +75,8 @@ IM3D_API void MulMatrix(const Mat4& _mat);
 IM3D_API void Translate(float _x, float _y, float _z);
 IM3D_API void Scale(float _x, float _y, float _z);
 
+
+/// IDs are used to identify gizmos.
 typedef U32  Id;
 extern const Id kInvalidId;
 IM3D_API Id MakeId(const char* _str);
@@ -81,6 +84,15 @@ IM3D_API Id MakeId(const char* _str);
 /// Manipulate position/orientation/scale via a gizmo. Return true if the gizmo was used (modified its output).
 IM3D_API bool Gizmo(const char* _id, Mat4* _mat_);
 IM3D_API bool GizmoPosition(const char* _id, Vec3* _position_);
+
+
+enum DrawPrimitiveType
+{
+	kDrawPrimitive_Points,
+	kDrawPrimitive_Lines,
+	kDrawPrimitive_Triangles
+};
+typedef void (DrawPrimitives)(DrawPrimitiveType _primType, const VertexData* _data, U32 _count);
 
 struct Vec2
 {
@@ -133,12 +145,35 @@ struct Color
 	Color(const Vec4& _rgba);
 	Color(float _r, float _g, float _b, float _a = 1.0f);
 	operator U32() const                                                     { return v; }
+
+	void set(int _i, float _val)
+	{
+		_i *= 8;
+		U32 mask = ((1 << 8) - 1) << _i;
+		v = (v & ~mask) | ((U32)(_val * 255.0f) << _i);
+	}
+	void setR(float _val)                                                    { set(3, _val); }
+	void setG(float _val)                                                    { set(2, _val); }
+	void setB(float _val)                                                    { set(1, _val); }
+	void setA(float _val)                                                    { set(0, _val); }
+
+	float get(int _i) const
+	{
+		_i *= 8;
+		U32 mask = ((1 << 8) - 1) << _i;
+		return (float)((v & ~mask) >> _i) / 255.0f;
+	}
+	float getR() const                                                       { return get(3); }
+	float getG() const                                                       { return get(2); }
+	float getB() const                                                       { return get(1); }
+	float getA() const                                                       { return get(0); }
 };
 struct VertexData
 {
 	Vec4   m_positionSize; //< xyz = position, w = size
 	Color  m_color;        //< rgba (MSB = r)
 	
+	VertexData() {}
 	VertexData(const Vec3& _position, float _size, Color _color)
 		: m_positionSize(_position, _size)
 		, m_color(_color)
@@ -158,8 +193,10 @@ public:
 	Vector(): m_size(0), m_capacity(0), m_data(0) {}
 	~Vector();
 
-	T&       operator[](int _i)                   { IM3D_ASSERT(_i < m_size); return m_data[_i]; }
-	const T& operator[](int _i) const             { IM3D_ASSERT(_i < m_size); return m_data[_i]; }
+	T&       operator[](U32 _i)                   { IM3D_ASSERT(_i < m_size); return m_data[_i]; }
+	const T& operator[](U32 _i) const             { IM3D_ASSERT(_i < m_size); return m_data[_i]; }
+	T*       data()                               { return m_data; }
+	const T* data() const                         { return m_data; }
 
 	void     push_back(const T& _v)               { if (m_size == m_capacity) { reserve(m_capacity + m_capacity / 2); } m_data[m_size++] = _v; }
 	void     pop_back()                           { IM3D_ASSERT(m_size > 0); --m_size; }
@@ -187,17 +224,20 @@ class Context
 public:
 	enum PrimitiveMode
 	{
-		kNone,
-		kPoints,
-		kLines,
-		kLineStrip,
-		kLineLoop,
-		kTriangles,
-		kTriangleStrip
+		kPrimitiveMode_None,
+		kPrimitiveMode_Points,
+		kPrimitiveMode_Lines,
+		kPrimitiveMode_LineStrip,
+		kPrimitiveMode_LineLoop,
+		kPrimitiveMode_Triangles,
+		kPrimitiveMode_TriangleStrip
 	};
 	void        begin(PrimitiveMode _mode);
 	void        end();
 	void        vertex(const Vec3& _position, float _size, Color _color);
+
+	void        reset();
+	void        draw();
 
 	void        enableSorting(bool _enable);
 
@@ -247,6 +287,9 @@ private:
 	int                m_primList;             //< 0, or 1 if sorting enabled.
 	U32                m_firstVertThisPrim;    //< Index of the first vertex pushed during this primitive.
 	U32                m_vertCountThisPrim;    //< # calls to vertex() since the last call to begin().
+
+ // callbacks
+	DrawPrimitives*    drawPrimitives;
 
 }; // class Context
 

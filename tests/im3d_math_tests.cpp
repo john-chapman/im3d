@@ -18,22 +18,36 @@ TEST_CASE("Vec2 ops", "[math]")
 	Vec2 c;
 
 	c = a + b;
-	REQUIRE(c.x == Approx(3.0f));
-	REQUIRE(c.y == Approx(3.0f));
+	REQUIRE(c.x == Approx(3.0));
+	REQUIRE(c.y == Approx(3.0));
 	c = a - b;
-	REQUIRE(c.x == Approx(1.0f));
-	REQUIRE(c.y == Approx(1.0f));
+	REQUIRE(c.x == Approx(1.0));
+	REQUIRE(c.y == Approx(1.0));
 	c = a * b;
-	REQUIRE(c.x == Approx(2.0f));
-	REQUIRE(c.y == Approx(2.0f));
+	REQUIRE(c.x == Approx(2.0));
+	REQUIRE(c.y == Approx(2.0));
 	c = a / b;
-	REQUIRE(c.x == Approx(2.0f));
-	REQUIRE(c.y == Approx(2.0f));
+	REQUIRE(c.x == Approx(2.0));
+	REQUIRE(c.y == Approx(2.0));
 
 	c = a * 10.0f;
-	REQUIRE(c.x == Approx(20.0f));
-	REQUIRE(c.y == Approx(20.0f));
+	REQUIRE(c.x == Approx(20.0));
+	REQUIRE(c.y == Approx(20.0));
 	c = a / 10.0f;
-	REQUIRE(c.x == Approx(0.2f));
-	REQUIRE(c.y == Approx(0.2f));
+	REQUIRE(c.x == Approx(0.2));
+	REQUIRE(c.y == Approx(0.2));
+}
+
+TEST_CASE("Color", "[types]")
+{
+	Color c;
+	
+	c = Color(1.0f, 0.0f, 0.0f, 0.0f);
+	REQUIRE(c.getR() == Approx(1.0));
+	c = Color(0.0f, 1.0f, 0.0f, 0.0f);
+	REQUIRE(c.getG() == Approx(1.0));
+	c = Color(0.0f, 0.0f, 1.0f, 0.0f);
+	REQUIRE(c.getB() == Approx(1.0));
+	c = Color(0.0f, 0.0f, 0.0f, 1.0f);
+	REQUIRE(c.getA() == Approx(1.0));
 }
