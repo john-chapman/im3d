@@ -5,18 +5,19 @@
 
 using namespace Im3d;
 
-const Color Im3d::kColorBlack   = Color(0.0f, 0.0f, 0.0f);
-const Color Im3d::kColorWhite   = Color(1.0f, 1.0f, 1.0f);
-const Color Im3d::kColorRed     = Color(1.0f, 0.0f, 0.0f);
-const Color Im3d::kColorGreen   = Color(0.0f, 1.0f, 0.0f);
-const Color Im3d::kColorBlue    = Color(0.0f, 0.0f, 1.0f);
-const Color Im3d::kColorCyan    = Color(0.0f, 1.0f, 1.0f);
-const Color Im3d::kColorMagenta = Color(1.0f, 0.0f, 1.0f);
-const Color Im3d::kColorYellow  = Color(1.0f, 1.0f, 0.0f);
+const Id    Im3d::kId_Invalid    = 0;
+const Color Im3d::kColor_Black   = Color(0.0f, 0.0f, 0.0f);
+const Color Im3d::kColor_White   = Color(1.0f, 1.0f, 1.0f);
+const Color Im3d::kColor_Red     = Color(1.0f, 0.0f, 0.0f);
+const Color Im3d::kColor_Green   = Color(0.0f, 1.0f, 0.0f);
+const Color Im3d::kColor_Blue    = Color(0.0f, 0.0f, 1.0f);
+const Color Im3d::kColor_Magenta = Color(1.0f, 0.0f, 1.0f);
+const Color Im3d::kColor_Yellow  = Color(1.0f, 1.0f, 0.0f);
+const Color Im3d::kColor_Cyan    = Color(0.0f, 1.0f, 1.0f);
 
 void Im3d::MulMatrix(const Mat4& _mat)
 {
-	Context& ctx = GetCurrentContext();
+	Context& ctx = GetContext();
 	ctx.setMatrix(ctx.getMatrix() * _mat);
 }
 
@@ -27,7 +28,6 @@ Mat4::Mat4(float _diagonal)
 	m[ 8] = 0.0f;      m[ 9] = 0.0f;      m[10] = _diagonal; m[11] = 0.0f;
 	m[12] = 0.0f;      m[13] = 0.0f;      m[14] = 0.0f;      m[15] = _diagonal;
 }
-
 Mat4::Mat4(
 	float m00, float m01, float m02, float m03,
 	float m10, float m11, float m12, float m13,
@@ -202,6 +202,10 @@ void Context::reset()
 		m_lines[i].clear();
 		m_triangles[i].clear();
 	}
+
+ // copy keydown array internally so that we can make a delta to detect key presses
+	memcpy(m_keyDownPrev, m_keyDownCurr,       kKey_Max); // \todo avoid this copy, use an index
+	memcpy(m_keyDownCurr, m_appData.m_keyDown, kKey_Max);
 }
 
 void Context::draw()
@@ -235,10 +239,10 @@ Context::Context()
 	m_vertCountThisPrim = 0;
 
 	pushMatrix(Mat4(1.0f));
-	pushColor(kColorWhite);
+	pushColor(kColor_White);
 	pushAlpha(1.0f);
 	pushSize(1.0f);
-	pushId(0x811C9DC5u); // fnv1 base
+	pushId(0x811C9DC5u); // fnv1 hash base
 }
 
 Context::~Context()
