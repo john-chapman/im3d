@@ -30,7 +30,7 @@ extern const Color kColor_Cyan;
 
 
 
-// Begin primitive. End() *must* be called before starting a new primitive type.
+// Begin primitive. End() *must* be called before starting each new primitive type.
 void  BeginPoints();
 void  BeginLines();
 void  BeginLineLoop();
@@ -77,6 +77,90 @@ Id    MakeId(const char* _str);
 bool  Gizmo(const char* _id, Mat4* _mat_);
 bool  GizmoPosition(const char* _id, Vec3* _position_);
 
+struct Vec2
+{
+	float x; float y; 
+	Vec2()                                                                   {}
+	Vec2(float _xy): x(_xy), y(_xy)                                          {}
+	Vec2(float _x, float _y): x(_x), y(_y)                                   {}
+	operator float*()                                                        { return &x; }
+	operator const float*() const                                            { return &x; }
+};
+struct Vec3
+{ 
+	float x; float y; float z; 
+	Vec3()                                                                   {}
+	Vec3(float _xyz): x(_xyz), y(_xyz), z(_xyz)                              {}
+	Vec3(float _x, float _y, float _z): x(_x), y(_y), z(_z)                  {}
+	Vec3(const Vec2& _xy, float _z): x(_xy.x), y(_xy.y), z(_z)               {}
+	operator float*()                                                        { return &x; }
+	operator const float*() const                                            { return &x; }
+};
+struct Vec4
+{ 
+	float x; float y; float z; float w;
+	Vec4()                                                                   {}
+	Vec4(float _xyzw): x(_xyzw), y(_xyzw), z(_xyzw), w(_xyzw)                {}
+	Vec4(float _x, float _y, float _z, float _w): x(_x), y(_y), z(_z), w(_w) {}
+	Vec4(const Vec3& _xyz, float _w): x(_xyz.x), y(_xyz.y), z(_xyz.z), w(_w) {}
+	Vec4(Color _rgba);
+	operator float*()                                                        { return &x; }
+	operator const float*() const                                            { return &x; }
+};
+struct Mat4
+{
+	float m[16];
+	Mat4()                                                                   {}
+	Mat4(float _diagonal);
+	Mat4(
+		float m00, float m01, float m02, float m03,
+		float m10, float m11, float m12, float m13,
+		float m20, float m21, float m22, float m23,
+		float m30, float m31, float m32, float m33
+		);
+	operator float*()                                                        { return m; }
+	operator const float*() const                                            { return m; }
+};
+struct Color
+{
+	U32 v;
+	Color(): v(0)                                                            {}
+	Color(U32 _rgba): v(_rgba)                                               {}
+	Color(const Vec4& _rgba);
+	Color(float _r, float _g, float _b, float _a = 1.0f);
+	operator U32() const                                                     { return v; }
+
+	void set(int _i, float _val)
+	{
+		_i *= 8;
+		U32 mask = 0xff << _i;
+		v = (v & ~mask) | ((U32)(_val * 255.0f) << _i);
+	}
+	void setR(float _val)                                                    { set(3, _val); }
+	void setG(float _val)                                                    { set(2, _val); }
+	void setB(float _val)                                                    { set(1, _val); }
+	void setA(float _val)                                                    { set(0, _val); }
+
+	float get(int _i) const
+	{
+		_i *= 8;
+		U32 mask = 0xff << _i;
+		return (float)((v & mask) >> _i) / 255.0f;
+	}
+	float getR() const                                                       { return get(3); }
+	float getG() const                                                       { return get(2); }
+	float getB() const                                                       { return get(1); }
+	float getA() const                                                       { return get(0); }
+};
+
+struct VertexData
+{
+	Vec4   m_positionSize; // xyz = position, w = size
+	Color  m_color;        // rgba8 (MSB = r)
+	
+	VertexData() {}
+	VertexData(const Vec3& _position, float _size, Color _color): m_positionSize(_position, _size), m_color(_color) {}
+};
 
 enum DrawPrimitiveType
 {
@@ -84,9 +168,8 @@ enum DrawPrimitiveType
 	kDrawPrimitive_Lines,
 	kDrawPrimitive_Triangles
 };
-typedef void (DrawPrimitives)(DrawPrimitiveType _primType, const VertexData* _data, U32 _count);
+typedef void (DrawPrimitivesCallback)(DrawPrimitiveType _primType, const VertexData* _data, U32 _count);
 
-// \todo replace with 'actions'? Could be more intuitive for VR.
 enum Key
 {
 	kMouseLeft,
@@ -101,29 +184,20 @@ enum Key
 	kKey_R,           // Select rotation gizmo.
 	kKey_S,           // Select scale gizmo.
 
-	kKey_Count,
-	kKey_Max = 256
+	kKey_Count
 };
 struct AppData
 {
-	bool  m_keyDown[kKey_Max];   // Application-provided key states.
-	int   m_keyMap[kKey_Count];  // Map Key enum to m_keyDown array.
+	bool  m_keyDown[kKey_Count]; // Application-provided key states.
 
 	Vec3  m_cursorRayOrigin;     // World space cursor ray origin.
 	Vec3  m_cursorRayDirection;  // World space cursor ray direction.
 	Vec3  m_viewOrigin;          // World space render origin (camera position).
 	Vec2  m_displaySize;         // Viewport size (pixels).
+	float m_tanHalfFov;          // tan(fov/2); fov = vertical field of view of the current projection.
 	float m_deltaTime;           // Time since previous frame (seconds).
-};
 
-
-struct VertexData
-{
-	Vec4   m_positionSize; // xyz = position, w = size
-	Color  m_color;        // rgba8 (MSB = r)
-	
-	VertexData() {}
-	VertexData(const Vec3& _position, float _size, Color _color): m_positionSize(_position, _size), m_color(_color) {}
+	DrawPrimitivesCallback drawPrimitives;
 };
 
 // Minimal vector.
@@ -231,102 +305,30 @@ private:
 
  // primitive state
 	PrimitiveMode      m_primMode;   
-	int                m_primList;               // 1 if sorting enabled, else 0.
-	U32                m_firstVertThisPrim;      // Index of the first vertex pushed during this primitive.
-	U32                m_vertCountThisPrim;      // # calls to vertex() since the last call to begin().
+	int                m_primList;                 // 1 if sorting enabled, else 0.
+	U32                m_firstVertThisPrim;        // Index of the first vertex pushed during this primitive.
+	U32                m_vertCountThisPrim;        // # calls to vertex() since the last call to begin().
 
  // gizmo state
 	Id                 m_idActive;
 	Id                 m_idHot;
 
- // callbacks \todo move to AppData
-	DrawPrimitives*    drawPrimitives;
-
  // app data
 	AppData            m_appData;
-	bool               m_keyDownCurr[kKey_Max];  // Key state captured during reset().
-	bool               m_keyDownPrev[kKey_Max];  // Key state from previous frame.
+	bool               m_keyDownCurr[kKey_Count];  // Key state captured during reset().
+	bool               m_keyDownPrev[kKey_Count];  // Key state from previous frame.
 
+	// Interpret key state.
+	bool isKeyDown(Key _key) const     { return m_keyDownCurr[_key]; }
+	bool wasKeyPressed(Key _key) const { return m_keyDownCurr[_key] && !m_keyDownPrev[_key]; }
+
+	// Convert pixels -> world space size based on distance between _position and view origin.
+	float pixelsToWorldSize(const Vec3& _position, float _pixels);
 };
 
 namespace internal {
 	extern Context* g_CurrentContext;
 }
-
-struct Vec2
-{
-	float x; float y; 
-	Vec2()                                                                   {}
-	Vec2(float _xy): x(_xy), y(_xy)                                          {}
-	Vec2(float _x, float _y): x(_x), y(_y)                                   {}
-	operator float*()                                                        { return &x; }
-	operator const float*() const                                            { return &x; }
-};
-struct Vec3
-{ 
-	float x; float y; float z; 
-	Vec3()                                                                   {}
-	Vec3(float _xyz): x(_xyz), y(_xyz), z(_xyz)                              {}
-	Vec3(float _x, float _y, float _z): x(_x), y(_y), z(_z)                  {}
-	Vec3(const Vec2& _xy, float _z): x(_xy.x), y(_xy.y), z(_z)               {}
-	operator float*()                                                        { return &x; }
-	operator const float*() const                                            { return &x; }
-};
-struct Vec4
-{ 
-	float x; float y; float z; float w;
-	Vec4()                                                                   {}
-	Vec4(float _xyzw): x(_xyzw), y(_xyzw), z(_xyzw), w(_xyzw)                {}
-	Vec4(float _x, float _y, float _z, float _w): x(_x), y(_y), z(_z), w(_w) {}
-	Vec4(const Vec3& _xyz, float _w): x(_xyz.x), y(_xyz.y), z(_xyz.z), w(_w) {}
-	operator float*()                                                        { return &x; }
-	operator const float*() const                                            { return &x; }
-};
-struct Mat4
-{
-	float m[16];
-	Mat4()                                                                   {}
-	Mat4(float _diagonal);
-	Mat4(
-		float m00, float m01, float m02, float m03,
-		float m10, float m11, float m12, float m13,
-		float m20, float m21, float m22, float m23,
-		float m30, float m31, float m32, float m33
-		);
-	operator float*()                                                        { return m; }
-	operator const float*() const                                            { return m; }
-};
-struct Color
-{
-	U32 v;
-	Color(): v(0)                                                            {}
-	Color(U32 _rgba): v(_rgba)                                               {}
-	Color(const Vec4& _rgba);
-	Color(float _r, float _g, float _b, float _a = 1.0f);
-	operator U32() const                                                     { return v; }
-
-	void set(int _i, float _val)
-	{
-		_i *= 8;
-		U32 mask = ((1 << 8) - 1) << _i;
-		v = (v & ~mask) | ((U32)(_val * 255.0f) << _i);
-	}
-	void setR(float _val)                                                    { set(3, _val); }
-	void setG(float _val)                                                    { set(2, _val); }
-	void setB(float _val)                                                    { set(1, _val); }
-	void setA(float _val)                                                    { set(0, _val); }
-
-	float get(int _i) const
-	{
-		_i *= 8;
-		U32 mask = ((1 << 8) - 1) << _i;
-		return (float)((v & ~mask) >> _i) / 255.0f;
-	}
-	float getR() const                                                       { return get(3); }
-	float getG() const                                                       { return get(2); }
-	float getB() const                                                       { return get(1); }
-	float getA() const                                                       { return get(0); }
-};
 
 inline Context& GetContext()                                                 { return *internal::g_CurrentContext; }
 inline void     SetContext(Context& _ctx)                                    { internal::g_CurrentContext = &_ctx; }

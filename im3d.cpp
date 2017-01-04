@@ -21,6 +21,14 @@ void Im3d::MulMatrix(const Mat4& _mat)
 	ctx.setMatrix(ctx.getMatrix() * _mat);
 }
 
+Vec4::Vec4(Color _rgba)
+	: x(_rgba.getR())
+	, y(_rgba.getG())
+	, z(_rgba.getB())
+	, w(_rgba.getA())
+{
+}
+
 Mat4::Mat4(float _diagonal)
 {
 	m[ 0] = _diagonal; m[ 1] = 0.0f;      m[ 2] = 0.0f;      m[ 3] = 0.0f;
@@ -54,6 +62,19 @@ Color::Color(float _r, float _g, float _b, float _a)
 	v |= (U32)(_g * 255.0f) << 16;
 	v |= (U32)(_b * 255.0f) << 8;
 	v |= (U32)(_a * 255.0f);
+}
+
+Im3d::Id Im3d::MakeId(const char* _str)
+{
+	static const U32 kFnv1aPrime32 = 0x01000193u;
+
+	IM3D_ASSERT(_str);
+	U32 ret = (U32)GetContext().getId(); // i.e. top of Id stack
+	while (*_str) {
+		ret ^= (U32)*_str++;
+		ret *= kFnv1aPrime32;
+	}
+	return (Id)ret;
 }
 
 /*******************************************************************************
@@ -159,6 +180,7 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 	IM3D_ASSERT(m_primMode != kPrimitiveMode_None);
 
 	VertexData vd(m_matrixStack.back() * _position, _size, _color);
+	vd.m_color.setA(vd.m_color.getA() * m_alphaStack.back());
 	
 	switch (m_primMode) {
 	case kPrimitiveMode_Points:
@@ -204,21 +226,23 @@ void Context::reset()
 	}
 
  // copy keydown array internally so that we can make a delta to detect key presses
-	memcpy(m_keyDownPrev, m_keyDownCurr,       kKey_Max); // \todo avoid this copy, use an index
-	memcpy(m_keyDownCurr, m_appData.m_keyDown, kKey_Max);
+	memcpy(m_keyDownPrev, m_keyDownCurr,       kKey_Count); // \todo avoid this copy, use an index
+	memcpy(m_keyDownCurr, m_appData.m_keyDown, kKey_Count); // must copy in case m_keyDown is updated after reset (e.g. by an app callback)
 }
 
 void Context::draw()
 {
+	IM3D_ASSERT(m_appData.drawPrimitives);
+
  // draw unsorted prims first
 	if (m_triangles[0].size() > 0) {
-		drawPrimitives(kDrawPrimitive_Triangles, m_triangles[0].data(), m_triangles[0].size());
+		m_appData.drawPrimitives(kDrawPrimitive_Triangles, m_triangles[0].data(), m_triangles[0].size());
 	}
 	if (m_lines[0].size() > 0) {
-		drawPrimitives(kDrawPrimitive_Lines, m_lines[0].data(), m_lines[0].size());
+		m_appData.drawPrimitives(kDrawPrimitive_Lines, m_lines[0].data(), m_lines[0].size());
 	}
 	if (m_points[0].size() > 0) {
-		drawPrimitives(kDrawPrimitive_Points, m_points[0].data(), m_points[0].size());
+		m_appData.drawPrimitives(kDrawPrimitive_Points, m_points[0].data(), m_points[0].size());
 	}
 
  // draw sorted primitives on top
@@ -237,6 +261,9 @@ Context::Context()
 	m_primList = 0; // sorting disabled by default
 	m_firstVertThisPrim = 0;
 	m_vertCountThisPrim = 0;
+	memset(&m_appData, 0, sizeof(m_appData));
+	memset(&m_keyDownCurr, 0, sizeof(m_keyDownCurr));
+	memset(&m_keyDownPrev, 0, sizeof(m_keyDownPrev));
 
 	pushMatrix(Mat4(1.0f));
 	pushColor(kColor_White);
@@ -247,4 +274,10 @@ Context::Context()
 
 Context::~Context()
 {
+}
+
+float Context::pixelsToWorldSize(const Vec3& _position, float _pixels)
+{
+	float d = length(_position - m_appData.m_viewOrigin);
+	return m_appData.m_tanHalfFov * 2.0f * d * (_pixels / m_appData.m_displaySize.y);
 }

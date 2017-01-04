@@ -3,7 +3,6 @@
 #define im3d_math_h
 
 #include "im3d.h"
-#include "im3d_internal.h"
 
 #include <cmath>
 
@@ -42,7 +41,7 @@ inline float length(const Vec4& _v)                        { return sqrtf(dot(_v
 inline float length2(const Vec4& _v)                       { return dot(_v, _v);                                                              }
 inline Vec4  abs(const Vec4& _v)                           { return Vec4(fabs(_v.x), fabs(_v.y), fabs(_v.z), fabs(_v.w));                     }
 
-inline Mat4  operator*(const Mat4& _lhs, const Mat4& _rhs)
+inline Mat4 operator*(const Mat4& _lhs, const Mat4& _rhs)
 {
 	float m00 = _lhs[ 0] * _rhs[ 0] + _lhs[ 1] * _rhs[4] + _lhs[ 2] * _rhs[ 8] + _lhs[ 3] * _rhs[12];
 	float m01 = _lhs[ 0] * _rhs[ 1] + _lhs[ 1] * _rhs[5] + _lhs[ 2] * _rhs[ 9] + _lhs[ 3] * _rhs[13];
@@ -74,6 +73,15 @@ inline Vec3 operator*(const Mat4& _mat, const Vec3& _pos)
 		_mat[ 0] * _pos.x + _mat[ 1] * _pos.y + _mat[ 2] * _pos.z + _mat[ 3],
 		_mat[ 4] * _pos.x + _mat[ 5] * _pos.y + _mat[ 6] * _pos.z + _mat[ 7],
 		_mat[ 8] * _pos.x + _mat[ 9] * _pos.y + _mat[10] * _pos.z + _mat[11]
+		);
+}
+inline Vec4 operator*(const Mat4& _mat, const Vec4& _vec)
+{
+	return Vec4(
+		_mat[ 0] * _vec.x + _mat[ 1] * _vec.y + _mat[ 2] * _vec.z + _mat[ 3] * _vec.w,
+		_mat[ 4] * _vec.x + _mat[ 5] * _vec.y + _mat[ 6] * _vec.z + _mat[ 7] * _vec.w,
+		_mat[ 8] * _vec.x + _mat[ 9] * _vec.y + _mat[10] * _vec.z + _mat[11] * _vec.w,
+		_mat[12] * _vec.x + _mat[13] * _vec.y + _mat[14] * _vec.z + _mat[15] * _vec.w
 		);
 }
 
