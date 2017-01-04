@@ -27,13 +27,17 @@ workspace "im3d_tests"
 		system "windows"
 		architecture "x86_64"
 	
-	project "im3d_math_tests"
+	project "im3d_tests"
 		kind "ConsoleApp"
 		language "C++"
 		targetdir "../bin"
 		
 		vpaths({
 			["*"] = IM3D_DIR .. "*",
+			})
+		
+		includedirs({
+			IM3D_DIR,
 			})
 		
 		files({ 

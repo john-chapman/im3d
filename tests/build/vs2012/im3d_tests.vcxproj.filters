@@ -7,17 +7,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\im3d.h" />
-    <ClInclude Include="..\..\..\im3d_internal.h" />
     <ClInclude Include="..\..\..\im3d_math.h" />
-    <ClInclude Include="..\..\catch.hpp">
-      <Filter>tests</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\im3d.cpp" />
-    <ClCompile Include="..\..\im3d_math_tests.cpp">
-      <Filter>tests</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\im3d_tests.cpp">
       <Filter>tests</Filter>
     </ClCompile>
