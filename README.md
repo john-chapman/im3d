@@ -1,8 +1,8 @@
-Im3d is a small, self-contained library for immediate-mode rendering of simple primitives (points, lines, etc.), plus an immediate-mode UI providing 3d 'gizmos' and manipulation tools. It is designed to be compatible with VR.
+Im3d is a small, self-contained library for immediate-mode rendering of simple primitives (points, lines, etc.), plus an immediate-mode UI providing 3d manipulation 'gizmos' and other tools. It is designed to be compatible with VR.
 
-Im3d outputs vertex buffers for rendering by the application. Im3d does not affect the system graphics state directly, therefore Im3d calls can be made from anywhere inside 
+Im3d outputs vertex buffers for rendering by the application. Im3d does not affect the system graphics state directly, therefore Im3d calls can be made from anywhere inside the application code.
 
-The design closely follows OpenGL immediate mode in that it is a state machine:
+The design closely follows OpenGL immediate mode in that it functions as a state machine:
 
 ```
 Im3d::PushDrawState();
