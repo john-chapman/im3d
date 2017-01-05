@@ -197,7 +197,7 @@ struct AppData
 	float m_tanHalfFov;          // tan(fov/2); fov = vertical field of view of the current projection.
 	float m_deltaTime;           // Time since previous frame (seconds).
 
-	DrawPrimitivesCallback drawPrimitives;
+	DrawPrimitivesCallback* drawPrimitives;
 };
 
 // Minimal vector.

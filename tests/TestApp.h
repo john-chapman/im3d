@@ -7,6 +7,8 @@ namespace Im3d {
 class TestApp
 {
 public:
+	TestApp();
+
 	bool        init(int _width, int _height, const char* _title);
 	void        shutdown();
 

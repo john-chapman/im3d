@@ -1,11 +1,17 @@
 #include "TestApp.h"
 
+#include "common.h"
+
 #include <cstring>
 
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-
 using namespace Im3d;
+
+
+/*******************************************************************************
+
+                                  TestApp
+
+*******************************************************************************/
 
 struct TestApp::Impl
 {
@@ -25,14 +31,12 @@ LRESULT CALLBACK TestApp::Impl::WindowProc(HWND _hwnd, UINT _umsg, WPARAM _wpara
 	return DefWindowProc(_hwnd, _umsg, _wparam, _lparam);
 }
 
-
-/*******************************************************************************
-
-                                  TestApp
-
-*******************************************************************************/
-
 // PUBLIC
+
+TestApp::TestApp()
+	: m_impl(nullptr)
+{
+}
 
 bool TestApp::init(int _width, int _height, const char* _title)
 {
@@ -54,7 +58,7 @@ bool TestApp::init(int _width, int _height, const char* _title)
 		wc.hInstance = GetModuleHandle(0);
 		wc.lpszClassName = "TestAppImpl";
 		wc.hCursor = LoadCursor(0, IDC_ARROW);
-		APT_PLATFORM_VERIFY(wndclassex = RegisterClassEx(&wc));
+		IM3D_PLATFORM_VERIFY(wndclassex = RegisterClassEx(&wc));
 	}
 
 	DWORD dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
@@ -63,22 +67,22 @@ bool TestApp::init(int _width, int _height, const char* _title)
 	if (m_width == -1 || m_height == -1) {
 	 // auto size; get the dimensions of the primary screen area and subtract the non-client area
 		RECT r;
-		APT_PLATFORM_VERIFY(SystemParametersInfo(SPI_GETWORKAREA, 0, &r, 0));
+		IM3D_PLATFORM_VERIFY(SystemParametersInfo(SPI_GETWORKAREA, 0, &r, 0));
 		_width  = r.right - r.left;
 		_height = r.bottom - r.top;
 
 		RECT wr = {};
-		APT_PLATFORM_VERIFY(AdjustWindowRectEx(&wr, dwStyle, FALSE, dwExStyle));
+		IM3D_PLATFORM_VERIFY(AdjustWindowRectEx(&wr, dwStyle, FALSE, dwExStyle));
 		_width  -= wr.right - wr.left;
 		_height -= wr.bottom - wr.top;
 	}
 
 	RECT r; r.top = 0; r.left = 0; r.bottom = _height; r.right = _width;
-	APT_PLATFORM_VERIFY(AdjustWindowRectEx(&r, dwStyle, FALSE, dwExStyle));
-	impl->m_hwnd = CreateWindowEx(
+	IM3D_PLATFORM_VERIFY(AdjustWindowRectEx(&r, dwStyle, FALSE, dwExStyle));
+	m_impl->m_hwnd = CreateWindowEx(
 		dwExStyle, 
 		MAKEINTATOM(wndclassex), 
-		ret->m_title, 
+		m_title, 
 		dwStyle, 
 		0, 0, 
 		r.right - r.left, r.bottom - r.top, 
@@ -87,16 +91,15 @@ bool TestApp::init(int _width, int _height, const char* _title)
 		GetModuleHandle(0), 
 		NULL
 		);
-	APT_PLATFORM_ASSERT(impl->m_hwnd);
-	ShowWindow(impl->m_hwnd, SW_SHOW);
+	IM3D_ASSERT(m_impl->m_hwnd);
+	ShowWindow(m_impl->m_hwnd, SW_SHOW);
 	return true;
 }
 
 void TestApp::shutdown()
 {
 	if (m_impl) {
-
-		APT_PLATFORM_VERIFY(DestroyWindow(m_impl->m_handle));
+		IM3D_PLATFORM_VERIFY(DestroyWindow(m_impl->m_hwnd));
 		delete m_impl;
 	}
 }
