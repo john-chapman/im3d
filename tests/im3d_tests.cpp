@@ -1,6 +1,5 @@
-
-#include "im3d.h"
-#include "im3d_math.h"
+#include "common.h"
+#include "TestApp.h"
 
 #include <cstdio>
 
@@ -19,11 +18,10 @@ void Print(Color _c)        { printf("%.8x = ", _c.v); Print(Vec4(_c)); printf("
 
 int main(int, char**)
 {
-	Print(kColor_Red);
-	Print(kColor_Green);
-	Print(kColor_Blue);
-	Color c(0);
-	c.setA(0.5f);
-	Print(c);
+	TestApp app;
+	app.init(-1, -1, "Im3d Tests");
+	Sleep(1000);
+	app.shutdown();
+
 	return 0;
 }

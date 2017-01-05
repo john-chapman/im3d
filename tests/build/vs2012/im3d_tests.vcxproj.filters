@@ -1,16 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <Filter Include="im3d">
+      <UniqueIdentifier>{F279987C-DEB0-990D-879D-7F1073B3150F}</UniqueIdentifier>
+    </Filter>
     <Filter Include="tests">
       <UniqueIdentifier>{78756B10-E489-93C1-AD0B-372119DF8FF2}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\im3d.h" />
-    <ClInclude Include="..\..\..\im3d_math.h" />
+    <ClInclude Include="..\..\..\im3d.h">
+      <Filter>im3d</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\im3d_math.h">
+      <Filter>im3d</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\TestApp.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common.h">
+      <Filter>tests</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\im3d.cpp" />
+    <ClCompile Include="..\..\..\im3d.cpp">
+      <Filter>im3d</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Windows\OpenGL\TestApp.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\im3d_tests.cpp">
       <Filter>tests</Filter>
     </ClCompile>

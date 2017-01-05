@@ -1,5 +1,5 @@
 local IM3D_DIR  = "../../"
-local TESTS_DIR = "../"
+local TESTS_DIR = "../../tests/"
 
 filter { "configurations:debug" }
 	defines { "IM3D_DEBUG" }
@@ -15,7 +15,7 @@ filter { "action:vs*" }
 	defines { "_CRT_SECURE_NO_WARNINGS", "_SCL_SECURE_NO_WARNINGS" }
 	characterset "MBCS" -- force Win32 API to use *A variants (i.e. can pass char* for strings)
 
-workspace "im3d_tests"
+workspace "im3d"
 	location(_ACTION)
 	configurations { "Debug", "Release" }
 	platforms { "Win32", "Win64" }
@@ -26,23 +26,30 @@ workspace "im3d_tests"
 	filter { "platforms:Win64" }
 		system "windows"
 		architecture "x86_64"
+		
+	filter {}
+	
+	vpaths({
+		["im3d"]  = { IM3D_DIR .. "*.h", IM3D_DIR .. "*.cpp" },
+		["tests"] = TESTS_DIR .. "**",
+		})
+	
+	files({ 
+		IM3D_DIR .. "*.h", 
+		IM3D_DIR .. "*.cpp",
+		})
 	
 	project "im3d_tests"
 		kind "ConsoleApp"
 		language "C++"
 		targetdir "../bin"
-		
-		vpaths({
-			["*"] = IM3D_DIR .. "*",
-			})
+	
 		
 		includedirs({
 			IM3D_DIR,
+			TESTS_DIR,
 			})
-		
-		files({ 
-			IM3D_DIR .. "**.h", 
-			IM3D_DIR .. "**.hpp", 
-			IM3D_DIR .. "**.c", 
-			IM3D_DIR .. "**.cpp",
+		files({
+			TESTS_DIR .. "**.h",
+			TESTS_DIR .. "**.cpp",
 			})
