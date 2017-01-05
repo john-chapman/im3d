@@ -13,7 +13,7 @@ public:
 	void        shutdown();
 
 	bool        update();
-	bool        draw();
+	void        draw();
 
 	int         getWidth() const    { return m_width;  }
 	int         getHeight() const   { return m_height; }

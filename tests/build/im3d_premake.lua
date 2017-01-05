@@ -20,11 +20,17 @@ workspace "im3d"
 	configurations { "Debug", "Release" }
 	platforms { "Win32", "Win64" }
 	flags { "C++11", "StaticRuntime" }
-	filter { "platforms:Win32" }
+
+	filter { "platforms:Win32 or Win64" }
 		system "windows"
+
+	 -- \todo select graphics lib?
+		defines { "IM3D_GL", "GLEW_STATIC" }
+		links { "opengl32" }
+
+	filter { "platforms:Win32" }
 		architecture "x86"
 	filter { "platforms:Win64" }
-		system "windows"
 		architecture "x86_64"
 		
 	filter {}
@@ -51,5 +57,7 @@ workspace "im3d"
 			})
 		files({
 			TESTS_DIR .. "**.h",
+			TESTS_DIR .. "**.hpp",
+			TESTS_DIR .. "**.c",
 			TESTS_DIR .. "**.cpp",
 			})

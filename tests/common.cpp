@@ -55,3 +55,29 @@ const char* Im3d::GetPlatformErrorString(void* _err)
 	);
 	return buf;
 }
+
+#if defined(IM3D_GL)
+	const char* Im3d::GetGlEnumString(GLenum _enum)
+	{
+		#define CASE_ENUM(e) case e: return #e
+		switch (_enum) {
+		// errors
+			CASE_ENUM(GL_NONE);
+			CASE_ENUM(GL_INVALID_ENUM);
+			CASE_ENUM(GL_INVALID_VALUE);
+			CASE_ENUM(GL_INVALID_OPERATION);
+			CASE_ENUM(GL_INVALID_FRAMEBUFFER_OPERATION);
+			CASE_ENUM(GL_OUT_OF_MEMORY);
+
+			default: return "Unkown GLenum";
+		};
+		#undef CASE_ENUM
+	}
+
+	const char* Im3d::GlGetString(GLenum _name)
+	{
+		const char* ret;
+		glAssert(ret = (const char*)glGetString(_name));
+		return ret ? ret : "";
+	}
+#endif

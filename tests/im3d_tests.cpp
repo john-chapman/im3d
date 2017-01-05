@@ -19,8 +19,16 @@ void Print(Color _c)        { printf("%.8x = ", _c.v); Print(Vec4(_c)); printf("
 int main(int, char**)
 {
 	TestApp app;
-	app.init(-1, -1, "Im3d Tests");
-	Sleep(1000);
+	if (!app.init(-1, -1, "Im3d Tests")) {
+		return 1;
+	}
+	while (app.update()) {
+		glAssert(glViewport(0, 0, app.getWidth(), app.getHeight()));
+		glAssert(glClearColor(1.0f, 0.0f, 1.0f, 1.0f));
+		glAssert(glClear(GL_COLOR_BUFFER_BIT));
+
+		app.draw();
+	}
 	app.shutdown();
 
 	return 0;

@@ -15,6 +15,15 @@
     <ClInclude Include="..\..\..\im3d_math.h">
       <Filter>im3d</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\GL\glew.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\GL\glxew.h">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\GL\wglew.h">
+      <Filter>tests</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\TestApp.h">
       <Filter>tests</Filter>
     </ClInclude>
@@ -25,6 +34,9 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\im3d.cpp">
       <Filter>im3d</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\GL\glew.c">
+      <Filter>tests</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Windows\OpenGL\TestApp.cpp">
       <Filter>tests</Filter>
