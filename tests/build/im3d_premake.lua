@@ -37,6 +37,7 @@ workspace "im3d"
 	
 	vpaths({
 		["im3d"]  = { IM3D_DIR .. "*.h", IM3D_DIR .. "*.cpp" },
+		["imgui"] = TESTS_DIR .. "imgui/**",
 		["tests"] = TESTS_DIR .. "**",
 		})
 	

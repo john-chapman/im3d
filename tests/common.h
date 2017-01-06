@@ -85,5 +85,6 @@ const char* GetPlatformErrorString(void* _err);
 	#define IM3D_PLATFORM_VERIFY(e) IM3D_VERIFY_MSG(e, GetPlatformErrorString((void*)GetLastError()))
 #endif
 
+#include "imgui/imgui.h"
 
 #endif // im3d_common_h
