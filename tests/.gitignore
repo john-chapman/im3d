@@ -1,5 +1,6 @@
 # All builds and intermediate build files
 bin/*
+!bin/*.glsl
 
 # Visual Studio
 build/vs*/*

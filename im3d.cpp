@@ -108,10 +108,20 @@ void Vector<T>::reserve(U32 _capacity)
 	m_capacity = _capacity;
 }
 
+template <typename T>
+void Vector<T>::resize(U32 _size, const T& _val)
+{
+	reserve(_size);
+	while (m_size < _size) {
+		push_back(_val);
+	}
+}
+
 template class Vector<Color>;
 template class Vector<float>;
 template class Vector<Mat4>;
 template class Vector<Id>;
+template class Vector<char>;
 
 /*******************************************************************************
 

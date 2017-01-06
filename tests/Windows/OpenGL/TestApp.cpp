@@ -11,6 +11,100 @@ using namespace Im3d;
 static PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormat = 0;
 static PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs = 0;
 
+static const char* kGlslVersionString = "#version 450";
+
+static void Append(const char* _str, Vector<char>& _out_)
+{
+	while (*_str) {
+		_out_.push_back(*_str);
+		++_str;
+	}
+}
+static void AppendLine(const char* _str, Vector<char>& _out_)
+{
+	Append(_str, _out_);
+	_out_.push_back('\n');
+}
+
+// _defines list must end with "", returns 0 on failure.
+static GLuint LoadCompileShader(GLenum _stage, const char* _path, const char** _defines = 0)
+{
+	Vector<char> src;
+	AppendLine(kGlslVersionString, src);
+	if (_defines) {
+		while (**_defines != '\0') {
+			AppendLine(*_defines, src);
+			++_defines;
+		}
+	}
+
+	FILE* fin = fopen(_path, "rb");
+	if (!fin) {
+		fprintf(stderr, "Error opening '%s'\n", _path);
+		return 0;
+	}
+	IM3D_VERIFY(fseek(fin, 0, SEEK_END) == 0); // not portable but works on almost all implementations
+	long fsize = ftell(fin);
+	IM3D_VERIFY(fseek(fin, 0, SEEK_SET) == 0);
+
+	int srcbeg = src.size();
+	src.resize(srcbeg + fsize, '\0');
+	if (fread(src.data() + srcbeg, 1, fsize, fin) != fsize) {
+		fclose(fin);
+		fprintf(stderr, "Error reading '%s'\n", _path);
+		return 0;
+	}
+	fclose(fin);
+	src.push_back('\0');
+
+	GLuint ret = 0;
+	glAssert(ret = glCreateShader(_stage));
+	const GLchar* pd = src.data();
+	GLint ps = src.size();
+	glAssert(glShaderSource(ret, 1, &pd, &ps));
+
+	glAssert(glCompileShader(ret));
+	GLint compileStatus = GL_FALSE;
+	glAssert(glGetShaderiv(ret, GL_COMPILE_STATUS, &compileStatus));
+	if (compileStatus == GL_FALSE) {
+		fprintf(stderr, "Error compiling '%s':\n\n", _path);
+		GLint len;
+		glAssert(glGetShaderiv(ret, GL_INFO_LOG_LENGTH, &len));
+		char* log = new GLchar[len];
+		glAssert(glGetShaderInfoLog(ret, len, 0, log));
+		fprintf(stderr, log);
+		delete[] log;
+
+		fprintf(stderr, "\n\n%s", src.data());
+		fprintf(stderr, "\n");
+		glAssert(glDeleteShader(ret));
+		return 0;
+	}
+
+	return ret;
+}
+
+static bool LinkShaderProgram(GLuint _handle)
+{
+	IM3D_ASSERT(_handle != 0);
+
+	glAssert(glLinkProgram(_handle));
+	GLint linkStatus = GL_FALSE;
+	glAssert(glGetProgramiv(_handle, GL_LINK_STATUS, &linkStatus));
+	if (linkStatus == GL_FALSE) {
+		fprintf(stderr, "Error linking program:\n\n");
+		GLint len;
+		glAssert(glGetProgramiv(_handle, GL_INFO_LOG_LENGTH, &len));
+		GLchar* log = new GLchar[len];
+		glAssert(glGetProgramInfoLog(_handle, len, 0, log));
+		fprintf(stderr, log);
+		fprintf(stderr, "\n");
+		delete[] log;
+
+		return false;
+	}
+	return true;
+}
 
 /*******************************************************************************
 
@@ -182,7 +276,7 @@ bool TestApp::Impl::initGl(int _vmaj, int _vmin)
 	IM3D_ASSERT(err == GLEW_OK);
 	glGetError(); // clear any errors caused by glewInit()
 
-	fprintf(stdout, "OpenGL context:\n\tVersion: %s\n\tGLSL Version: %s\n\tVendor: %s\n\tRenderer: %s",
+	fprintf(stdout, "OpenGL context:\n\tVersion: %s\n\tGLSL Version: %s\n\tVendor: %s\n\tRenderer: %s\n",
 		GlGetString(GL_VERSION),
 		GlGetString(GL_SHADING_LANGUAGE_VERSION),
 		GlGetString(GL_VENDOR),
@@ -216,6 +310,26 @@ bool TestApp::init(int _width, int _height, const char* _title)
 	if (!m_impl->initGl(4, 5)) {
 		shutdown();
 		return false;
+	}
+
+ // force the current working directoy to the exe location
+	TCHAR buf[MAX_PATH] = {};
+	DWORD buflen;
+	IM3D_PLATFORM_VERIFY(buflen = GetModuleFileName(0, buf, MAX_PATH));
+	char* pathend = strrchr(buf, (int)'\\');
+	*(++pathend) = '\0';
+	IM3D_PLATFORM_VERIFY(SetCurrentDirectory(buf));
+	fprintf(stdout, "Set current directory: '%s'\n", buf);
+
+ // test
+	GLuint vs = LoadCompileShader(GL_VERTEX_SHADER, "test_vs.glsl");
+	GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "test_fs.glsl");
+	if (vs && fs) {
+		GLuint sh;
+		glAssert(sh = glCreateProgram());
+		glAssert(glAttachShader(sh, vs));
+		glAssert(glAttachShader(sh, fs));
+		LinkShaderProgram(sh);
 	}
 
 	ShowWindow(m_impl->m_hwnd, SW_SHOW);

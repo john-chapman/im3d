@@ -235,6 +235,7 @@ public:
 
 	void     clear()                              { m_size = 0; }
 	void     reserve(U32 _capacity);
+	void     resize(U32 _size, const T& _val);
 };
 
 // Context stores all relevant state - main interface affects the context currently bound via SetCurrentContext().
