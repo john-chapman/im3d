@@ -18,15 +18,15 @@ struct Mat4;
 struct Color;
 struct VertexData;
 
-extern const Id    kId_Invalid;
-extern const Color kColor_Black;
-extern const Color kColor_White;
-extern const Color kColor_Red;
-extern const Color kColor_Green;
-extern const Color kColor_Blue;
-extern const Color kColor_Magenta;
-extern const Color kColor_Yellow;
-extern const Color kColor_Cyan;
+extern const Id    Id_Invalid;
+extern const Color Color_Black;
+extern const Color Color_White;
+extern const Color Color_Red;
+extern const Color Color_Green;
+extern const Color Color_Blue;
+extern const Color Color_Magenta;
+extern const Color Color_Yellow;
+extern const Color Color_Cyan;
 
 
 
@@ -164,31 +164,31 @@ struct VertexData
 
 enum DrawPrimitiveType
 {
-	kDrawPrimitive_Points,
-	kDrawPrimitive_Lines,
-	kDrawPrimitive_Triangles
+	DrawPrimitive_Points,
+	DrawPrimitive_Lines,
+	DrawPrimitive_Triangles
 };
 typedef void (DrawPrimitivesCallback)(DrawPrimitiveType _primType, const VertexData* _data, U32 _count);
 
 enum Key
 {
-	kMouseLeft,
-	kMouseRight,
-	kMouseMiddle,
+	MouseLeft,
+	MouseRight,
+	MouseMiddle,
 		
-	kKey_Ctrl,
-	kKey_Shift,
-	kKey_Alt,
+	Key_Ctrl,
+	Key_Shift,
+	Key_Alt,
 
-	kKey_T,           // Select translation gizmo.
-	kKey_R,           // Select rotation gizmo.
-	kKey_S,           // Select scale gizmo.
+	Key_T,           // Select translation gizmo.
+	Key_R,           // Select rotation gizmo.
+	Key_S,           // Select scale gizmo.
 
-	kKey_Count
+	Key_Count
 };
 struct AppData
 {
-	bool  m_keyDown[kKey_Count]; // Application-provided key states.
+	bool  m_keyDown[Key_Count]; // Application-provided key states.
 
 	Vec3  m_cursorRayOrigin;     // World space cursor ray origin.
 	Vec3  m_cursorRayDirection;  // World space cursor ray direction.
@@ -244,13 +244,13 @@ class Context
 public:
 	enum PrimitiveMode
 	{
-		kPrimitiveMode_None,
-		kPrimitiveMode_Points,
-		kPrimitiveMode_Lines,
-		kPrimitiveMode_LineStrip,
-		kPrimitiveMode_LineLoop,
-		kPrimitiveMode_Triangles,
-		kPrimitiveMode_TriangleStrip
+		PrimitiveMode_None,
+		PrimitiveMode_Points,
+		PrimitiveMode_Lines,
+		PrimitiveMode_LineStrip,
+		PrimitiveMode_LineLoop,
+		PrimitiveMode_Triangles,
+		PrimitiveMode_TriangleStrip
 	};
 	void        begin(PrimitiveMode _mode);
 	void        end();
@@ -316,8 +316,8 @@ private:
 
  // app data
 	AppData            m_appData;
-	bool               m_keyDownCurr[kKey_Count];  // Key state captured during reset().
-	bool               m_keyDownPrev[kKey_Count];  // Key state from previous frame.
+	bool               m_keyDownCurr[Key_Count];  // Key state captured during reset().
+	bool               m_keyDownPrev[Key_Count];  // Key state from previous frame.
 
 	// Interpret key state.
 	bool isKeyDown(Key _key) const     { return m_keyDownCurr[_key]; }
@@ -336,12 +336,12 @@ inline void     SetContext(Context& _ctx)                                    { i
 inline AppData& GetAppData()                                                 { return GetContext().getAppData();   }
 
 inline void  EnableSorting(bool _enable)                                     { GetContext().enableSorting(_enable);                       }
-inline void  BeginPoints()                                                   { GetContext().begin(Context::kPrimitiveMode_Points);        }
-inline void  BeginLines()                                                    { GetContext().begin(Context::kPrimitiveMode_Lines);         }
-inline void  BeginLineLoop()                                                 { GetContext().begin(Context::kPrimitiveMode_LineLoop);      }
-inline void  BeginLineStrip()                                                { GetContext().begin(Context::kPrimitiveMode_LineStrip);     }
-inline void  BeginTriangles()                                                { GetContext().begin(Context::kPrimitiveMode_Triangles);     }
-inline void  BeginTriangleStrip()                                            { GetContext().begin(Context::kPrimitiveMode_TriangleStrip); }
+inline void  BeginPoints()                                                   { GetContext().begin(Context::PrimitiveMode_Points);        }
+inline void  BeginLines()                                                    { GetContext().begin(Context::PrimitiveMode_Lines);         }
+inline void  BeginLineLoop()                                                 { GetContext().begin(Context::PrimitiveMode_LineLoop);      }
+inline void  BeginLineStrip()                                                { GetContext().begin(Context::PrimitiveMode_LineStrip);     }
+inline void  BeginTriangles()                                                { GetContext().begin(Context::PrimitiveMode_Triangles);     }
+inline void  BeginTriangleStrip()                                            { GetContext().begin(Context::PrimitiveMode_TriangleStrip); }
 inline void  End()                                                           { GetContext().end(); }
 
 inline void  Vertex(const Vec3& _position)                                   { GetContext().vertex(_position, GetContext().getSize(), GetContext().getColor()); }

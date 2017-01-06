@@ -5,15 +5,15 @@
 
 using namespace Im3d;
 
-const Id    Im3d::kId_Invalid    = 0;
-const Color Im3d::kColor_Black   = Color(0.0f, 0.0f, 0.0f);
-const Color Im3d::kColor_White   = Color(1.0f, 1.0f, 1.0f);
-const Color Im3d::kColor_Red     = Color(1.0f, 0.0f, 0.0f);
-const Color Im3d::kColor_Green   = Color(0.0f, 1.0f, 0.0f);
-const Color Im3d::kColor_Blue    = Color(0.0f, 0.0f, 1.0f);
-const Color Im3d::kColor_Magenta = Color(1.0f, 0.0f, 1.0f);
-const Color Im3d::kColor_Yellow  = Color(1.0f, 1.0f, 0.0f);
-const Color Im3d::kColor_Cyan    = Color(0.0f, 1.0f, 1.0f);
+const Id    Im3d::Id_Invalid    = 0;
+const Color Im3d::Color_Black   = Color(0.0f, 0.0f, 0.0f);
+const Color Im3d::Color_White   = Color(1.0f, 1.0f, 1.0f);
+const Color Im3d::Color_Red     = Color(1.0f, 0.0f, 0.0f);
+const Color Im3d::Color_Green   = Color(0.0f, 1.0f, 0.0f);
+const Color Im3d::Color_Blue    = Color(0.0f, 0.0f, 1.0f);
+const Color Im3d::Color_Magenta = Color(1.0f, 0.0f, 1.0f);
+const Color Im3d::Color_Yellow  = Color(1.0f, 1.0f, 0.0f);
+const Color Im3d::Color_Cyan    = Color(0.0f, 1.0f, 1.0f);
 
 void Im3d::MulMatrix(const Mat4& _mat)
 {
@@ -134,20 +134,20 @@ Context* Im3d::internal::g_CurrentContext = &s_DefaultContext;
 
 void Context::begin(PrimitiveMode _mode)
 {
-	IM3D_ASSERT(m_primMode == kPrimitiveMode_None);
+	IM3D_ASSERT(m_primMode == PrimitiveMode_None);
 	m_primMode = _mode;
 	m_vertCountThisPrim = 0;
 	switch (m_primMode) {
-	case kPrimitiveMode_Points:
+	case PrimitiveMode_Points:
 		m_firstVertThisPrim = m_points[m_primList].size();
 		break;
-	case kPrimitiveMode_Lines:
-	case kPrimitiveMode_LineStrip:
-	case kPrimitiveMode_LineLoop:
+	case PrimitiveMode_Lines:
+	case PrimitiveMode_LineStrip:
+	case PrimitiveMode_LineLoop:
 		m_firstVertThisPrim = m_lines[m_primList].size();
 		break;
-	case kPrimitiveMode_Triangles:
-	case kPrimitiveMode_TriangleStrip:
+	case PrimitiveMode_Triangles:
+	case PrimitiveMode_TriangleStrip:
 		m_firstVertThisPrim = m_triangles[m_primList].size();
 		break;
 	default:
@@ -157,60 +157,60 @@ void Context::begin(PrimitiveMode _mode)
 
 void Context::end()
 {
-	IM3D_ASSERT(m_primMode != kPrimitiveMode_None);
+	IM3D_ASSERT(m_primMode != PrimitiveMode_None);
 	switch (m_primMode) {
-	case kPrimitiveMode_Points:
+	case PrimitiveMode_Points:
 		break;
 
-	case kPrimitiveMode_Lines:
+	case PrimitiveMode_Lines:
 		IM3D_ASSERT(m_vertCountThisPrim % 2 == 0);
 		break;
-	case kPrimitiveMode_LineStrip:
+	case PrimitiveMode_LineStrip:
 		IM3D_ASSERT(m_vertCountThisPrim > 1);
 		break;
-	case kPrimitiveMode_LineLoop:
+	case PrimitiveMode_LineLoop:
 		IM3D_ASSERT(m_vertCountThisPrim > 1);
 		m_lines[m_primList].push_back(m_lines[m_primList].back());
 		m_lines[m_primList].push_back(m_lines[m_primList][m_firstVertThisPrim]);
 		break;
-	case kPrimitiveMode_Triangles:
+	case PrimitiveMode_Triangles:
 		IM3D_ASSERT(m_vertCountThisPrim % 3 == 0);
 		break;
-	case kPrimitiveMode_TriangleStrip:
+	case PrimitiveMode_TriangleStrip:
 		IM3D_ASSERT(m_vertCountThisPrim >= 3);
 		break;
 	default:
 		break;
 	};
-	m_primMode = kPrimitiveMode_None;
+	m_primMode = PrimitiveMode_None;
 }
 
 void Context::vertex(const Vec3& _position, float _size, Color _color)
 {	
-	IM3D_ASSERT(m_primMode != kPrimitiveMode_None);
+	IM3D_ASSERT(m_primMode != PrimitiveMode_None);
 
 	VertexData vd(m_matrixStack.back() * _position, _size, _color);
 	vd.m_color.setA(vd.m_color.getA() * m_alphaStack.back());
 	
 	switch (m_primMode) {
-	case kPrimitiveMode_Points:
+	case PrimitiveMode_Points:
 		m_points[m_primList].push_back(vd);
 		break;
-	case kPrimitiveMode_Lines:
+	case PrimitiveMode_Lines:
 		m_lines[m_primList].push_back(vd);
 		break;
-	case kPrimitiveMode_LineStrip:
-	case kPrimitiveMode_LineLoop:
+	case PrimitiveMode_LineStrip:
+	case PrimitiveMode_LineLoop:
 		if (m_vertCountThisPrim >= 2) {
 			m_lines[m_primList].push_back(m_lines[m_primList].back());
 			++m_vertCountThisPrim;
 		}
 		m_lines[m_primList].push_back(vd);
 		break;
-	case kPrimitiveMode_Triangles:
+	case PrimitiveMode_Triangles:
 		m_triangles[m_primList].push_back(vd);
 		break;
-	case kPrimitiveMode_TriangleStrip:
+	case PrimitiveMode_TriangleStrip:
 		if (m_vertCountThisPrim >= 3) {
 			m_triangles[m_primList].push_back(*(m_triangles[m_primList].end() - 2));
 			m_triangles[m_primList].push_back(*(m_triangles[m_primList].end() - 2));
@@ -226,8 +226,8 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 
 void Context::reset()
 {
-	IM3D_ASSERT(m_primMode == kPrimitiveMode_None);
-	m_primMode = kPrimitiveMode_None;
+	IM3D_ASSERT(m_primMode == PrimitiveMode_None);
+	m_primMode = PrimitiveMode_None;
 
 	for (int i = 0; i < 2; ++i) {
 		m_points[i].clear();
@@ -236,8 +236,8 @@ void Context::reset()
 	}
 
  // copy keydown array internally so that we can make a delta to detect key presses
-	memcpy(m_keyDownPrev, m_keyDownCurr,       kKey_Count); // \todo avoid this copy, use an index
-	memcpy(m_keyDownCurr, m_appData.m_keyDown, kKey_Count); // must copy in case m_keyDown is updated after reset (e.g. by an app callback)
+	memcpy(m_keyDownPrev, m_keyDownCurr,       Key_Count); // \todo avoid this copy, use an index
+	memcpy(m_keyDownCurr, m_appData.m_keyDown, Key_Count); // must copy in case m_keyDown is updated after reset (e.g. by an app callback)
 }
 
 void Context::draw()
@@ -246,13 +246,13 @@ void Context::draw()
 
  // draw unsorted prims first
 	if (m_triangles[0].size() > 0) {
-		m_appData.drawPrimitives(kDrawPrimitive_Triangles, m_triangles[0].data(), m_triangles[0].size());
+		m_appData.drawPrimitives(DrawPrimitive_Triangles, m_triangles[0].data(), m_triangles[0].size());
 	}
 	if (m_lines[0].size() > 0) {
-		m_appData.drawPrimitives(kDrawPrimitive_Lines, m_lines[0].data(), m_lines[0].size());
+		m_appData.drawPrimitives(DrawPrimitive_Lines, m_lines[0].data(), m_lines[0].size());
 	}
 	if (m_points[0].size() > 0) {
-		m_appData.drawPrimitives(kDrawPrimitive_Points, m_points[0].data(), m_points[0].size());
+		m_appData.drawPrimitives(DrawPrimitive_Points, m_points[0].data(), m_points[0].size());
 	}
 
  // draw sorted primitives on top
@@ -261,13 +261,13 @@ void Context::draw()
 
 void Context::enableSorting(bool _enable)
 {
-	IM3D_ASSERT(m_primMode == kPrimitiveMode_None);
+	IM3D_ASSERT(m_primMode == PrimitiveMode_None);
 	m_primList  = _enable ? 1 : 0;
 }
 
 Context::Context()
 {
-	m_primMode = kPrimitiveMode_None;
+	m_primMode = PrimitiveMode_None;
 	m_primList = 0; // sorting disabled by default
 	m_firstVertThisPrim = 0;
 	m_vertCountThisPrim = 0;
@@ -276,7 +276,7 @@ Context::Context()
 	memset(&m_keyDownPrev, 0, sizeof(m_keyDownPrev));
 
 	pushMatrix(Mat4(1.0f));
-	pushColor(kColor_White);
+	pushColor(Color_White);
 	pushAlpha(1.0f);
 	pushSize(1.0f);
 	pushId(0x811C9DC5u); // fnv1 hash base
