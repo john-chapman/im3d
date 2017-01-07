@@ -150,21 +150,38 @@ static bool ImGui_Init()
     glAssert(glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ImDrawVert), (GLvoid*)offsetof(ImDrawVert, col)));
 	glAssert(glBindVertexArray(0));
 
-
 	unsigned char* txbuf;
 	int txX, txY;
 	io.Fonts->GetTexDataAsAlpha8(&txbuf, &txX, &txY);
-	glAssert(glCreateTextures(GL_TEXTURE_2D, 1, &s_txImGui));
+	glAssert(glGenTextures(1, &s_txImGui));
+	glAssert(glBindTexture(GL_TEXTURE_2D, s_txImGui));
 	glAssert(glTextureParameteri(s_txImGui, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
 	glAssert(glTextureParameteri(s_txImGui, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-	glAssert(glTextureStorage2D(s_txImGui, 1, GL_R8, txX, txY));
-	glAssert(glTextureSubImage2D(s_txImGui, 0, 0, 0, txX, txY, GL_RED, GL_UNSIGNED_BYTE, (const GLvoid*)txbuf));
-	glAssert(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
+	glAssert(glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, txX, txY, 0, GL_RED, GL_UNSIGNED_BYTE, (const GLvoid*)txbuf));
 	io.Fonts->TexID = (void*)s_txImGui;
 
 	io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
-
 	io.RenderDrawListsFn = &ImGui_Draw;
+
+	io.KeyMap[ImGuiKey_Tab]        = VK_TAB;
+	io.KeyMap[ImGuiKey_LeftArrow]  = VK_LEFT;
+	io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
+	io.KeyMap[ImGuiKey_UpArrow]	   = VK_UP;
+	io.KeyMap[ImGuiKey_DownArrow]  = VK_DOWN;
+	io.KeyMap[ImGuiKey_PageUp]	   = VK_PRIOR;
+	io.KeyMap[ImGuiKey_PageDown]   = VK_NEXT;
+	io.KeyMap[ImGuiKey_Home]	   = VK_HOME;
+	io.KeyMap[ImGuiKey_End]		   = VK_END;
+	io.KeyMap[ImGuiKey_Delete]	   = VK_DELETE;
+	io.KeyMap[ImGuiKey_Backspace]  = VK_BACK;
+	io.KeyMap[ImGuiKey_Enter]	   = VK_RETURN;
+	io.KeyMap[ImGuiKey_Escape]	   = VK_ESCAPE;
+	io.KeyMap[ImGuiKey_A]		   = 0x41;
+	io.KeyMap[ImGuiKey_C]		   = 0x43;
+	io.KeyMap[ImGuiKey_V]		   = 0x56;
+	io.KeyMap[ImGuiKey_X]		   = 0x58;
+	io.KeyMap[ImGuiKey_Y]		   = 0x59;
+	io.KeyMap[ImGuiKey_Z]		   = 0x5A;
 	return true;
 }
 
@@ -189,25 +206,25 @@ static void ImGui_Draw(ImDrawData* _drawData)
     glAssert(glEnable(GL_SCISSOR_TEST));
     glAssert(glActiveTexture(GL_TEXTURE0));
 
-	glAssert(glUseProgram(s_shImGui));
 	Mat4 ortho = Mat4(
 		 2.0f/io.DisplaySize.x, 0.0f,                   0.0f, 0.0f,
 		 0.0f,                  2.0f/-io.DisplaySize.y, 0.0f, 0.0f,
 		 0.0f,                  0.0f,                  -1.0f, 0.0f,
 		-1.0f,                  1.0f,                   0.0f, 1.0f
 		);
+	glAssert(glUseProgram(s_shImGui));
 	glAssert(glUniformMatrix4fv(glGetUniformLocation(s_shImGui, "uProjMatrix"), 1, false, (const GLfloat*)ortho));
 	glAssert(glBindVertexArray(s_vaImGui));
-	glAssert(glBindBuffer(GL_ARRAY_BUFFER, s_vbImGui));
-	glAssert(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_ibImGui));
 
 	for (int i = 0; i < _drawData->CmdListsCount; ++i) {
 		const ImDrawList* drawList = _drawData->CmdLists[i];
-		GLuint indexOffset = 0;
+		const ImDrawIdx* indexOffset = 0;
 
 	 // upload vertex/index data
-		glAssert(glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)drawList->VtxBuffer.size(), (GLvoid*)&drawList->VtxBuffer.front(), GL_STREAM_DRAW));
-        glAssert(glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)drawList->IdxBuffer.Size * sizeof(ImDrawIdx), (const GLvoid*)drawList->IdxBuffer.Data, GL_STREAM_DRAW));
+		glAssert(glBindBuffer(GL_ARRAY_BUFFER, s_vbImGui));
+		glAssert(glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)drawList->VtxBuffer.size() * sizeof(ImDrawVert), (GLvoid*)&drawList->VtxBuffer.front(), GL_STREAM_DRAW));
+		glAssert(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_ibImGui));
+		glAssert(glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)drawList->IdxBuffer.Size * sizeof(ImDrawIdx), (const GLvoid*)drawList->IdxBuffer.Data, GL_STREAM_DRAW));
 
 	 // dispatch draw commands
 		for (const ImDrawCmd* pcmd = drawList->CmdBuffer.begin(); pcmd != drawList->CmdBuffer.end(); ++pcmd) {
@@ -218,7 +235,7 @@ static void ImGui_Draw(ImDrawData* _drawData)
                 glAssert(glScissor((int)pcmd->ClipRect.x, (int)(fbY - pcmd->ClipRect.w), (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y)));
 				glAssert(glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, GL_UNSIGNED_SHORT, (GLvoid*)indexOffset));
 			}
-			indexOffset += pcmd->ElemCount * sizeof(ImDrawIdx);
+			indexOffset += pcmd->ElemCount;
 		}
 	}
 
@@ -243,6 +260,11 @@ struct TestApp::Impl
 	static LRESULT CALLBACK WindowProc(HWND _hwnd, UINT _umsg, WPARAM _wparam, LPARAM _lparam);
 
 	bool initWindow(int& _width_, int& _height_, const char* _title);
+
+ // time
+	LARGE_INTEGER m_currTime, m_prevTime;
+	LARGE_INTEGER m_sysFreq;
+	float m_deltaTime; // seconds
 
  // gl context
 	HDC     m_hdc;
@@ -310,7 +332,13 @@ LRESULT CALLBACK TestApp::Impl::WindowProc(HWND _hwnd, UINT _umsg, WPARAM _wpara
 		case VK_RSHIFT:
 			io.KeyShift = _umsg == WM_KEYDOWN;
 			break;
+		case VK_ESCAPE:
+			PostQuitMessage(0);
+			break;
 		default:
+			if (vk < 512) {
+				io.KeysDown[vk] = _umsg == WM_KEYDOWN;
+			}
 			break;
 		};
 		break;
@@ -526,7 +554,10 @@ bool TestApp::init(int _width, int _height, const char* _title)
 		shutdown();
 		return false;
 	}
-		
+	
+	IM3D_PLATFORM_VERIFY(QueryPerformanceFrequency(&m_impl->m_sysFreq));
+	IM3D_PLATFORM_VERIFY(QueryPerformanceCounter(&m_impl->m_prevTime));
+
 	ShowWindow(m_impl->m_hwnd, SW_SHOW);
 	return true;
 }
@@ -544,6 +575,11 @@ void TestApp::shutdown()
 
 bool TestApp::update()
 {
+	m_impl->m_prevTime = m_impl->m_currTime;
+	IM3D_PLATFORM_VERIFY(QueryPerformanceCounter(&m_impl->m_currTime));
+	double microseconds = (double)((m_impl->m_currTime.QuadPart - m_impl->m_prevTime.QuadPart) * 1000000ll / m_impl->m_sysFreq.QuadPart);
+	m_impl->m_deltaTime = (float)(microseconds / 1000000.0);
+
 	MSG msg;
 	while (PeekMessage(&msg, (HWND)m_impl->m_hwnd, 0, 0, PM_REMOVE) && msg.message != WM_QUIT) {
 		TranslateMessage(&msg);
@@ -554,7 +590,14 @@ bool TestApp::update()
 	io.ImeWindowHandle = m_impl->m_hwnd;
 	io.DisplaySize = ImVec2((float)m_width, (float)m_height);
 	io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
-	//io.DeltaTime = (float)_app->m_deltaTime;
+	io.DeltaTime = m_impl->m_deltaTime;
+	io.MousePos = ImVec2(-1.0f, -1.0f);
+	if (m_impl->m_hwnd == GetFocus()) {
+		POINT p = {};
+		IM3D_PLATFORM_VERIFY(GetCursorPos(&p));
+		IM3D_PLATFORM_VERIFY(ScreenToClient(m_impl->m_hwnd, &p));
+		ImGui::GetIO().MousePos = ImVec2((float)p.x, (float)p.y);
+	}
 	ImGui::NewFrame();
 
 	return msg.message != WM_QUIT;
