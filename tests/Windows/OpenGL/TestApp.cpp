@@ -86,7 +86,6 @@ static GLuint LoadCompileShader(GLenum _stage, const char* _path, const char* _d
 		glAssert(glDeleteShader(ret));
 		return 0;
 	}
-
 	return ret;
 }
 
@@ -205,12 +204,12 @@ static void ImGui_Draw(ImDrawData* _drawData)
     glAssert(glDisable(GL_DEPTH_TEST));
     glAssert(glEnable(GL_SCISSOR_TEST));
     glAssert(glActiveTexture(GL_TEXTURE0));
-
+	
 	Mat4 ortho = Mat4(
-		 2.0f/io.DisplaySize.x, 0.0f,                   0.0f, 0.0f,
-		 0.0f,                  2.0f/-io.DisplaySize.y, 0.0f, 0.0f,
-		 0.0f,                  0.0f,                  -1.0f, 0.0f,
-		-1.0f,                  1.0f,                   0.0f, 1.0f
+		2.0f/io.DisplaySize.x, 0.0f,                   0.0f, -1.0f,
+		0.0f,                  2.0f/-io.DisplaySize.y, 0.0f,  1.0f,
+		0.0f,                  0.0f,                  -1.0f,  0.0f,
+		0.0f,                  0.0f,                   0.0f,  1.0f
 		);
 	glAssert(glUseProgram(s_shImGui));
 	glAssert(glUniformMatrix4fv(glGetUniformLocation(s_shImGui, "uProjMatrix"), 1, false, (const GLfloat*)ortho));
@@ -244,7 +243,120 @@ static void ImGui_Draw(ImDrawData* _drawData)
 	glAssert(glUseProgram(0));
 }
 
+/*******************************************************************************
 
+                                    Im3d
+
+*******************************************************************************/
+static GLuint  s_vaIm3d;           // vertex array object
+static GLuint  s_vbIm3d;           // vertex buffer
+static GLuint  s_shIm3dPoints;
+static GLuint  s_shIm3dLines;
+static GLuint  s_shIm3dTriangles;
+
+void Im3d_Draw(Im3d::DrawPrimitiveType _primType, const Im3d::VertexData* _data, Im3d::U32 _count);
+
+static bool Im3d_Init()
+{
+	{
+		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0POINTS\0");
+		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "im3d.glsl", "FRAGMENT_SHADER\0POINTS\0");
+		if (vs && fs) {
+			glAssert(s_shIm3dPoints = glCreateProgram());
+			glAssert(glAttachShader(s_shIm3dPoints, vs));
+			glAssert(glAttachShader(s_shIm3dPoints, fs));
+			if (!LinkShaderProgram(s_shIm3dPoints)) {
+				return false;
+			}
+		} else {
+			return false;
+		}
+	}
+	{
+		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0LINES\0");
+		GLuint gs = LoadCompileShader(GL_GEOMETRY_SHADER, "im3d.glsl", "GEOMETRY_SHADER\0LINES\0");
+		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "im3d.glsl", "FRAGMENT_SHADER\0LINES\0");
+		if (vs && gs && fs) {
+			glAssert(s_shIm3dLines = glCreateProgram());
+			glAssert(glAttachShader(s_shIm3dLines, vs));
+			glAssert(glAttachShader(s_shIm3dLines, gs));
+			glAssert(glAttachShader(s_shIm3dLines, fs));
+			if (!LinkShaderProgram(s_shIm3dLines)) {
+				return false;
+			}
+		} else {
+			return false;
+		}
+	}
+	{
+		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0TRIANGLES\0");
+		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "im3d.glsl", "FRAGMENT_SHADER\0TRIANGLES\0");
+		if (vs && fs) {
+			glAssert(s_shIm3dTriangles = glCreateProgram());
+			glAssert(glAttachShader(s_shIm3dTriangles, vs));
+			glAssert(glAttachShader(s_shIm3dTriangles, fs));
+			if (!LinkShaderProgram(s_shIm3dTriangles)) {
+				return false;
+			}
+		} else {
+			return false;
+		}
+	}
+
+	glAssert(glCreateBuffers(1, &s_vbIm3d));;
+	glAssert(glCreateVertexArrays(1, &s_vaIm3d));	
+	glAssert(glBindVertexArray(s_vaIm3d));
+	glAssert(glBindBuffer(GL_ARRAY_BUFFER, s_vbIm3d));
+	glAssert(glEnableVertexAttribArray(0));
+    glAssert(glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(Im3d::VertexData), (GLvoid*)offsetof(Im3d::VertexData, m_positionSize)));
+	glAssert(glEnableVertexAttribArray(1));
+    glAssert(glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Im3d::VertexData), (GLvoid*)offsetof(Im3d::VertexData, m_color)));
+	glAssert(glBindVertexArray(0));
+
+
+	GetAppData().drawPrimitives = &Im3d_Draw;
+	
+	return true;
+}
+
+static void Im3d_Draw(Im3d::DrawPrimitiveType _primType, const Im3d::VertexData* _data, Im3d::U32 _count)
+{
+	glAssert(glEnable(GL_BLEND));
+	glAssert(glBlendEquation(GL_FUNC_ADD));
+	glAssert(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+	glAssert(glEnable(GL_PROGRAM_POINT_SIZE));
+	glAssert(glDisable(GL_CULL_FACE));
+
+	GLenum prim;
+	GLuint sh;
+	switch (_primType) {
+	case Im3d::DrawPrimitive_Points:
+		prim = GL_POINTS;
+		sh = s_shIm3dPoints;
+		break;
+	case Im3d::DrawPrimitive_Lines:
+		prim = GL_LINES;
+		sh = s_shIm3dLines;
+		break;
+	case Im3d::DrawPrimitive_Triangles:
+		prim = GL_TRIANGLES;
+		sh = s_shIm3dTriangles;
+		break;
+	default:
+		IM3D_ASSERT(false);
+		return;
+	};
+
+	glAssert(glBindVertexArray(s_vaIm3d));
+	glAssert(glBindBuffer(GL_ARRAY_BUFFER, s_vbIm3d));
+	glAssert(glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)_count * sizeof(Im3d::VertexData), (GLvoid*)_data, GL_STREAM_DRAW));
+	
+	glAssert(glUseProgram(sh));
+	glAssert(glUniformMatrix4fv(glGetUniformLocation(sh, "uViewProjMatrix"), 1, false, (const GLfloat*)s_testApp->m_camViewProj));
+	glAssert(glDrawArrays(prim, 0, (GLsizei)_count));
+
+	glAssert(glDisable(GL_PROGRAM_POINT_SIZE));
+}
 
 /*******************************************************************************
 
@@ -474,6 +586,7 @@ bool TestApp::Impl::initGl(int _vmaj, int _vmin)
 	IM3D_PLATFORM_VERIFY(wglChoosePixelFormat(m_hdc, pfattr, 0, 1, &pformat, (::UINT*)&npformat));
 	IM3D_PLATFORM_VERIFY(SetPixelFormat(m_hdc, pformat, &pfd));
 	int profileBit = WGL_CONTEXT_CORE_PROFILE_BIT_ARB;
+	profileBit = WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB;
 	int attr[] = {
 		WGL_CONTEXT_MAJOR_VERSION_ARB,	_vmaj,
 		WGL_CONTEXT_MINOR_VERSION_ARB,	_vmin,
@@ -518,6 +631,9 @@ bool TestApp::Impl::initGl(int _vmaj, int _vmin)
 TestApp::TestApp()
 	: m_impl(nullptr)
 {
+	m_camPos = Vec3(0.0f, 0.0f, 0.0f);
+	m_camDir = Normalize(Vec3(0.0f, 0.0f, -1.0f));
+	m_camFov = 50.0f;
 }
 
 bool TestApp::init(int _width, int _height, const char* _title)
@@ -554,9 +670,14 @@ bool TestApp::init(int _width, int _height, const char* _title)
 		shutdown();
 		return false;
 	}
-	
+	if (!Im3d_Init()) {
+		shutdown();
+		return false;
+	}
+	Im3d::GetAppData().drawPrimitives = &Im3d_Draw;
+
 	IM3D_PLATFORM_VERIFY(QueryPerformanceFrequency(&m_impl->m_sysFreq));
-	IM3D_PLATFORM_VERIFY(QueryPerformanceCounter(&m_impl->m_prevTime));
+	IM3D_PLATFORM_VERIFY(QueryPerformanceCounter(&m_impl->m_currTime));
 
 	ShowWindow(m_impl->m_hwnd, SW_SHOW);
 	return true;
@@ -579,12 +700,67 @@ bool TestApp::update()
 	IM3D_PLATFORM_VERIFY(QueryPerformanceCounter(&m_impl->m_currTime));
 	double microseconds = (double)((m_impl->m_currTime.QuadPart - m_impl->m_prevTime.QuadPart) * 1000000ll / m_impl->m_sysFreq.QuadPart);
 	m_impl->m_deltaTime = (float)(microseconds / 1000000.0);
+	m_deltaTime = m_impl->m_deltaTime;
 
 	MSG msg;
 	while (PeekMessage(&msg, (HWND)m_impl->m_hwnd, 0, 0, PM_REMOVE) && msg.message != WM_QUIT) {
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
+
+	static const float kCamSpeed = 2.0f;
+	if (GetAsyncKeyState(0x57) & 0x8000) { // W (forward)
+		m_camPos = m_camPos - m_camWorld.getCol(2) * (m_deltaTime * kCamSpeed);
+	}
+	if (GetAsyncKeyState(0x41) & 0x8000) { // A (left)
+		m_camPos = m_camPos - m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
+	}
+	if (GetAsyncKeyState(0x53) & 0x8000) { // S (backward)
+		m_camPos = m_camPos + m_camWorld.getCol(2) * (m_deltaTime * kCamSpeed);
+	}
+	if (GetAsyncKeyState(0x44) & 0x8000) { // D (right)
+		m_camPos = m_camPos + m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
+	}
+	if (GetAsyncKeyState(0x51) & 0x8000) { // Q (down)
+		m_camPos = m_camPos - m_camWorld.getCol(1)* (m_deltaTime * kCamSpeed);
+	}
+	if (GetAsyncKeyState(0x45) & 0x8000) { // D (up)
+		m_camPos = m_camPos + m_camWorld.getCol(1) * (m_deltaTime * kCamSpeed);
+	}
+
+	if (GetAsyncKeyState(VK_ADD) & 0x8000) { // + (rotate right)
+		m_camDir = Rotate(Mat4(1.0f), Vec3(0.0f, 1.0f, 0.0f), m_deltaTime) * m_camDir;
+	}
+	if (GetAsyncKeyState(VK_SUBTRACT) & 0x8000) { // - (rotate left)
+		m_camDir = Rotate(Mat4(1.0f), Vec3(0.0f, 1.0f, 0.0f), -m_deltaTime) * m_camDir;
+	}
+
+
+	float fovRads = m_camFov * (3.1415926f / 180.0f);
+	float n = 0.1f;
+	float f = 10000.0f;
+	float a = (float)m_width / (float)m_height;
+	float scale = tanf(fovRads * 0.5f) * n;
+	float r = a * scale;
+	float l = -r;
+	float t = scale;
+	float b = -t;
+
+	m_camProj = Mat4(
+		2.0f * n / (r - l),  0.0f,                 (r + l) / (r - l),   0.0f,
+		0.0f,                2.0f * n / (t - b),   (t + b) / (t - b),   0.0f,
+		0.0f,                0.0f,                -(f + n) / (f - n),  -2.0f * f * n / (f - n),
+		0.0f,                0.0f,                -1.0f,                0.0f
+		);
+	m_camWorld = LookAt(m_camPos, m_camPos + m_camDir);
+	m_camView = InvertOrtho(m_camWorld);
+	m_camViewProj = m_camView * m_camProj;
+	AppData& ad = GetAppData();
+	ad.m_deltaTime = m_deltaTime;
+	ad.m_displaySize = Vec2((float)m_width, (float)m_height);
+	ad.m_viewOrigin = m_camPos;
+	ad.m_tanHalfFov = tanf(fovRads * 0.5f);
+	Im3d::NewFrame();
 
 	ImGuiIO& io = ImGui::GetIO();
 	io.ImeWindowHandle = m_impl->m_hwnd;
@@ -600,12 +776,41 @@ bool TestApp::update()
 	}
 	ImGui::NewFrame();
 
+	ImGui::SliderFloat("Fov", &m_camFov, 1.0f, 90.0f);
+	ImGui::Text("Delta t: %.2f", m_deltaTime);
+	ImGui::Text("Cam pos: %.2f,%.2f,%.2f", m_camPos.x, m_camPos.y, m_camPos.z);
+	ImGui::Text("Cam dir: %.2f,%.2f,%.2f", m_camDir.x, m_camDir.y, m_camDir.z);
+	const Mat4& vm = m_camView;
+	ImGui::Text("View:\n%+.2f, %+.2f, %+.2f, %+.2f\n%+.2f, %+.2f, %+.2f, %+.2f\n%+.2f, %+.2f, %+.2f, %+.2f\n%+.2f, %+.2f, %+.2f, %+.2f", 
+		vm[ 0], vm[ 4], vm[ 8], vm[12],
+		vm[ 1], vm[ 5], vm[ 9], vm[13],
+		vm[ 2], vm[ 6], vm[10], vm[14],
+		vm[ 3], vm[ 7], vm[11], vm[15]
+		);
+
+	
+
 	return msg.message != WM_QUIT;
 }
 
 void TestApp::draw()
 {
+	glAssert(glViewport(0, 0, m_width, m_height));
+
+	Im3d::Draw();
 	ImGui::Render();
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadMatrixf((GLfloat*)m_camProj);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadMatrixf((GLfloat*)m_camView);
+	glColor3f(1.0f, 0.0f, 1.0f);
+	glBegin(GL_LINES);
+		glVertex3f(-1.0f, 0.0f, 0.0f);
+		glVertex3f(1.0f, 0.0f, 0.0f);
+		glVertex3f(0.0f, 1.0f, 0.0f);
+		glVertex3f(0.0f, -1.0f, 0.0f);
+	glEnd();
 
 	glAssert(glBindVertexArray(0));
 	glAssert(glUseProgram(0));

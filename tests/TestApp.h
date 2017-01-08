@@ -2,6 +2,8 @@
 #ifndef im3d_TestApp_h
 #define im3d_TestApp_h
 
+#include "common.h"
+
 namespace Im3d {
 
 class TestApp
@@ -19,10 +21,17 @@ public:
 	int         getHeight() const   { return m_height; }
 	const char* getTitle() const    { return m_title;  }
 
-private:
 	int         m_width, m_height; // viewport size (pixels)
 	const char* m_title;
 	float       m_deltaTime;
+
+	Vec3        m_camPos;
+	Vec3        m_camDir;
+	float       m_camFov;
+	Mat4        m_camWorld;
+	Mat4        m_camView;
+	Mat4        m_camProj;
+	Mat4        m_camViewProj;
 
  
 	struct      Impl;
