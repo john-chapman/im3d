@@ -87,4 +87,8 @@ const char* GetPlatformErrorString(void* _err);
 
 #include "imgui/imgui.h"
 
+
+float       RandFloat(float _min, float _max);
+Im3d::Vec3  RandVec3(float _min, float _max);
+
 #endif // im3d_common_h

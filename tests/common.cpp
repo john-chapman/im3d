@@ -2,6 +2,7 @@
 
 #include <cstdarg>
 #include <cstdio>
+#include <cstdlib>
 
 #ifdef IM3D_COMPILER_MSVC
 	#pragma warning(disable: 4996) // vsnprintf
@@ -81,3 +82,17 @@ const char* Im3d::GetPlatformErrorString(void* _err)
 		return ret ? ret : "";
 	}
 #endif
+
+float RandFloat(float _min, float _max)
+{
+	return _min + (float)rand() / (float)RAND_MAX * _max;
+}
+
+Im3d::Vec3 RandVec3(float _min, float _max)
+{
+	return Im3d::Vec3(
+		RandFloat(_min, _max),
+		RandFloat(_min, _max),
+		RandFloat(_min, _max)
+		);
+}
