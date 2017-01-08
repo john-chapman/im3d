@@ -17,6 +17,8 @@ struct Vec4;
 struct Mat4;
 struct Color;
 struct VertexData;
+struct AppData;
+class  Context;
 
 extern const Id    Id_Invalid;
 extern const Color Color_Black;
@@ -28,7 +30,11 @@ extern const Color Color_Magenta;
 extern const Color Color_Yellow;
 extern const Color Color_Cyan;
 
-
+Context& GetContext();
+void     SetContext(Context& _ctx);
+AppData& GetAppData();
+void     NewFrame();
+void     Draw();
 
 // Begin primitive. End() *must* be called before starting each new primitive type.
 void  BeginPoints();
@@ -55,6 +61,7 @@ void  EnableSorting(bool _enable);
 void  PushDrawState();
 void  PopDrawState();
 void  SetColor(Color _color);
+void  SetColor(float _r, float _g, float _b, float _a = 1.0f);
 Color GetColor();
 void  SetAlpha(float _alpha);
 float GetAlpha();
@@ -93,6 +100,7 @@ struct Vec3
 	Vec3(float _xyz): x(_xyz), y(_xyz), z(_xyz)                              {}
 	Vec3(float _x, float _y, float _z): x(_x), y(_y), z(_z)                  {}
 	Vec3(const Vec2& _xy, float _z): x(_xy.x), y(_xy.y), z(_z)               {}
+	Vec3(const Vec4& _v); // discards w
 	operator float*()                                                        { return &x; }
 	operator const float*() const                                            { return &x; }
 };
@@ -109,7 +117,7 @@ struct Vec4
 };
 struct Mat4
 {
-	float m[16];
+	float m[16]; // column-major
 	Mat4()                                                                   {}
 	Mat4(float _diagonal);
 	Mat4(
@@ -120,6 +128,9 @@ struct Mat4
 		);
 	operator float*()                                                        { return m; }
 	operator const float*() const                                            { return m; }
+
+	Vec4 getCol(int _i) const                                                { _i *= 4; return Vec4(m[_i + 0], m[_i + 1], m[_i + 2], m[_i + 3]); }
+	Vec4 getRow(int _i) const                                                { return Vec4(m[0 + _i], m[4 + _i], m[8 + _i], m[12 + _i]);         }
 };
 struct Color
 {
@@ -188,7 +199,7 @@ enum Key
 };
 struct AppData
 {
-	bool  m_keyDown[Key_Count]; // Application-provided key states.
+	bool  m_keyDown[Key_Count];  // Application-provided key states.
 
 	Vec3  m_cursorRayOrigin;     // World space cursor ray origin.
 	Vec3  m_cursorRayDirection;  // World space cursor ray direction.
@@ -196,6 +207,7 @@ struct AppData
 	Vec2  m_displaySize;         // Viewport size (pixels).
 	float m_tanHalfFov;          // tan(fov/2); fov = vertical field of view of the current projection.
 	float m_deltaTime;           // Time since previous frame (seconds).
+	void* m_userData;            // App-specific data (useful for passing app context to drawPrimitives).
 
 	DrawPrimitivesCallback* drawPrimitives;
 };
@@ -334,6 +346,8 @@ namespace internal {
 inline Context& GetContext()                                                 { return *internal::g_CurrentContext; }
 inline void     SetContext(Context& _ctx)                                    { internal::g_CurrentContext = &_ctx; }
 inline AppData& GetAppData()                                                 { return GetContext().getAppData();   }
+inline void     NewFrame()                                                   { GetContext().reset();               }
+inline void     Draw()                                                       { GetContext().draw();                }
 
 inline void  EnableSorting(bool _enable)                                     { GetContext().enableSorting(_enable);                       }
 inline void  BeginPoints()                                                   { GetContext().begin(Context::PrimitiveMode_Points);        }
@@ -353,10 +367,14 @@ inline void  Vertex(float _x, float _y, float _z, Color _color)              { V
 inline void  Vertex(float _x, float _y, float _z, float _size)               { Vertex(Vec3(_x, _y, _z), _size); }
 inline void  Vertex(float _x, float _y, float _z, float _size, Color _color) { Vertex(Vec3(_x, _y, _z), _size, _color); }
 
+inline void  PushDrawState()                                                 { Context& ctx = GetContext(); ctx.pushColor(ctx.getColor()); ctx.pushAlpha(ctx.getAlpha()); ctx.pushSize(ctx.getSize()); }
+inline void  PopDrawState()                                                  { Context& ctx = GetContext(); ctx.popColor(); ctx.popAlpha(); ctx.popSize(); }
+
 inline void  PushColor()                                                     { GetContext().pushColor(GetContext().getColor()); }
-inline void  PopColor()                                                      { GetContext().popColor();        }
-inline void  SetColor(Color _color)                                          { GetContext().setColor(_color);  }
-inline Color GetColor()                                                      { return GetContext().getColor(); }
+inline void  PopColor()                                                      { GetContext().popColor();                         }
+inline void  SetColor(Color _color)                                          { GetContext().setColor(_color);                   }
+inline void  SetColor(float _r, float _g, float _b, float _a)                { GetContext().setColor(Color(_r, _g, _b, _a));    }
+inline Color GetColor()                                                      { return GetContext().getColor();                  }
 
 inline void  PushAlpha()                                                     { GetContext().pushAlpha(GetContext().getAlpha()); }
 inline void  PopAlpha()                                                      { GetContext().popAlpha();        }

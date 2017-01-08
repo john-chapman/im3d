@@ -2,6 +2,35 @@
 #include "im3d_math.h"
 
 #include <cstring>
+#include <cfloat>
+
+// Compiler
+#if defined(__GNUC__)
+	#define IM3D_COMPILER_GNU
+#elif defined(_MSC_VER)
+	#define IM3D_COMPILER_MSVC
+#else
+	#error im3d: Compiler not defined
+#endif
+
+// Platform 
+#if defined(_WIN32) || defined(_WIN64)
+	#define IM3D_PLATFORM_WIN
+#else
+	#error im3d: Platform not defined
+#endif
+
+#if defined(IM3D_COMPILER_GNU)
+	#define if_likely(e)   if ( __builtin_expect(!!(e), 1) )
+	#define if_unlikely(e) if ( __builtin_expect(!!(e), 0) )
+//#elif defined(IM3D_COMPILER_MSVC)
+  // not defined for MSVC
+#else
+	#define if_likely(e)   if(!!(e))
+	#define if_unlikely(e) if(!!(e))
+#endif
+
+
 
 using namespace Im3d;
 
@@ -21,6 +50,13 @@ void Im3d::MulMatrix(const Mat4& _mat)
 	ctx.setMatrix(ctx.getMatrix() * _mat);
 }
 
+Vec3::Vec3(const Vec4& _v)
+	: x(_v.x)
+	, y(_v.y)
+	, z(_v.z)
+{
+}
+
 Vec4::Vec4(Color _rgba)
 	: x(_rgba.getR())
 	, y(_rgba.getG())
@@ -31,10 +67,10 @@ Vec4::Vec4(Color _rgba)
 
 Mat4::Mat4(float _diagonal)
 {
-	m[ 0] = _diagonal; m[ 1] = 0.0f;      m[ 2] = 0.0f;      m[ 3] = 0.0f;
-	m[ 4] = 0.0f;      m[ 5] = _diagonal; m[ 6] = 0.0f;      m[ 7] = 0.0f;
-	m[ 8] = 0.0f;      m[ 9] = 0.0f;      m[10] = _diagonal; m[11] = 0.0f;
-	m[12] = 0.0f;      m[13] = 0.0f;      m[14] = 0.0f;      m[15] = _diagonal;
+	m[ 0] = _diagonal; m[ 4] = 0.0f;      m[ 8] = 0.0f;      m[12] = 0.0f;
+	m[ 1] = 0.0f;      m[ 5] = _diagonal; m[ 9] = 0.0f;      m[13] = 0.0f;
+	m[ 2] = 0.0f;      m[ 6] = 0.0f;      m[10] = _diagonal; m[14] = 0.0f;
+	m[ 3] = 0.0f;      m[ 7] = 0.0f;      m[11] = 0.0f;      m[15] = _diagonal;
 }
 Mat4::Mat4(
 	float m00, float m01, float m02, float m03,
@@ -43,10 +79,10 @@ Mat4::Mat4(
 	float m30, float m31, float m32, float m33
 	)
 {
-	m[ 0] = m00; m[ 1] = m01; m[ 2] = m02; m[ 3] = m03;
-	m[ 4] = m10; m[ 5] = m11; m[ 6] = m12; m[ 7] = m13;
-	m[ 8] = m20; m[ 9] = m21; m[10] = m22; m[11] = m23;
-	m[12] = m30; m[13] = m31; m[14] = m32; m[15] = m33;
+	m[ 0] = m00; m[ 4] = m01; m[ 8] = m02; m[12] = m03;
+	m[ 1] = m10; m[ 5] = m11; m[ 9] = m12; m[13] = m13;
+	m[ 2] = m20; m[ 6] = m21; m[10] = m22; m[14] = m23;
+	m[ 3] = m30; m[ 7] = m31; m[11] = m32; m[15] = m33;
 }
 
 Color::Color(const Vec4& _rgba)
@@ -75,6 +111,72 @@ Im3d::Id Im3d::MakeId(const char* _str)
 		ret *= kFnv1aPrime32;
 	}
 	return (Id)ret;
+}
+
+// declared in im3d_math.h
+static inline bool Equal(const Vec3& _a, const Vec3& _b)
+{
+	if (fabs(_a.x - _b.x) < FLT_EPSILON) return false;
+	if (fabs(_a.y - _b.y) < FLT_EPSILON) return false;
+	if (fabs(_a.z - _b.z) < FLT_EPSILON) return false;
+	return true;
+}
+Mat4 Im3d::InvertOrtho(const Mat4& _mat)
+{
+	return Mat4(
+		_mat[ 0], _mat[ 1], _mat[ 2], -_mat[12],
+		_mat[ 4], _mat[ 5], _mat[ 6], -_mat[13],
+		_mat[ 8], _mat[ 9], _mat[10], -_mat[14],
+		_mat[ 3], _mat[ 7], _mat[11],  _mat[15]
+		);
+}
+Mat4 Im3d::Transpose(const Mat4& _mat)
+{
+	return Mat4(
+		_mat[ 0], _mat[ 1], _mat[ 2], _mat[ 3],
+		_mat[ 4], _mat[ 5], _mat[ 6], _mat[ 7],
+		_mat[ 8], _mat[ 9], _mat[10], _mat[11],
+		_mat[12], _mat[13], _mat[14], _mat[15]
+		);
+}
+Mat4 Im3d::Translate(const Mat4& _mat, const Vec3& _t)
+{
+	Mat4 ret = _mat;
+	ret[12] += _t.x;
+	ret[13] += _t.y;
+	ret[14] += _t.z;
+	return ret;
+}
+Mat4 Im3d::Rotate(const Mat4& _mat, const Vec3& _axis, float _rads)
+{
+	float c  = cosf(_rads);
+	float rc = 1.0f - c;
+	float s  = sinf(_rads);
+	return Mat4(
+		_axis.x * _axis.x + (1.0f - _axis.x * _axis.x) * c, _axis.x * _axis.y * rc + _axis.z * s,                _axis.x * _axis.z * rc - _axis.y * s,                0.0f,
+		_axis.x * _axis.y * rc - _axis.z * s,               _axis.y * _axis.y + (1.0f - _axis.y * _axis.y) * c,  _axis.y * _axis.z * rc + _axis.x * s,                0.0f,
+		_axis.x * _axis.z * rc + _axis.y * s,               _axis.y * _axis.z * rc - _axis.x * s,                _axis.z * _axis.z + (1.0f - _axis.z * _axis.z) * c,  0.0f,
+        0.0f,                                               0.0f,                                                0.0f,                                                1.0f
+		);
+}
+Mat4 Im3d::LookAt(const Vec3& _from, const Vec3& _to, const Vec3& _up)
+{
+	Vec3 z = Normalize(_to - _from);
+	Vec3 x, y;
+	if_unlikely (Equal(z, _up) || Equal(z, -_up)) { // prevent degenerate where z aligns with _up
+		Vec3 k = _up + Vec3(FLT_EPSILON);
+		y = Normalize(k - z * Dot(k, z));
+	} else {
+		y = Normalize(_up - z * Dot(_up, z));
+	}
+	x = Cross(y, z);
+
+	return Mat4(
+		x.x,    y.x,    z.x,    _from.x,
+		x.y,    y.y,    z.y,    _from.y,
+		x.z,    y.z,    z.z,    _from.z,
+		0.0f,   0.0f,   0.0f,   1.0f
+		);
 }
 
 /*******************************************************************************
@@ -288,6 +390,6 @@ Context::~Context()
 
 float Context::pixelsToWorldSize(const Vec3& _position, float _pixels)
 {
-	float d = length(_position - m_appData.m_viewOrigin);
+	float d = Length(_position - m_appData.m_viewOrigin);
 	return m_appData.m_tanHalfFov * 2.0f * d * (_pixels / m_appData.m_displaySize.y);
 }
