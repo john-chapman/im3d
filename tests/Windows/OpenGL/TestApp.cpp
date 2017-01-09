@@ -333,14 +333,17 @@ static void Im3d_Draw(Im3d::DrawPrimitiveType _primType, const Im3d::VertexData*
 	case Im3d::DrawPrimitive_Points:
 		prim = GL_POINTS;
 		sh = s_shIm3dPoints;
+		ImGui::Text("Points (%d)", _count);
 		break;
 	case Im3d::DrawPrimitive_Lines:
 		prim = GL_LINES;
 		sh = s_shIm3dLines;
+		ImGui::Text("Lines (%d)", _count / 2);
 		break;
 	case Im3d::DrawPrimitive_Triangles:
 		prim = GL_TRIANGLES;
 		sh = s_shIm3dTriangles;
+		ImGui::Text("Tris (%d)", _count / 3);
 		break;
 	default:
 		IM3D_ASSERT(false);
@@ -586,7 +589,7 @@ bool TestApp::Impl::initGl(int _vmaj, int _vmin)
 	IM3D_PLATFORM_VERIFY(wglChoosePixelFormat(m_hdc, pfattr, 0, 1, &pformat, (::UINT*)&npformat));
 	IM3D_PLATFORM_VERIFY(SetPixelFormat(m_hdc, pformat, &pfd));
 	int profileBit = WGL_CONTEXT_CORE_PROFILE_BIT_ARB;
-	profileBit = WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB;
+	//profileBit = WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB;
 	int attr[] = {
 		WGL_CONTEXT_MAJOR_VERSION_ARB,	_vmaj,
 		WGL_CONTEXT_MINOR_VERSION_ARB,	_vmin,
@@ -713,13 +716,13 @@ bool TestApp::update()
 		m_camPos = m_camPos - m_camWorld.getCol(2) * (m_deltaTime * kCamSpeed);
 	}
 	if (GetAsyncKeyState(0x41) & 0x8000) { // A (left)
-		m_camPos = m_camPos - m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
+		m_camPos = m_camPos + m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
 	}
 	if (GetAsyncKeyState(0x53) & 0x8000) { // S (backward)
 		m_camPos = m_camPos + m_camWorld.getCol(2) * (m_deltaTime * kCamSpeed);
 	}
 	if (GetAsyncKeyState(0x44) & 0x8000) { // D (right)
-		m_camPos = m_camPos + m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
+		m_camPos = m_camPos - m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
 	}
 	if (GetAsyncKeyState(0x51) & 0x8000) { // Q (down)
 		m_camPos = m_camPos - m_camWorld.getCol(1)* (m_deltaTime * kCamSpeed);
@@ -752,9 +755,9 @@ bool TestApp::update()
 		0.0f,                0.0f,                -(f + n) / (f - n),  -2.0f * f * n / (f - n),
 		0.0f,                0.0f,                -1.0f,                0.0f
 		);
-	m_camWorld = LookAt(m_camPos, m_camPos + m_camDir);
+	m_camWorld = LookAt(m_camPos, m_camPos - m_camDir);
 	m_camView = InvertOrtho(m_camWorld);
-	m_camViewProj = m_camView * m_camProj;
+	m_camViewProj = m_camProj * m_camView;
 	AppData& ad = GetAppData();
 	ad.m_deltaTime = m_deltaTime;
 	ad.m_displaySize = Vec2((float)m_width, (float)m_height);
@@ -781,7 +784,11 @@ bool TestApp::update()
 	ImGui::Text("Cam pos: %.2f,%.2f,%.2f", m_camPos.x, m_camPos.y, m_camPos.z);
 	ImGui::Text("Cam dir: %.2f,%.2f,%.2f", m_camDir.x, m_camDir.y, m_camDir.z);
 	const Mat4& vm = m_camView;
-	ImGui::Text("View:\n%+.2f, %+.2f, %+.2f, %+.2f\n%+.2f, %+.2f, %+.2f, %+.2f\n%+.2f, %+.2f, %+.2f, %+.2f\n%+.2f, %+.2f, %+.2f, %+.2f", 
+	ImGui::Text("View:\n"
+		"%+.2f, %+.2f, %+.2f, %+.2f\n"
+		"%+.2f, %+.2f, %+.2f, %+.2f\n"
+		"%+.2f, %+.2f, %+.2f, %+.2f\n"
+		"%+.2f, %+.2f, %+.2f, %+.2f", 
 		vm[ 0], vm[ 4], vm[ 8], vm[12],
 		vm[ 1], vm[ 5], vm[ 9], vm[13],
 		vm[ 2], vm[ 6], vm[10], vm[14],
@@ -800,7 +807,7 @@ void TestApp::draw()
 	Im3d::Draw();
 	ImGui::Render();
 
-	glMatrixMode(GL_PROJECTION);
+	/*glMatrixMode(GL_PROJECTION);
 	glLoadMatrixf((GLfloat*)m_camProj);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadMatrixf((GLfloat*)m_camView);
@@ -810,7 +817,7 @@ void TestApp::draw()
 		glVertex3f(1.0f, 0.0f, 0.0f);
 		glVertex3f(0.0f, 1.0f, 0.0f);
 		glVertex3f(0.0f, -1.0f, 0.0f);
-	glEnd();
+	glEnd();*/
 
 	glAssert(glBindVertexArray(0));
 	glAssert(glUseProgram(0));

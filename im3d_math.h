@@ -57,26 +57,28 @@ inline Vec4  Normalize(const Vec4& _v)                     { return _v / Length(
 
 inline Mat4 operator*(const Mat4& _lhs, const Mat4& _rhs)
 {
+	// \todo expand
 	Mat4 ret;
-	ret[ 0] = _lhs[ 0] * _rhs[ 0] + _lhs[ 4] + _rhs[ 1] + _lhs[ 8] + _rhs[ 2] + _lhs[12] + _rhs[ 3];
-	ret[ 4] = _lhs[ 0] * _rhs[ 4] + _lhs[ 4] + _rhs[ 5] + _lhs[ 8] + _rhs[ 6] + _lhs[12] + _rhs[ 7];
-	ret[ 8] = _lhs[ 0] * _rhs[ 8] + _lhs[ 4] + _rhs[ 9] + _lhs[ 8] + _rhs[10] + _lhs[12] + _rhs[11];
-	ret[12] = _lhs[ 0] * _rhs[12] + _lhs[ 4] + _rhs[13] + _lhs[ 8] + _rhs[14] + _lhs[12] + _rhs[15];
+	ret[ 0] = Dot(_lhs.getRow(0), _rhs.getCol(0));
+	ret[ 4] = Dot(_lhs.getRow(0), _rhs.getCol(1));
+	ret[ 8] = Dot(_lhs.getRow(0), _rhs.getCol(2));
+	ret[12] = Dot(_lhs.getRow(0), _rhs.getCol(3));
 
-	ret[ 1] = _lhs[ 1] * _rhs[ 0] + _lhs[ 5] + _rhs[ 1] + _lhs[ 9] + _rhs[ 2] + _lhs[13] + _rhs[ 3];
-	ret[ 5] = _lhs[ 1] * _rhs[ 4] + _lhs[ 5] + _rhs[ 5] + _lhs[ 9] + _rhs[ 6] + _lhs[13] + _rhs[ 7];
-	ret[ 9] = _lhs[ 1] * _rhs[ 8] + _lhs[ 5] + _rhs[ 9] + _lhs[ 9] + _rhs[10] + _lhs[13] + _rhs[11];
-	ret[13] = _lhs[ 1] * _rhs[12] + _lhs[ 5] + _rhs[13] + _lhs[ 9] + _rhs[14] + _lhs[13] + _rhs[15];
+	ret[ 1] = Dot(_lhs.getRow(1), _rhs.getCol(0));
+	ret[ 5] = Dot(_lhs.getRow(1), _rhs.getCol(1));
+	ret[ 9] = Dot(_lhs.getRow(1), _rhs.getCol(2));
+	ret[13] = Dot(_lhs.getRow(1), _rhs.getCol(3));
 
-	ret[ 2] = _lhs[ 2] * _rhs[ 0] + _lhs[ 6] + _rhs[ 1] + _lhs[10] + _rhs[ 2] + _lhs[14] + _rhs[ 3];
-	ret[ 6] = _lhs[ 2] * _rhs[ 4] + _lhs[ 6] + _rhs[ 5] + _lhs[10] + _rhs[ 6] + _lhs[14] + _rhs[ 7];
-	ret[10] = _lhs[ 2] * _rhs[ 8] + _lhs[ 6] + _rhs[ 9] + _lhs[10] + _rhs[10] + _lhs[14] + _rhs[11];
-	ret[14] = _lhs[ 2] * _rhs[12] + _lhs[ 6] + _rhs[13] + _lhs[10] + _rhs[14] + _lhs[14] + _rhs[15];
+	ret[ 2] = Dot(_lhs.getRow(2), _rhs.getCol(0));
+	ret[ 6] = Dot(_lhs.getRow(2), _rhs.getCol(1));
+	ret[10] = Dot(_lhs.getRow(2), _rhs.getCol(2));
+	ret[14] = Dot(_lhs.getRow(2), _rhs.getCol(3));
+	
+	ret[ 3] = Dot(_lhs.getRow(3), _rhs.getCol(0));
+	ret[ 7] = Dot(_lhs.getRow(3), _rhs.getCol(1));
+	ret[11] = Dot(_lhs.getRow(3), _rhs.getCol(2));
+	ret[15] = Dot(_lhs.getRow(3), _rhs.getCol(3));
 
-	ret[ 3] = _lhs[ 3] * _rhs[ 0] + _lhs[ 7] + _rhs[ 1] + _lhs[11] + _rhs[ 2] + _lhs[15] + _rhs[ 3];
-	ret[ 7] = _lhs[ 3] * _rhs[ 4] + _lhs[ 7] + _rhs[ 5] + _lhs[11] + _rhs[ 6] + _lhs[15] + _rhs[ 7];
-	ret[11] = _lhs[ 3] * _rhs[ 8] + _lhs[ 7] + _rhs[ 9] + _lhs[11] + _rhs[10] + _lhs[15] + _rhs[11];
-	ret[15] = _lhs[ 3] * _rhs[12] + _lhs[ 7] + _rhs[13] + _lhs[11] + _rhs[14] + _lhs[15] + _rhs[15];
 	return ret;
 }
 

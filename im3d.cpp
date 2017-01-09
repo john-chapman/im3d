@@ -152,11 +152,17 @@ Mat4 Im3d::Rotate(const Mat4& _mat, const Vec3& _axis, float _rads)
 	float c  = cosf(_rads);
 	float rc = 1.0f - c;
 	float s  = sinf(_rads);
-	return Mat4(
+	/*return Mat4(
 		_axis.x * _axis.x + (1.0f - _axis.x * _axis.x) * c, _axis.x * _axis.y * rc + _axis.z * s,                _axis.x * _axis.z * rc - _axis.y * s,                0.0f,
 		_axis.x * _axis.y * rc - _axis.z * s,               _axis.y * _axis.y + (1.0f - _axis.y * _axis.y) * c,  _axis.y * _axis.z * rc + _axis.x * s,                0.0f,
 		_axis.x * _axis.z * rc + _axis.y * s,               _axis.y * _axis.z * rc - _axis.x * s,                _axis.z * _axis.z + (1.0f - _axis.z * _axis.z) * c,  0.0f,
         0.0f,                                               0.0f,                                                0.0f,                                                1.0f
+		);*/
+	return Mat4(
+		_axis.x * _axis.x + (1.0f - _axis.x * _axis.x) * c, _axis.x * _axis.y * rc - _axis.z * s,                _axis.x * _axis.z * rc + _axis.y * s,                0.0f,
+		_axis.x * _axis.y * rc + _axis.z * s,               _axis.y * _axis.y + (1.0f - _axis.y * _axis.y) * c,  _axis.y * _axis.z * rc - _axis.x * s,                0.0f,
+		_axis.x * _axis.z * rc - _axis.y * s,               _axis.y * _axis.z * rc + _axis.x * s,                _axis.z * _axis.z + (1.0f - _axis.z * _axis.z) * c,  0.0f,
+		0.0f,                                               0.0f,                                                0.0f,                                                1.0f
 		);
 }
 Mat4 Im3d::LookAt(const Vec3& _from, const Vec3& _to, const Vec3& _up)
