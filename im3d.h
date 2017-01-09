@@ -223,7 +223,7 @@ struct AppData
 	Vec3  m_cursorRayOrigin;     // World space cursor ray origin.
 	Vec3  m_cursorRayDirection;  // World space cursor ray direction.
 	Vec3  m_viewOrigin;          // World space render origin (camera position).
-	Vec2  m_displaySize;         // Viewport size (pixels).
+	Vec2  m_viewportSize;        // Viewport size (pixels).
 	float m_tanHalfFov;          // tan(fov/2); fov = vertical field of view of the current projection.
 	float m_deltaTime;           // Time since previous frame (seconds).
 	void* m_userData;            // App-specific data (useful for passing app context to drawPrimitives).

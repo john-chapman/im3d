@@ -356,6 +356,7 @@ static void Im3d_Draw(Im3d::DrawPrimitiveType _primType, const Im3d::VertexData*
 	
 	glAssert(glUseProgram(sh));
 	glAssert(glUniformMatrix4fv(glGetUniformLocation(sh, "uViewProjMatrix"), 1, false, (const GLfloat*)s_testApp->m_camViewProj));
+	glAssert(glUniform2f(glGetUniformLocation(sh, "uViewport"), (float)s_testApp->getWidth(), (float)s_testApp->getHeight()));
 	glAssert(glDrawArrays(prim, 0, (GLsizei)_count));
 
 	glAssert(glDisable(GL_PROGRAM_POINT_SIZE));
@@ -646,7 +647,7 @@ bool TestApp::init(int _width, int _height, const char* _title)
 
 	shutdown();
 
- // force the current working directoy to the exe location
+ // force the current working directory to the exe location
 	TCHAR buf[MAX_PATH] = {};
 	DWORD buflen;
 	IM3D_PLATFORM_VERIFY(buflen = GetModuleFileName(0, buf, MAX_PATH));
@@ -716,13 +717,13 @@ bool TestApp::update()
 		m_camPos = m_camPos - m_camWorld.getCol(2) * (m_deltaTime * kCamSpeed);
 	}
 	if (GetAsyncKeyState(0x41) & 0x8000) { // A (left)
-		m_camPos = m_camPos + m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
+		m_camPos = m_camPos - m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
 	}
 	if (GetAsyncKeyState(0x53) & 0x8000) { // S (backward)
 		m_camPos = m_camPos + m_camWorld.getCol(2) * (m_deltaTime * kCamSpeed);
 	}
 	if (GetAsyncKeyState(0x44) & 0x8000) { // D (right)
-		m_camPos = m_camPos - m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
+		m_camPos = m_camPos + m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
 	}
 	if (GetAsyncKeyState(0x51) & 0x8000) { // Q (down)
 		m_camPos = m_camPos - m_camWorld.getCol(1)* (m_deltaTime * kCamSpeed);
@@ -732,10 +733,10 @@ bool TestApp::update()
 	}
 
 	if (GetAsyncKeyState(VK_ADD) & 0x8000) { // + (rotate right)
-		m_camDir = Rotate(Mat4(1.0f), Vec3(0.0f, 1.0f, 0.0f), m_deltaTime) * m_camDir;
+		m_camDir = Rotate(Mat4(1.0f), Vec3(0.0f, 1.0f, 0.0f), -m_deltaTime) * m_camDir;
 	}
 	if (GetAsyncKeyState(VK_SUBTRACT) & 0x8000) { // - (rotate left)
-		m_camDir = Rotate(Mat4(1.0f), Vec3(0.0f, 1.0f, 0.0f), -m_deltaTime) * m_camDir;
+		m_camDir = Rotate(Mat4(1.0f), Vec3(0.0f, 1.0f, 0.0f), m_deltaTime) * m_camDir;
 	}
 
 
@@ -756,11 +757,11 @@ bool TestApp::update()
 		0.0f,                0.0f,                -1.0f,                0.0f
 		);
 	m_camWorld = LookAt(m_camPos, m_camPos - m_camDir);
-	m_camView = InvertOrtho(m_camWorld);
+	m_camView = Inverse(m_camWorld);
 	m_camViewProj = m_camProj * m_camView;
 	AppData& ad = GetAppData();
 	ad.m_deltaTime = m_deltaTime;
-	ad.m_displaySize = Vec2((float)m_width, (float)m_height);
+	ad.m_viewportSize = Vec2((float)m_width, (float)m_height);
 	ad.m_viewOrigin = m_camPos;
 	ad.m_tanHalfFov = tanf(fovRads * 0.5f);
 	Im3d::NewFrame();
@@ -783,19 +784,6 @@ bool TestApp::update()
 	ImGui::Text("Delta t: %.2f", m_deltaTime);
 	ImGui::Text("Cam pos: %.2f,%.2f,%.2f", m_camPos.x, m_camPos.y, m_camPos.z);
 	ImGui::Text("Cam dir: %.2f,%.2f,%.2f", m_camDir.x, m_camDir.y, m_camDir.z);
-	const Mat4& vm = m_camView;
-	ImGui::Text("View:\n"
-		"%+.2f, %+.2f, %+.2f, %+.2f\n"
-		"%+.2f, %+.2f, %+.2f, %+.2f\n"
-		"%+.2f, %+.2f, %+.2f, %+.2f\n"
-		"%+.2f, %+.2f, %+.2f, %+.2f", 
-		vm[ 0], vm[ 4], vm[ 8], vm[12],
-		vm[ 1], vm[ 5], vm[ 9], vm[13],
-		vm[ 2], vm[ 6], vm[10], vm[14],
-		vm[ 3], vm[ 7], vm[11], vm[15]
-		);
-
-	
 
 	return msg.message != WM_QUIT;
 }

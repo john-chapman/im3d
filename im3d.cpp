@@ -430,5 +430,5 @@ Context::~Context()
 float Context::pixelsToWorldSize(const Vec3& _position, float _pixels)
 {
 	float d = Length(_position - m_appData.m_viewOrigin);
-	return m_appData.m_tanHalfFov * 2.0f * d * (_pixels / m_appData.m_displaySize.y);
+	return m_appData.m_tanHalfFov * 2.0f * d * (_pixels / m_appData.m_viewportSize.y);
 }
