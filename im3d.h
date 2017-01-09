@@ -2,6 +2,8 @@
 #ifndef im3d_h
 #define im3d_h
 
+//#define IM3D_MATRIX_ROW_MAJOR
+
 #ifndef IM3D_ASSERT
 	#include <assert.h>
 	#define IM3D_ASSERT(e) assert(e)
@@ -117,7 +119,7 @@ struct Vec4
 };
 struct Mat4
 {
-	float m[16]; // column-major
+	float m[16]; // column-major unless IM3D_MATRIX_ROW_MAJOR defined
 	Mat4()                                                                   {}
 	Mat4(float _diagonal);
 	Mat4(
@@ -129,8 +131,25 @@ struct Mat4
 	operator float*()                                                        { return m; }
 	operator const float*() const                                            { return m; }
 
-	Vec4 getCol(int _i) const                                                { _i *= 4; return Vec4(m[_i + 0], m[_i + 1], m[_i + 2], m[_i + 3]); }
-	Vec4 getRow(int _i) const                                                { return Vec4(m[0 + _i], m[4 + _i], m[8 + _i], m[12 + _i]);         }
+	Vec4   getCol(int _i) const;
+	Vec4   getRow(int _i) const;
+	
+	float  operator()(int _row, int _col) const
+	{
+	#ifdef IM3D_MATRIX_ROW_MAJOR
+		return m[_row * 4 + _col];
+	#else
+		return m[_col * 4 + _row];
+	#endif
+	}
+	float& operator()(int _row, int _col)
+	{ 
+	#ifdef IM3D_MATRIX_ROW_MAJOR
+		return m[_row * 4 + _col];
+	#else
+		return m[_col * 4 + _row];
+	#endif
+	}
 };
 struct Color
 {

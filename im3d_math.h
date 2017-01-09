@@ -57,55 +57,55 @@ inline Vec4  Normalize(const Vec4& _v)                     { return _v / Length(
 
 inline Mat4 operator*(const Mat4& _lhs, const Mat4& _rhs)
 {
-	// \todo expand
+	// \todo expand, remove Dot calls
 	Mat4 ret;
-	ret[ 0] = Dot(_lhs.getRow(0), _rhs.getCol(0));
-	ret[ 4] = Dot(_lhs.getRow(0), _rhs.getCol(1));
-	ret[ 8] = Dot(_lhs.getRow(0), _rhs.getCol(2));
-	ret[12] = Dot(_lhs.getRow(0), _rhs.getCol(3));
+	ret(0, 0) = Dot(_lhs.getRow(0), _rhs.getCol(0));
+	ret(0, 1) = Dot(_lhs.getRow(0), _rhs.getCol(1));
+	ret(0, 2) = Dot(_lhs.getRow(0), _rhs.getCol(2));
+	ret(0, 3) = Dot(_lhs.getRow(0), _rhs.getCol(3));
 
-	ret[ 1] = Dot(_lhs.getRow(1), _rhs.getCol(0));
-	ret[ 5] = Dot(_lhs.getRow(1), _rhs.getCol(1));
-	ret[ 9] = Dot(_lhs.getRow(1), _rhs.getCol(2));
-	ret[13] = Dot(_lhs.getRow(1), _rhs.getCol(3));
+	ret(1, 0) = Dot(_lhs.getRow(1), _rhs.getCol(0));
+	ret(1, 1) = Dot(_lhs.getRow(1), _rhs.getCol(1));
+	ret(1, 2) = Dot(_lhs.getRow(1), _rhs.getCol(2));
+	ret(1, 3) = Dot(_lhs.getRow(1), _rhs.getCol(3));
 
-	ret[ 2] = Dot(_lhs.getRow(2), _rhs.getCol(0));
-	ret[ 6] = Dot(_lhs.getRow(2), _rhs.getCol(1));
-	ret[10] = Dot(_lhs.getRow(2), _rhs.getCol(2));
-	ret[14] = Dot(_lhs.getRow(2), _rhs.getCol(3));
-	
-	ret[ 3] = Dot(_lhs.getRow(3), _rhs.getCol(0));
-	ret[ 7] = Dot(_lhs.getRow(3), _rhs.getCol(1));
-	ret[11] = Dot(_lhs.getRow(3), _rhs.getCol(2));
-	ret[15] = Dot(_lhs.getRow(3), _rhs.getCol(3));
+	ret(2, 0) = Dot(_lhs.getRow(2), _rhs.getCol(0));
+	ret(2, 1) = Dot(_lhs.getRow(2), _rhs.getCol(1));
+	ret(2, 2) = Dot(_lhs.getRow(2), _rhs.getCol(2));
+	ret(2, 3) = Dot(_lhs.getRow(2), _rhs.getCol(3));
+
+	ret(3, 0) = Dot(_lhs.getRow(3), _rhs.getCol(0));
+	ret(3, 1) = Dot(_lhs.getRow(3), _rhs.getCol(1));
+	ret(3, 2) = Dot(_lhs.getRow(3), _rhs.getCol(2));
+	ret(3, 3) = Dot(_lhs.getRow(3), _rhs.getCol(3));
 
 	return ret;
 }
 
-inline Vec3 operator*(const Mat4& _mat, const Vec3& _pos)
+inline Vec3 operator*(const Mat4& _m, const Vec3& _pos)
 {
 	return Vec3(
-		_mat[ 0] * _pos.x + _mat[ 4] * _pos.y + _mat[ 8] * _pos.z + _mat[12],
-		_mat[ 1] * _pos.x + _mat[ 5] * _pos.y + _mat[ 9] * _pos.z + _mat[13],
-		_mat[ 2] * _pos.x + _mat[ 6] * _pos.y + _mat[10] * _pos.z + _mat[14]
+		_m(0, 0) * _pos.x + _m(0, 1) * _pos.y + _m(0, 2) * _pos.z + _m(0, 3),
+		_m(1, 0) * _pos.x + _m(1, 1) * _pos.y + _m(1, 2) * _pos.z + _m(1, 3),
+		_m(2, 0) * _pos.x + _m(2, 1) * _pos.y + _m(2, 2) * _pos.z + _m(2, 3)
 		);
 }
-inline Vec4 operator*(const Mat4& _mat, const Vec4& _vec)
+inline Vec4 operator*(const Mat4& _m, const Vec4& _v)
 {
 	return Vec4(
-		_mat[ 0] * _vec.x + _mat[ 4] * _vec.y + _mat[ 8] * _vec.z + _mat[12] * _vec.w,
-		_mat[ 1] * _vec.x + _mat[ 5] * _vec.y + _mat[ 9] * _vec.z + _mat[13] * _vec.w,
-		_mat[ 2] * _vec.x + _mat[ 6] * _vec.y + _mat[10] * _vec.z + _mat[14] * _vec.w,
-		_mat[ 3] * _vec.x + _mat[ 7] * _vec.y + _mat[11] * _vec.z + _mat[15] * _vec.w
+		_m(0, 0) * _v.x + _m(0, 1) * _v.y + _m(0, 2) * _v.z + _m(0, 3) * _v.w,
+		_m(1, 0) * _v.x + _m(1, 1) * _v.y + _m(1, 2) * _v.z + _m(1, 3) * _v.w,
+		_m(2, 0) * _v.x + _m(2, 1) * _v.y + _m(2, 2) * _v.z + _m(2, 3) * _v.w,
+		_m(3, 0) * _v.x + _m(3, 1) * _v.y + _m(3, 2) * _v.z + _m(3, 3) * _v.w
 		);
 }
 
 // defined in im3d.cpp
-Mat4 InvertOrtho(const Mat4& _mat); // transpose rotation, negate translation
-Mat4 Transpose(const Mat4& _mat);
-Mat4 Translate(const Mat4& _mat, const Vec3& _t);
-Mat4 Rotate(const Mat4& _mat, const Vec3& _axis, float _rads); // _angle must be unit length
-Mat4 LookAt(const Vec3& _from, const Vec3& _to, const Vec3& _up = Vec3(0.0f, 1.0f, 0.0f)); // aligns +z with (_to - _from)
+Mat4  Inverse(const Mat4& _m);
+Mat4  Transpose(const Mat4& _m);
+Mat4  Translate(const Mat4& _m, const Vec3& _t);
+Mat4  Rotate(const Mat4& _m, const Vec3& _axis, float _rads); // _angle must be unit length
+Mat4  LookAt(const Vec3& _from, const Vec3& _to, const Vec3& _up = Vec3(0.0f, 1.0f, 0.0f)); // aligns +z with (_to - _from)
 } // namespace Im3d
 
 #endif // im3d_math_h
