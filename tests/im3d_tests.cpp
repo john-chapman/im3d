@@ -45,6 +45,7 @@ int main(int, char**)
 
 			Im3d::SetSize(8.0f);
 			Im3d::BeginPoints();
+				RandSeed(123);
 				for (int i = 0; i < 200; ++i) {
 					Im3d::SetColor(RandFloat(0.5f, 1.0f), RandFloat(0.5f, 1.0f), RandFloat(0.5f, 1.0f));
 					Im3d::Vertex(RandVec3(-10.0f, 10.0f));
