@@ -1,6 +1,7 @@
 #include "im3d.h"
 #include "im3d_math.h"
 
+#include <cstdlib>
 #include <cstring>
 #include <cfloat>
 
@@ -403,7 +404,7 @@ void Context::draw()
 		sort();
 		m_sortCalled = true;
 	}
-	for (auto dl = m_sortedDrawLists.begin(); dl = m_sortedDrawLists.end(); ++dl) {
+	for (auto dl = m_sortedDrawLists.begin(); dl != m_sortedDrawLists.end(); ++dl) {
 		m_appData.drawPrimitives(dl->m_primType, dl->m_start, dl->m_count);
 	}
 }
@@ -436,43 +437,96 @@ Context::~Context()
 {
 }
 
+namespace {
+	struct SortData
+	{
+		float       m_key;
+		VertexData* m_start;
+		SortData() {}
+		SortData(float _key, VertexData* _start): m_key(_key), m_start(_start) {}
+	};
+
+	int SortCmp(const void* _a, const void* _b)
+	{
+		float ka = ((SortData*)_a)->m_key;
+		float kb = ((SortData*)_b)->m_key;
+		if (ka < kb) {
+			return -1;
+		} else if (ka > kb) {
+			return 1;
+		} else {
+			return 0;
+		}
+	}
+
+	void Reorder(VertexData* _data, const SortData* _sort, U32 _sortCount, int _primSize)
+	{
+		for (U32 i = 0; i < _sortCount; ++i) {
+			if (_sort->m_start != _data) {
+				for (int j = 0; j < 3; ++j) {
+					VertexData tmp = *(_sort->m_start + j);
+					*(_sort->m_start + j) = *_data;
+					*_data = tmp;
+					++_data;
+				}
+			} else {
+				_data += _primSize;
+			}
+			++_sort;
+		}
+	}
+}
+
 void Context::sort()
 {
-	Vector<float> pointsD2, linesD2, trianglesD2;
+	Vector<SortData> pointsD2, linesD2, trianglesD2;
 	Vec3 viewOrigin = m_appData.m_viewOrigin;
-
-/* see http://thomas.baudel.name/Visualisation/VisuTri/inplacestablesort.html
-*/
 
  // sort each primitive list internally
 	if (!m_points[1].empty()) {
 		pointsD2.reserve(m_points[1].size());
 		for (auto vd = m_points[1].begin(); vd != m_points[1].end(); ++vd) {
-			pointsD2.push_back(Length2(Vec3(vd->m_positionSize) - viewOrigin));
+			float d2 = Length2(Vec3(vd->m_positionSize) - viewOrigin);
+			pointsD2.push_back(SortData(d2, vd));
 		}
-		// \todo sort
+		//qsort(pointsD2.data(), pointsD2.size(), sizeof(SortData), SortCmp);
+		//Reorder(m_points[1].data(), pointsD2.data(), pointsD2.size(), 1);
 	}
 	if (!m_lines[1].empty()) {
-		linesD2.reserve(m_lines[1].size());
+		linesD2.reserve(m_lines[1].size() / 2);
 		for (auto vd = m_lines[1].begin(); vd != m_lines[1].end(); ++vd) {
 			Vec3 p = Vec3(vd->m_positionSize);
 			p = (p + Vec3((++vd)->m_positionSize)) / 2.0f; // sort by midpoint
-			linesD2.push_back(Length2(p - viewOrigin));
+			float d2 = Length2(p - viewOrigin);
+			linesD2.push_back(SortData(d2, vd - 2));
 		}
-		// \todo sort
+		//qsort(linesD2.data(), linesD2.size(), sizeof(SortData), SortCmp);
+		//Reorder(m_lines[1].data(), linesD2.data(), linesD2.size(), 2);
 	}
 	if (!m_triangles[1].empty()) {
-		trianglesD2.reserve(m_triangles[1].size());
+		trianglesD2.reserve(m_triangles[1].size() / 3);
 		for (auto vd = m_triangles[1].begin(); vd != m_triangles[1].end(); ++vd) {
 			Vec3 p = Vec3(vd->m_positionSize);
 			p = (p + Vec3((++vd)->m_positionSize));
 			p = (p + Vec3((++vd)->m_positionSize)) / 3.0f; // sort by midpoint
-			trianglesD2.push_back(Length2(p - viewOrigin));
+			float d2 = Length2(p - viewOrigin);
+			trianglesD2.push_back(SortData(d2, vd - 3));
 		}
-		// \todo sort
+		//qsort(trianglesD2.data(), trianglesD2.size(), sizeof(SortData), SortCmp);
+		//Reorder(m_triangles[1].data(), trianglesD2.data(), trianglesD2.size(), 3);
 	}
 
  // construct draw lists
+	DrawList dl;
+	dl.m_primType = DrawPrimitive_Lines;
+	dl.m_start = m_lines[1].data();
+	dl.m_count = m_lines[1].size();
+	m_sortedDrawLists.push_back(dl);
+
+	dl.m_primType = DrawPrimitive_Triangles;
+	dl.m_start = m_triangles[1].data();
+	dl.m_count = m_triangles[1].size();
+	m_sortedDrawLists.push_back(dl);
 /*	while !done (i.e. not checked all primitives
 		find the furthest D2 of points/lines/tris
 			increment the 'selected' primitive iterator only
