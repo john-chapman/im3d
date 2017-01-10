@@ -652,8 +652,8 @@ bool TestApp::Impl::initGl(int _vmaj, int _vmin)
 TestApp::TestApp()
 	: m_impl(nullptr)
 {
-	m_camPos = Vec3(0.0f, 0.0f, 0.0f);
-	m_camDir = Normalize(Vec3(0.0f, 0.0f, -1.0f));
+	m_camPos = Vec3(0.0f, 5.0f, 5.0f);
+	m_camDir = Normalize(Vec3(0.0f, -0.5f, -1.0f));
 	m_camFov = 50.0f;
 }
 
@@ -749,7 +749,10 @@ bool TestApp::update()
 	}
 	ImGui::NewFrame();
 
-	static const float kCamSpeed = 2.0f;
+	float kCamSpeed = 2.0f;
+	if (GetAsyncKeyState(VK_LSHIFT) & 0x8000) {
+		kCamSpeed *= 10.0f;
+	}
 	if (GetAsyncKeyState(0x57) & 0x8000) { // W (forward)
 		m_camPos = m_camPos - m_camWorld.getCol(2) * (m_deltaTime * kCamSpeed);
 	}
