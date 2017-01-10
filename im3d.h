@@ -82,7 +82,7 @@ void  Scale(float _x, float _y, float _z);
 // Generate an Id from a null-terminated string.
 Id    MakeId(const char* _str);
 
-// Manipulate position/orientation/scale via a gizmo. Return true if the gizmo was used (it modified its output).
+// Manipulate position/orientation/scale via a gizmo. Return true if the gizmo was used (if it modified its output).
 bool  Gizmo(const char* _id, Mat4* _mat_);
 bool  GizmoPosition(const char* _id, Vec3* _position_);
 
@@ -335,6 +335,15 @@ private:
 	Vector<VertexData> m_lines[2];
 	Vector<VertexData> m_triangles[2];
 
+	struct DrawList
+	{
+		DrawPrimitiveType m_primType;
+		VertexData*       m_start;
+		U32               m_count;
+	};
+	Vector<DrawList>   m_sortedDrawLists;
+	bool               m_sortCalled;               // Prevent sorting during every call to draw().
+
  // primitive state
 	PrimitiveMode      m_primMode;   
 	int                m_primList;                 // 1 if sorting enabled, else 0.
@@ -354,6 +363,9 @@ private:
 	bool isKeyDown(Key _key) const     { return m_keyDownCurr[_key]; }
 	bool wasKeyPressed(Key _key) const { return m_keyDownCurr[_key] && !m_keyDownPrev[_key]; }
 
+	// Sort primitive data.
+	void sort();
+
 	// Convert pixels -> world space size based on distance between _position and view origin.
 	float pixelsToWorldSize(const Vec3& _position, float _pixels);
 };
@@ -368,7 +380,7 @@ inline AppData& GetAppData()                                                 { r
 inline void     NewFrame()                                                   { GetContext().reset();               }
 inline void     Draw()                                                       { GetContext().draw();                }
 
-inline void  EnableSorting(bool _enable)                                     { GetContext().enableSorting(_enable);                       }
+inline void  EnableSorting(bool _enable)                                     { GetContext().enableSorting(_enable);                      }
 inline void  BeginPoints()                                                   { GetContext().begin(Context::PrimitiveMode_Points);        }
 inline void  BeginLines()                                                    { GetContext().begin(Context::PrimitiveMode_Lines);         }
 inline void  BeginLineLoop()                                                 { GetContext().begin(Context::PrimitiveMode_LineLoop);      }

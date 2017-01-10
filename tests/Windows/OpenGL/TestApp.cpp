@@ -325,8 +325,7 @@ static void Im3d_Draw(Im3d::DrawPrimitiveType _primType, const Im3d::VertexData*
 	glAssert(glBlendEquation(GL_FUNC_ADD));
 	glAssert(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 	glAssert(glEnable(GL_PROGRAM_POINT_SIZE));
-	glAssert(glDisable(GL_CULL_FACE));
-
+	
 	GLenum prim;
 	GLuint sh;
 	switch (_primType) {
@@ -334,16 +333,19 @@ static void Im3d_Draw(Im3d::DrawPrimitiveType _primType, const Im3d::VertexData*
 		prim = GL_POINTS;
 		sh = s_shIm3dPoints;
 		ImGui::Text("Points (%d)", _count);
+		glAssert(glDisable(GL_CULL_FACE)); // points are view-aligned
 		break;
 	case Im3d::DrawPrimitive_Lines:
 		prim = GL_LINES;
 		sh = s_shIm3dLines;
 		ImGui::Text("Lines (%d)", _count / 2);
+		glAssert(glDisable(GL_CULL_FACE)); // lines are view-aligned
 		break;
 	case Im3d::DrawPrimitive_Triangles:
 		prim = GL_TRIANGLES;
 		sh = s_shIm3dTriangles;
 		ImGui::Text("Tris (%d)", _count / 3);
+		//glAssert(glEnable(GL_CULL_FACE)); // culling valid for triangles, but optional
 		break;
 	default:
 		IM3D_ASSERT(false);
@@ -353,7 +355,6 @@ static void Im3d_Draw(Im3d::DrawPrimitiveType _primType, const Im3d::VertexData*
 	glAssert(glBindVertexArray(s_vaIm3d));
 	glAssert(glBindBuffer(GL_ARRAY_BUFFER, s_vbIm3d));
 	glAssert(glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)_count * sizeof(Im3d::VertexData), (GLvoid*)_data, GL_STREAM_DRAW));
-	
 	glAssert(glUseProgram(sh));
 	glAssert(glUniformMatrix4fv(glGetUniformLocation(sh, "uViewProjMatrix"), 1, false, (const GLfloat*)s_testApp->m_camViewProj));
 	glAssert(glUniform2f(glGetUniformLocation(sh, "uViewport"), (float)s_testApp->getWidth(), (float)s_testApp->getHeight()));
@@ -372,10 +373,13 @@ struct TestApp::Impl
 {
  // window
 	HWND   m_hwnd;
+	Vec2   m_prevCursorPos;
 
 	static LRESULT CALLBACK WindowProc(HWND _hwnd, UINT _umsg, WPARAM _wparam, LPARAM _lparam);
 
 	bool initWindow(int& _width_, int& _height_, const char* _title);
+	bool hasFocus() const;
+	Vec2 getWindowRelativeCursor() const;
 
  // time
 	LARGE_INTEGER m_currTime, m_prevTime;
@@ -457,13 +461,13 @@ LRESULT CALLBACK TestApp::Impl::WindowProc(HWND _hwnd, UINT _umsg, WPARAM _wpara
 			}
 			break;
 		};
-		break;
+		return 0;
 	}
    case WM_CHAR:
 		if (_wparam > 0 && _wparam < 0x10000) {
 			io.AddInputCharacter((unsigned short)_wparam);
 		}
-		break;
+		return 0;
 	case WM_PAINT:
 		//IM3D_ASSERT(false); // should be suppressed by calling ValidateRect()
 		break;
@@ -523,6 +527,19 @@ bool TestApp::Impl::initWindow(int& _width_, int& _height_, const char* _title)
 		);
 	IM3D_ASSERT(m_hwnd);
 	return true;
+}
+
+bool TestApp::Impl::hasFocus() const
+{
+	return m_hwnd == GetFocus();
+}
+
+Vec2 TestApp::Impl::getWindowRelativeCursor() const
+{
+	POINT p = {};
+	IM3D_PLATFORM_VERIFY(GetCursorPos(&p));
+	IM3D_PLATFORM_VERIFY(ScreenToClient(m_hwnd, &p));
+	return Vec2((float)p.x, (float)p.y);
 }
 
 bool TestApp::Impl::initGl(int _vmaj, int _vmin)
@@ -680,6 +697,7 @@ bool TestApp::init(int _width, int _height, const char* _title)
 	}
 	Im3d::GetAppData().drawPrimitives = &Im3d_Draw;
 
+	m_impl->m_prevCursorPos = m_impl->getWindowRelativeCursor();
 	IM3D_PLATFORM_VERIFY(QueryPerformanceFrequency(&m_impl->m_sysFreq));
 	IM3D_PLATFORM_VERIFY(QueryPerformanceCounter(&m_impl->m_currTime));
 
@@ -711,6 +729,25 @@ bool TestApp::update()
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
+
+	ImGuiIO& io = ImGui::GetIO();
+	io.ImeWindowHandle = m_impl->m_hwnd;
+	io.DisplaySize = ImVec2((float)m_width, (float)m_height);
+	io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
+	io.DeltaTime = m_impl->m_deltaTime;
+	io.MousePos = ImVec2(-1.0f, -1.0f);
+	if (m_impl->hasFocus()) {
+		Vec2 cursorPos = m_impl->getWindowRelativeCursor();
+		ImGui::GetIO().MousePos = ImVec2(cursorPos.x, cursorPos.y);
+
+		if (GetAsyncKeyState(VK_RBUTTON) & 0x8000) {
+			Vec2 cursorDelta = (cursorPos - m_impl->m_prevCursorPos) * m_deltaTime * 0.8f;
+			m_camDir = Rotate(Mat4(1.0f), Vec3(0.0f, 1.0f, 0.0f), -cursorDelta.x) * m_camDir;
+			m_camDir = Rotate(Mat4(1.0f), m_camWorld.getCol(0), -cursorDelta.y) * m_camDir;
+		}
+		m_impl->m_prevCursorPos = cursorPos;
+	}
+	ImGui::NewFrame();
 
 	static const float kCamSpeed = 2.0f;
 	if (GetAsyncKeyState(0x57) & 0x8000) { // W (forward)
@@ -766,20 +803,6 @@ bool TestApp::update()
 	ad.m_tanHalfFov = tanf(fovRads * 0.5f);
 	Im3d::NewFrame();
 
-	ImGuiIO& io = ImGui::GetIO();
-	io.ImeWindowHandle = m_impl->m_hwnd;
-	io.DisplaySize = ImVec2((float)m_width, (float)m_height);
-	io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
-	io.DeltaTime = m_impl->m_deltaTime;
-	io.MousePos = ImVec2(-1.0f, -1.0f);
-	if (m_impl->m_hwnd == GetFocus()) {
-		POINT p = {};
-		IM3D_PLATFORM_VERIFY(GetCursorPos(&p));
-		IM3D_PLATFORM_VERIFY(ScreenToClient(m_impl->m_hwnd, &p));
-		ImGui::GetIO().MousePos = ImVec2((float)p.x, (float)p.y);
-	}
-	ImGui::NewFrame();
-
 	ImGui::SliderFloat("Fov", &m_camFov, 1.0f, 90.0f);
 	ImGui::Text("Delta t: %.2f", m_deltaTime);
 	ImGui::Text("Cam pos: %.2f,%.2f,%.2f", m_camPos.x, m_camPos.y, m_camPos.z);
@@ -794,18 +817,6 @@ void TestApp::draw()
 
 	Im3d::Draw();
 	ImGui::Render();
-
-	/*glMatrixMode(GL_PROJECTION);
-	glLoadMatrixf((GLfloat*)m_camProj);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixf((GLfloat*)m_camView);
-	glColor3f(1.0f, 0.0f, 1.0f);
-	glBegin(GL_LINES);
-		glVertex3f(-1.0f, 0.0f, 0.0f);
-		glVertex3f(1.0f, 0.0f, 0.0f);
-		glVertex3f(0.0f, 1.0f, 0.0f);
-		glVertex3f(0.0f, -1.0f, 0.0f);
-	glEnd();*/
 
 	glAssert(glBindVertexArray(0));
 	glAssert(glUseProgram(0));

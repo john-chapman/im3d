@@ -54,17 +54,19 @@ int main(int, char**)
 
 			Im3d::SetSize(1.0f);
 			Im3d::BeginTriangles();
-				Im3d::Vertex(-1.0f, -1.0f, -5.0f, Color_Green);
-				Im3d::Vertex( 0.0f,  1.0f, -5.0f, Color_Red);
 				Im3d::Vertex( 1.0f, -1.0f, -5.0f, Color_Blue);
+				Im3d::Vertex( 0.0f,  1.0f, -5.0f, Color_Red);
+				Im3d::Vertex(-1.0f, -1.0f, -5.0f, Color_Green);
 			Im3d::End();
 
-			Im3d::SetSize(12.0f);
-			Im3d::SetColor(Color_Magenta);
+			Im3d::SetSize(2.0f);
 			Im3d::BeginLineLoop();
-				Im3d::Vertex(-1.0f, -1.0f, -5.0f);
-				Im3d::Vertex( 0.0f,  1.0f, -5.0f);
+				Im3d::SetColor(Color_Cyan);
 				Im3d::Vertex( 1.0f, -1.0f, -5.0f);
+				Im3d::SetColor(Color_Magenta);
+				Im3d::Vertex( 0.0f,  1.0f, -5.0f);
+				Im3d::SetColor(Color_Yellow);
+				Im3d::Vertex(-1.0f, -1.0f, -5.0f);
 			Im3d::End();
 
 		Im3d::PopDrawState();

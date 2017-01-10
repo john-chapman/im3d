@@ -114,7 +114,7 @@ Im3d::Id Im3d::MakeId(const char* _str)
 	static const U32 kFnv1aPrime32 = 0x01000193u;
 
 	IM3D_ASSERT(_str);
-	U32 ret = (U32)GetContext().getId(); // i.e. top of Id stack
+	U32 ret = (U32)GetContext().getId(); // top of Id stack
 	while (*_str) {
 		ret ^= (U32)*_str++;
 		ret *= kFnv1aPrime32;
@@ -178,13 +178,12 @@ Mat4 Im3d::Transpose(const Mat4& _m)
 }
 Mat4 Im3d::Translate(const Mat4& _m, const Vec3& _t)
 {
-	Mat4 ret(
+	return _m * Mat4(
 		1.0f, 0.0f, 0.0f, _t.x,
 		0.0f, 1.0f, 0.0f, _t.y,
 		0.0f, 0.0f, 1.0f, _t.z,
 		0.0f, 0.0f, 0.0f, 1.0f
 		);
-	return _m * ret;
 }
 Mat4 Im3d::Rotate(const Mat4& _m, const Vec3& _axis, float _rads)
 {
@@ -263,6 +262,7 @@ template class Vector<float>;
 template class Vector<Mat4>;
 template class Vector<Id>;
 template class Vector<char>;
+template class Vector<Context::DrawList>;
 
 /*******************************************************************************
 
@@ -275,7 +275,7 @@ Context* Im3d::internal::g_CurrentContext = &s_DefaultContext;
 
 void Context::begin(PrimitiveMode _mode)
 {
-	IM3D_ASSERT(m_primMode == PrimitiveMode_None);
+	IM3D_ASSERT(m_primMode == PrimitiveMode_None); // forgot to call End()
 	m_primMode = _mode;
 	m_vertCountThisPrim = 0;
 	switch (m_primMode) {
@@ -298,11 +298,10 @@ void Context::begin(PrimitiveMode _mode)
 
 void Context::end()
 {
-	IM3D_ASSERT(m_primMode != PrimitiveMode_None);
+	IM3D_ASSERT(m_primMode != PrimitiveMode_None); // End() called without Begin*()
 	switch (m_primMode) {
 	case PrimitiveMode_Points:
 		break;
-
 	case PrimitiveMode_Lines:
 		IM3D_ASSERT(m_vertCountThisPrim % 2 == 0);
 		break;
@@ -328,8 +327,9 @@ void Context::end()
 
 void Context::vertex(const Vec3& _position, float _size, Color _color)
 {	
-	IM3D_ASSERT(m_primMode != PrimitiveMode_None);
+	IM3D_ASSERT(m_primMode != PrimitiveMode_None); // Vertex() called without Begin*()
 
+	// \todo optim: force alpha/matrix stack bottom to be 1/identity, then skip the transform if the stack size == 1
 	VertexData vd(m_matrixStack.back() * _position, _size, _color);
 	vd.m_color.setA(vd.m_color.getA() * m_alphaStack.back());
 	
@@ -375,6 +375,8 @@ void Context::reset()
 		m_lines[i].clear();
 		m_triangles[i].clear();
 	}
+	m_sortedDrawLists.clear();
+	m_sortCalled = false;
 
  // copy keydown array internally so that we can make a delta to detect key presses
 	memcpy(m_keyDownPrev, m_keyDownCurr,       Key_Count); // \todo avoid this copy, use an index
@@ -385,7 +387,7 @@ void Context::draw()
 {
 	IM3D_ASSERT(m_appData.drawPrimitives);
 
- // draw unsorted prims first
+ // draw unsorted prims first (triangles -> lines -> points seems like a good order)
 	if (m_triangles[0].size() > 0) {
 		m_appData.drawPrimitives(DrawPrimitive_Triangles, m_triangles[0].data(), m_triangles[0].size());
 	}
@@ -397,17 +399,24 @@ void Context::draw()
 	}
 
  // draw sorted primitives on top
- // \todo need to sort *all* primitives together
+	if (!m_sortCalled) {
+		sort();
+		m_sortCalled = true;
+	}
+	for (auto dl = m_sortedDrawLists.begin(); dl = m_sortedDrawLists.end(); ++dl) {
+		m_appData.drawPrimitives(dl->m_primType, dl->m_start, dl->m_count);
+	}
 }
 
 void Context::enableSorting(bool _enable)
 {
-	IM3D_ASSERT(m_primMode == PrimitiveMode_None);
+	IM3D_ASSERT(m_primMode == PrimitiveMode_None); // can't enable sorting mid-primitive
 	m_primList  = _enable ? 1 : 0;
 }
 
 Context::Context()
 {
+	m_sortCalled = false;
 	m_primMode = PrimitiveMode_None;
 	m_primList = 0; // sorting disabled by default
 	m_firstVertThisPrim = 0;
@@ -425,6 +434,55 @@ Context::Context()
 
 Context::~Context()
 {
+}
+
+void Context::sort()
+{
+	Vector<float> pointsD2, linesD2, trianglesD2;
+	Vec3 viewOrigin = m_appData.m_viewOrigin;
+
+/* see http://thomas.baudel.name/Visualisation/VisuTri/inplacestablesort.html
+*/
+
+ // sort each primitive list internally
+	if (!m_points[1].empty()) {
+		pointsD2.reserve(m_points[1].size());
+		for (auto vd = m_points[1].begin(); vd != m_points[1].end(); ++vd) {
+			pointsD2.push_back(Length2(Vec3(vd->m_positionSize) - viewOrigin));
+		}
+		// \todo sort
+	}
+	if (!m_lines[1].empty()) {
+		linesD2.reserve(m_lines[1].size());
+		for (auto vd = m_lines[1].begin(); vd != m_lines[1].end(); ++vd) {
+			Vec3 p = Vec3(vd->m_positionSize);
+			p = (p + Vec3((++vd)->m_positionSize)) / 2.0f; // sort by midpoint
+			linesD2.push_back(Length2(p - viewOrigin));
+		}
+		// \todo sort
+	}
+	if (!m_triangles[1].empty()) {
+		trianglesD2.reserve(m_triangles[1].size());
+		for (auto vd = m_triangles[1].begin(); vd != m_triangles[1].end(); ++vd) {
+			Vec3 p = Vec3(vd->m_positionSize);
+			p = (p + Vec3((++vd)->m_positionSize));
+			p = (p + Vec3((++vd)->m_positionSize)) / 3.0f; // sort by midpoint
+			trianglesD2.push_back(Length2(p - viewOrigin));
+		}
+		// \todo sort
+	}
+
+ // construct draw lists
+/*	while !done (i.e. not checked all primitives
+		find the furthest D2 of points/lines/tris
+			increment the 'selected' primitive iterator only
+			if m_sortedDrawLists.empty() || primtive !m_sortedDrawLists.back().m_primitive
+				push a new draw list
+			else
+				increment draw list count
+
+
+*/
 }
 
 float Context::pixelsToWorldSize(const Vec3& _position, float _pixels)

@@ -1,4 +1,4 @@
-Im3d is a small, self-contained library for immediate-mode rendering of simple primitives (points, lines, etc.), plus an immediate mode UI which provides 3d manipulation 'gizmos' and other tools. It is platform and graphics API agnostic and designed to be compatible with VR.
+Im3d is a small, self-contained library for immediate mode rendering of simple primitives (points, lines, etc.), plus an immediate mode UI which provides 3d manipulation 'gizmos' and other tools. It is platform and graphics API agnostic and designed to be compatible with VR.
 
 Im3d outputs vertex buffers for rendering by the application. Im3d does not affect the system graphics state directly, therefore Im3d calls can be made from anywhere inside the application code.
 
@@ -14,7 +14,7 @@ Im3d::PushDrawState();
 	Im3d::End();
 Im3d::PopDrawState();
 ```
-_A key point to note is that there is no view-projection matrix here - the requirement for VR support precludes this. Instead, the view-projection transform should be applied at draw time (in the shader)._
+_A key point to note is that there is no view-projection matrix here - the requirement for VR support precludes this. Instead, the view-projection transform is applied at draw time (in the shader)._
 
 Similarly, the UI system follows the immediate mode paradigm in that no UI state is retained. For example, you can create gizmos from any place in the code:
 
