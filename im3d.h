@@ -59,8 +59,7 @@ void  Vertex(float _x, float _y, float _z, float _size);
 void  Vertex(float _x, float _y, float _z, float _size, Color _color);
 
 // Current draw state (affects all subsequent primitives).
-void  EnableSorting(bool _enable);
-void  PushDrawState();
+void  PushDrawState(); // color, alpha, size, sorting
 void  PopDrawState();
 void  SetColor(Color _color);
 void  SetColor(float _r, float _g, float _b, float _a = 1.0f);
@@ -69,6 +68,7 @@ void  SetAlpha(float _alpha);
 float GetAlpha();
 void  SetSize(float _size);
 float GetSize();
+void  EnableSorting(bool _enable);
 
 // Current transform state (affects all subsequent primitives).
 void  PushMatrix();
@@ -267,6 +267,9 @@ public:
 	void     clear()                              { m_size = 0; }
 	void     reserve(U32 _capacity);
 	void     resize(U32 _size, const T& _val);
+
+	template <typename T>
+	friend void swap(Vector<T>& _a_, Vector<T>& _b_);
 };
 
 // Context stores all relevant state - main interface affects the context currently bound via SetCurrentContext().
@@ -290,7 +293,6 @@ public:
 	void        reset();
 	void        draw();
 
-	void        enableSorting(bool _enable);
 
 	void        pushColor(Color _color)          { m_colorStack.push_back(_color); }
 	void        popColor()                       { m_colorStack.pop_back();        }
@@ -302,22 +304,27 @@ public:
 	void        setAlpha(float _alpha)           { m_alphaStack.back() = _alpha;   }
 	float       getAlpha() const                 { return m_alphaStack.back();     }
 
-	void        pushSize(float _size)            { m_sizeStack.push_back(_size);   }
-	void        popSize()                        { m_sizeStack.pop_back();         }
-	void        setSize(float _size)             { m_sizeStack.back() = _size;     }
-	float       getSize() const                  { return m_sizeStack.back();      }
+	void        pushSize(float _size)            { m_sizeStack.push_back(_size); }
+	void        popSize()                        { m_sizeStack.pop_back();       }
+	void        setSize(float _size)             { m_sizeStack.back() = _size;   }
+	float       getSize() const                  { return m_sizeStack.back();    }
 
-	void        pushMatrix(const Mat4& _mat)     { m_matrixStack.push_back(_mat);  }
-	void        popMatrix()                      { m_matrixStack.pop_back();       }
-	void        setMatrix(const Mat4& _mat)      { m_matrixStack.back() = _mat;    }
-	const Mat4& getMatrix() const                { return m_matrixStack.back();    }
+	void        pushEnableSorting(bool _enable);
+	void        popEnableSorting();
+	void        setEnableSorting(bool _enable);
+	bool        getEnableSorting() const         { return m_enableSortingStack.back();      }
 
-	void        pushId(Id _id)                   { m_idStack.push_back(_id);       }
-	void        popId()                          { m_idStack.pop_back();           }
-	void        setId(Id _id)                    { m_idStack.back() = _id;         }
-	Id          getId() const                    { return m_idStack.back();        }
+	void        pushMatrix(const Mat4& _mat)     { m_matrixStack.push_back(_mat); }
+	void        popMatrix()                      { m_matrixStack.pop_back();      }
+	void        setMatrix(const Mat4& _mat)      { m_matrixStack.back() = _mat;   }
+	const Mat4& getMatrix() const                { return m_matrixStack.back();   }
 
-	AppData&    getAppData()                     { return m_appData;               }
+	void        pushId(Id _id)                   { m_idStack.push_back(_id); }
+	void        popId()                          { m_idStack.pop_back();     }
+	void        setId(Id _id)                    { m_idStack.back() = _id;   }
+	Id          getId() const                    { return m_idStack.back();  }
+
+	AppData&    getAppData()                     { return m_appData; }
 
 	Context();
 	~Context();
@@ -327,6 +334,7 @@ private:
 	Vector<Color>      m_colorStack;
 	Vector<float>      m_alphaStack;
 	Vector<float>      m_sizeStack;
+	Vector<bool>       m_enableSortingStack;
 	Vector<Mat4>       m_matrixStack;
 	Vector<Id>         m_idStack;
 
@@ -380,7 +388,6 @@ inline AppData& GetAppData()                                                 { r
 inline void     NewFrame()                                                   { GetContext().reset();               }
 inline void     Draw()                                                       { GetContext().draw();                }
 
-inline void  EnableSorting(bool _enable)                                     { GetContext().enableSorting(_enable);                      }
 inline void  BeginPoints()                                                   { GetContext().begin(Context::PrimitiveMode_Points);        }
 inline void  BeginLines()                                                    { GetContext().begin(Context::PrimitiveMode_Lines);         }
 inline void  BeginLineLoop()                                                 { GetContext().begin(Context::PrimitiveMode_LineLoop);      }
@@ -398,24 +405,22 @@ inline void  Vertex(float _x, float _y, float _z, Color _color)              { V
 inline void  Vertex(float _x, float _y, float _z, float _size)               { Vertex(Vec3(_x, _y, _z), _size); }
 inline void  Vertex(float _x, float _y, float _z, float _size, Color _color) { Vertex(Vec3(_x, _y, _z), _size, _color); }
 
-inline void  PushDrawState()                                                 { Context& ctx = GetContext(); ctx.pushColor(ctx.getColor()); ctx.pushAlpha(ctx.getAlpha()); ctx.pushSize(ctx.getSize()); }
-inline void  PopDrawState()                                                  { Context& ctx = GetContext(); ctx.popColor(); ctx.popAlpha(); ctx.popSize(); }
-
+inline void  PushDrawState()                                                 { Context& ctx = GetContext(); ctx.pushColor(ctx.getColor()); ctx.pushAlpha(ctx.getAlpha()); ctx.pushSize(ctx.getSize()); ctx.pushEnableSorting(ctx.getEnableSorting()); }
+inline void  PopDrawState()                                                  { Context& ctx = GetContext(); ctx.popColor(); ctx.popAlpha(); ctx.popSize(); ctx.popEnableSorting(); }
 inline void  PushColor()                                                     { GetContext().pushColor(GetContext().getColor()); }
 inline void  PopColor()                                                      { GetContext().popColor();                         }
 inline void  SetColor(Color _color)                                          { GetContext().setColor(_color);                   }
 inline void  SetColor(float _r, float _g, float _b, float _a)                { GetContext().setColor(Color(_r, _g, _b, _a));    }
 inline Color GetColor()                                                      { return GetContext().getColor();                  }
-
 inline void  PushAlpha()                                                     { GetContext().pushAlpha(GetContext().getAlpha()); }
 inline void  PopAlpha()                                                      { GetContext().popAlpha();        }
 inline void  SetAlpha(float _alpha)                                          { GetContext().setAlpha(_alpha);  }
 inline float GetAlpha()                                                      { return GetContext().getAlpha(); }
-
 inline void  PushSize()                                                      { GetContext().pushSize(GetContext().getAlpha()); }
 inline void  PopSize()                                                       { GetContext().popSize();         }
 inline void  SetSize(float _size)                                            { GetContext().setSize(_size);    }
 inline float GetSize()                                                       { return GetContext().getSize();  }
+inline void  EnableSorting(bool _enable)                                     { GetContext().setEnableSorting(_enable); }
 
 inline void  PushMatrix()                                                    { GetContext().pushMatrix(GetContext().getMatrix()); }
 inline void  PopMatrix()                                                     { GetContext().popMatrix();           }

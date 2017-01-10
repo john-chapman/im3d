@@ -258,11 +258,26 @@ void Vector<T>::resize(U32 _size, const T& _val)
 	}
 }
 
-template class Vector<Color>;
-template class Vector<float>;
-template class Vector<Mat4>;
-template class Vector<Id>;
+template <typename T>
+void Im3d::swap(Vector<T>& _a_, Vector<T>& _b_)
+{
+	T* data        = _a_.m_data;
+	U32 capacity   = _a_.m_capacity;
+	U32 size       = _a_.m_size;
+	_a_.m_data     = _b_.m_data;
+	_a_.m_capacity = _b_.m_capacity;
+	_a_.m_size     = _b_.m_size;
+	_b_.m_data     = data;
+	_b_.m_capacity = capacity;
+	_b_.m_size     = size;
+}
+
+template class Vector<bool>;
 template class Vector<char>;
+template class Vector<float>;
+template class Vector<Id>;
+template class Vector<Mat4>;
+template class Vector<Color>;
 template class Vector<Context::DrawList>;
 
 /*******************************************************************************
@@ -409,17 +424,30 @@ void Context::draw()
 	}
 }
 
-void Context::enableSorting(bool _enable)
+void Context::pushEnableSorting(bool _enable)
 {
-	IM3D_ASSERT(m_primMode == PrimitiveMode_None); // can't enable sorting mid-primitive
-	m_primList  = _enable ? 1 : 0;
+	IM3D_ASSERT(m_primMode == PrimitiveMode_None); // can't change sort mode mid-primitive
+	m_primList = _enable ? 1 : 0;
+	m_enableSortingStack.push_back(_enable);
+}
+void Context::popEnableSorting()
+{
+	IM3D_ASSERT(m_primMode == PrimitiveMode_None); // can't change sort mode mid-primitive
+	m_enableSortingStack.pop_back();
+	m_primList = m_enableSortingStack.back() ? 1 : 0;
+}
+void Context::setEnableSorting(bool _enable)
+{
+	IM3D_ASSERT(m_primMode == PrimitiveMode_None); // can't change sort mode mid-primitive
+	m_primList = _enable ? 1 : 0;
+	m_enableSortingStack.back() = _enable;
 }
 
 Context::Context()
 {
 	m_sortCalled = false;
 	m_primMode = PrimitiveMode_None;
-	m_primList = 0; // sorting disabled by default
+	m_primList = 0; // = sorting disabled
 	m_firstVertThisPrim = 0;
 	m_vertCountThisPrim = 0;
 	memset(&m_appData, 0, sizeof(m_appData));
@@ -430,6 +458,7 @@ Context::Context()
 	pushColor(Color_White);
 	pushAlpha(1.0f);
 	pushSize(1.0f);
+	pushEnableSorting(false);
 	pushId(0x811C9DC5u); // fnv1 hash base
 }
 
@@ -451,29 +480,24 @@ namespace {
 		float ka = ((SortData*)_a)->m_key;
 		float kb = ((SortData*)_b)->m_key;
 		if (ka < kb) {
-			return -1;
-		} else if (ka > kb) {
 			return 1;
+		} else if (ka > kb) {
+			return -1;
 		} else {
 			return 0;
 		}
 	}
 
-	void Reorder(VertexData* _data, const SortData* _sort, U32 _sortCount, int _primSize)
+	void Reorder(Vector<VertexData>& _data_, const SortData* _sort, U32 _sortCount, U32 _primSize)
 	{
+		Vector<VertexData> ret;
+		ret.reserve(_data_.size());
 		for (U32 i = 0; i < _sortCount; ++i) {
-			if (_sort->m_start != _data) {
-				for (int j = 0; j < 3; ++j) {
-					VertexData tmp = *(_sort->m_start + j);
-					*(_sort->m_start + j) = *_data;
-					*_data = tmp;
-					++_data;
-				}
-			} else {
-				_data += _primSize;
+			for (U32 j = 0; j < _primSize; ++j) {
+				ret.push_back(*(_sort[i].m_start + j));
 			}
-			++_sort;
 		}
+		Im3d::swap(_data_, ret);
 	}
 }
 
@@ -482,38 +506,38 @@ void Context::sort()
 	Vector<SortData> pointsD2, linesD2, trianglesD2;
 	Vec3 viewOrigin = m_appData.m_viewOrigin;
 
- // sort each primitive list internally
+ // sort each primitive list internally - doesn't need to be a stable sort assuming the prims 
+ //  are pushed in the same order each frame
 	if (!m_points[1].empty()) {
 		pointsD2.reserve(m_points[1].size());
 		for (auto vd = m_points[1].begin(); vd != m_points[1].end(); ++vd) {
-			float d2 = Length2(Vec3(vd->m_positionSize) - viewOrigin);
-			pointsD2.push_back(SortData(d2, vd));
+			pointsD2.push_back(SortData(Length2(Vec3(vd->m_positionSize) - viewOrigin), vd));
 		}
-		//qsort(pointsD2.data(), pointsD2.size(), sizeof(SortData), SortCmp);
-		//Reorder(m_points[1].data(), pointsD2.data(), pointsD2.size(), 1);
+		qsort(pointsD2.data(), pointsD2.size(), sizeof(SortData), SortCmp);
+		Reorder(m_points[1], pointsD2.data(), pointsD2.size(), 1);
 	}
 	if (!m_lines[1].empty()) {
 		linesD2.reserve(m_lines[1].size() / 2);
 		for (auto vd = m_lines[1].begin(); vd != m_lines[1].end(); ++vd) {
-			Vec3 p = Vec3(vd->m_positionSize);
-			p = (p + Vec3((++vd)->m_positionSize)) / 2.0f; // sort by midpoint
-			float d2 = Length2(p - viewOrigin);
-			linesD2.push_back(SortData(d2, vd - 2));
+			linesD2.push_back(SortData(0.0f, vd));
+			linesD2.back().m_key += Length2(Vec3(vd->m_positionSize) - viewOrigin);
+			linesD2.back().m_key += Length2(Vec3((++vd)->m_positionSize) - viewOrigin);
+			linesD2.back().m_key /= 2.0f;
 		}
-		//qsort(linesD2.data(), linesD2.size(), sizeof(SortData), SortCmp);
-		//Reorder(m_lines[1].data(), linesD2.data(), linesD2.size(), 2);
+		qsort(linesD2.data(), linesD2.size(), sizeof(SortData), SortCmp);
+		Reorder(m_lines[1], linesD2.data(), linesD2.size(), 2);
 	}
 	if (!m_triangles[1].empty()) {
 		trianglesD2.reserve(m_triangles[1].size() / 3);
 		for (auto vd = m_triangles[1].begin(); vd != m_triangles[1].end(); ++vd) {
-			Vec3 p = Vec3(vd->m_positionSize);
-			p = (p + Vec3((++vd)->m_positionSize));
-			p = (p + Vec3((++vd)->m_positionSize)) / 3.0f; // sort by midpoint
-			float d2 = Length2(p - viewOrigin);
-			trianglesD2.push_back(SortData(d2, vd - 3));
+			trianglesD2.push_back(SortData(0.0f, vd));
+			trianglesD2.back().m_key += Length2(Vec3(vd->m_positionSize) - viewOrigin);
+			trianglesD2.back().m_key += Length2(Vec3((++vd)->m_positionSize) - viewOrigin);
+			trianglesD2.back().m_key += Length2(Vec3((++vd)->m_positionSize) - viewOrigin);
+			trianglesD2.back().m_key /= 3.0f;
 		}
-		//qsort(trianglesD2.data(), trianglesD2.size(), sizeof(SortData), SortCmp);
-		//Reorder(m_triangles[1].data(), trianglesD2.data(), trianglesD2.size(), 3);
+		qsort(trianglesD2.data(), trianglesD2.size(), sizeof(SortData), SortCmp);
+		Reorder(m_triangles[1], trianglesD2.data(), trianglesD2.size(), 3);
 	}
 
  // construct draw lists
@@ -527,6 +551,18 @@ void Context::sort()
 	dl.m_start = m_triangles[1].data();
 	dl.m_count = m_triangles[1].size();
 	m_sortedDrawLists.push_back(dl);
+
+	//SortData* sortData[3] = {
+	//	pointsD2.begin(),
+	//	linesD2.begin(),
+	//	trianglesD2.begin()
+	//};
+	//int currentPrim = 0;
+	//while (true) {
+	//	float mx = sortData[0]->m_key;
+	//	
+	//	
+	//}
 /*	while !done (i.e. not checked all primitives
 		find the furthest D2 of points/lines/tris
 			increment the 'selected' primitive iterator only

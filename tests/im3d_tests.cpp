@@ -52,22 +52,26 @@ int main(int, char**)
 				}
 			Im3d::End();
 
-			Im3d::SetSize(1.0f);
-			Im3d::BeginTriangles();
-				Im3d::Vertex( 1.0f, -1.0f, -5.0f, Color_Blue);
-				Im3d::Vertex( 0.0f,  1.0f, -5.0f, Color_Red);
-				Im3d::Vertex(-1.0f, -1.0f, -5.0f, Color_Green);
-			Im3d::End();
+			Im3d::EnableSorting(true);
+			float x = -0.2f;
+			float z = -4.0f;
+			for (int i = 0; i < 3; ++i, z -= 2.0f, x += 0.2f){
+				Im3d::SetSize(1.0f);
+				Im3d::SetAlpha(0.5f);
+				Im3d::BeginTriangles();
+					Im3d::Vertex( 1.0f + x, -1.0f, z, Color_Blue);
+					Im3d::Vertex( 0.0f + x,  1.0f, z, Color_Red);
+					Im3d::Vertex(-1.0f + x, -1.0f, z, Color_Green);
+				Im3d::End();
 
-			Im3d::SetSize(2.0f);
-			Im3d::BeginLineLoop();
-				Im3d::SetColor(Color_Cyan);
-				Im3d::Vertex( 1.0f, -1.0f, -5.0f);
-				Im3d::SetColor(Color_Magenta);
-				Im3d::Vertex( 0.0f,  1.0f, -5.0f);
-				Im3d::SetColor(Color_Yellow);
-				Im3d::Vertex(-1.0f, -1.0f, -5.0f);
-			Im3d::End();
+				Im3d::SetSize(2.0f);
+				Im3d::SetAlpha(1.0f);
+				Im3d::BeginLineLoop();
+					Im3d::Vertex( 1.0f + x, -1.0f, z, Color_Cyan);
+					Im3d::Vertex( 0.0f + x,  1.0f, z, Color_Magenta);
+					Im3d::Vertex(-1.0f + x, -1.0f, z, Color_Green);
+				Im3d::End();
+			}
 
 		Im3d::PopDrawState();
 
