@@ -296,16 +296,16 @@ void Context::begin(PrimitiveMode _mode)
 	m_vertCountThisPrim = 0;
 	switch (m_primMode) {
 	case PrimitiveMode_Points:
-		m_firstVertThisPrim = m_points[m_primList].size();
+		m_firstVertThisPrim = m_vertexData[DrawPrimitive_Points][m_primList].size();
 		break;
 	case PrimitiveMode_Lines:
 	case PrimitiveMode_LineStrip:
 	case PrimitiveMode_LineLoop:
-		m_firstVertThisPrim = m_lines[m_primList].size();
+		m_firstVertThisPrim = m_vertexData[DrawPrimitive_Lines][m_primList].size();
 		break;
 	case PrimitiveMode_Triangles:
 	case PrimitiveMode_TriangleStrip:
-		m_firstVertThisPrim = m_triangles[m_primList].size();
+		m_firstVertThisPrim = m_vertexData[DrawPrimitive_Triangles][m_primList].size();
 		break;
 	default:
 		break;
@@ -326,8 +326,8 @@ void Context::end()
 		break;
 	case PrimitiveMode_LineLoop:
 		IM3D_ASSERT(m_vertCountThisPrim > 1);
-		m_lines[m_primList].push_back(m_lines[m_primList].back());
-		m_lines[m_primList].push_back(m_lines[m_primList][m_firstVertThisPrim]);
+		m_vertexData[DrawPrimitive_Lines][m_primList].push_back(m_vertexData[DrawPrimitive_Lines][m_primList].back());
+		m_vertexData[DrawPrimitive_Lines][m_primList].push_back(m_vertexData[DrawPrimitive_Lines][m_primList][m_firstVertThisPrim]);
 		break;
 	case PrimitiveMode_Triangles:
 		IM3D_ASSERT(m_vertCountThisPrim % 3 == 0);
@@ -351,29 +351,29 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 	
 	switch (m_primMode) {
 	case PrimitiveMode_Points:
-		m_points[m_primList].push_back(vd);
+		m_vertexData[DrawPrimitive_Points][m_primList].push_back(vd);
 		break;
 	case PrimitiveMode_Lines:
-		m_lines[m_primList].push_back(vd);
+		m_vertexData[DrawPrimitive_Lines][m_primList].push_back(vd);
 		break;
 	case PrimitiveMode_LineStrip:
 	case PrimitiveMode_LineLoop:
 		if (m_vertCountThisPrim >= 2) {
-			m_lines[m_primList].push_back(m_lines[m_primList].back());
+			m_vertexData[DrawPrimitive_Lines][m_primList].push_back(m_vertexData[DrawPrimitive_Lines][m_primList].back());
 			++m_vertCountThisPrim;
 		}
-		m_lines[m_primList].push_back(vd);
+		m_vertexData[DrawPrimitive_Lines][m_primList].push_back(vd);
 		break;
 	case PrimitiveMode_Triangles:
-		m_triangles[m_primList].push_back(vd);
+		m_vertexData[DrawPrimitive_Triangles][m_primList].push_back(vd);
 		break;
 	case PrimitiveMode_TriangleStrip:
 		if (m_vertCountThisPrim >= 3) {
-			m_triangles[m_primList].push_back(*(m_triangles[m_primList].end() - 2));
-			m_triangles[m_primList].push_back(*(m_triangles[m_primList].end() - 2));
+			m_vertexData[DrawPrimitive_Triangles][m_primList].push_back(*(m_vertexData[DrawPrimitive_Triangles][m_primList].end() - 2));
+			m_vertexData[DrawPrimitive_Triangles][m_primList].push_back(*(m_vertexData[DrawPrimitive_Triangles][m_primList].end() - 2));
 			m_vertCountThisPrim += 2;
 		}
-		m_triangles[m_primList].push_back(vd);
+		m_vertexData[DrawPrimitive_Triangles][m_primList].push_back(vd);
 		break;
 	default:
 		break;
@@ -386,10 +386,12 @@ void Context::reset()
 	IM3D_ASSERT(m_primMode == PrimitiveMode_None);
 	m_primMode = PrimitiveMode_None;
 
-	for (int i = 0; i < 2; ++i) {
-		m_points[i].clear();
-		m_lines[i].clear();
-		m_triangles[i].clear();
+	for (int i = 0; i < DrawPrimitive_Count; ++i) {
+		for (int j = 0; j < 2; ++j) {
+			m_vertexData[i][j].clear();
+			m_vertexData[i][j].clear();
+			m_vertexData[i][j].clear();
+		}
 	}
 	m_sortedDrawLists.clear();
 	m_sortCalled = false;
@@ -401,17 +403,13 @@ void Context::reset()
 
 void Context::draw()
 {
-	IM3D_ASSERT(m_appData.drawPrimitives);
+	IM3D_ASSERT(m_appData.drawPrimitives); // must set the draw callback
 
- // draw unsorted prims first (triangles -> lines -> points seems like a good order)
-	if (m_triangles[0].size() > 0) {
-		m_appData.drawPrimitives(DrawPrimitive_Triangles, m_triangles[0].data(), m_triangles[0].size());
-	}
-	if (m_lines[0].size() > 0) {
-		m_appData.drawPrimitives(DrawPrimitive_Lines, m_lines[0].data(), m_lines[0].size());
-	}
-	if (m_points[0].size() > 0) {
-		m_appData.drawPrimitives(DrawPrimitive_Points, m_points[0].data(), m_points[0].size());
+ // draw unsorted prims first
+	for (int i = 0; i < DrawPrimitive_Count; ++i) {
+		if (m_vertexData[i][0].size() > 0) {
+			m_appData.drawPrimitives((DrawPrimitiveType)i, m_vertexData[i][0].data(), m_vertexData[i][0].size());
+		}
 	}
 
  // draw sorted primitives on top
@@ -503,76 +501,78 @@ namespace {
 
 void Context::sort()
 {
-	Vector<SortData> pointsD2, linesD2, trianglesD2;
+	Vector<SortData> sortData[DrawPrimitive_Count];
 	Vec3 viewOrigin = m_appData.m_viewOrigin;
 
- // sort each primitive list internally - doesn't need to be a stable sort assuming the prims 
- //  are pushed in the same order each frame
-	if (!m_points[1].empty()) {
-		pointsD2.reserve(m_points[1].size());
-		for (auto vd = m_points[1].begin(); vd != m_points[1].end(); ++vd) {
-			pointsD2.push_back(SortData(Length2(Vec3(vd->m_positionSize) - viewOrigin), vd));
+ // sort each primitive list internally
+	static const int kPrimCount[DrawPrimitive_Count] = { 1, 2, 3 };
+	for (int i = 0 ; i < DrawPrimitive_Count; ++i) {
+		Vector<VertexData>& vd = m_vertexData[i][1];
+		if (!vd.empty()) {
+			sortData[i].reserve(vd.size() / kPrimCount[i]);
+			for (VertexData* v = vd.begin(); v != vd.end(); ) {
+				sortData[i].push_back(SortData(0.0f, v));
+				IM3D_ASSERT(v < vd.end());
+				for (int j = 0; j < kPrimCount[i]; ++j, ++v) {
+				 // sort key is the primitive midpoint distance to view origin
+					sortData[i].back().m_key += Length2(Vec3(v->m_positionSize) - viewOrigin);
+				}
+				sortData[i].back().m_key /= (float)kPrimCount[i];
+			}
+		 // qsort is not necessarily stable but it doesn't matter assuming the prims are pushed in
+		 //   roughly the same order each frame
+			qsort(vd.data(), vd.size(), sizeof(SortData), SortCmp);
+			Reorder(m_vertexData[i][1], sortData[i].data(), vd.size(), kPrimCount[i]);
 		}
-		qsort(pointsD2.data(), pointsD2.size(), sizeof(SortData), SortCmp);
-		Reorder(m_points[1], pointsD2.data(), pointsD2.size(), 1);
-	}
-	if (!m_lines[1].empty()) {
-		linesD2.reserve(m_lines[1].size() / 2);
-		for (auto vd = m_lines[1].begin(); vd != m_lines[1].end(); ++vd) {
-			linesD2.push_back(SortData(0.0f, vd));
-			linesD2.back().m_key += Length2(Vec3(vd->m_positionSize) - viewOrigin);
-			linesD2.back().m_key += Length2(Vec3((++vd)->m_positionSize) - viewOrigin);
-			linesD2.back().m_key /= 2.0f;
-		}
-		qsort(linesD2.data(), linesD2.size(), sizeof(SortData), SortCmp);
-		Reorder(m_lines[1], linesD2.data(), linesD2.size(), 2);
-	}
-	if (!m_triangles[1].empty()) {
-		trianglesD2.reserve(m_triangles[1].size() / 3);
-		for (auto vd = m_triangles[1].begin(); vd != m_triangles[1].end(); ++vd) {
-			trianglesD2.push_back(SortData(0.0f, vd));
-			trianglesD2.back().m_key += Length2(Vec3(vd->m_positionSize) - viewOrigin);
-			trianglesD2.back().m_key += Length2(Vec3((++vd)->m_positionSize) - viewOrigin);
-			trianglesD2.back().m_key += Length2(Vec3((++vd)->m_positionSize) - viewOrigin);
-			trianglesD2.back().m_key /= 3.0f;
-		}
-		qsort(trianglesD2.data(), trianglesD2.size(), sizeof(SortData), SortCmp);
-		Reorder(m_triangles[1], trianglesD2.data(), trianglesD2.size(), 3);
 	}
 
- // construct draw lists
-	DrawList dl;
-	dl.m_primType = DrawPrimitive_Lines;
-	dl.m_start = m_lines[1].data();
-	dl.m_count = m_lines[1].size();
-	m_sortedDrawLists.push_back(dl);
+ // construct draw lists (split prim lists so that none overlap)
+	int cprim = 0;
+	SortData* search[DrawPrimitive_Count];
+	int emptyCount = 0;
+	for (int i = 0; i < DrawPrimitive_Count; ++i) {
+		if (sortData[i].empty()) {
+			search[i] = 0;
+			++emptyCount;
+		} else {
+			search[i] = sortData[i].begin();
+		}
+	}
+	#define modinc(v) ((v + 1) % DrawPrimitive_Count)
+	while (emptyCount != DrawPrimitive_Count) {
+		while (search[cprim] == 0) {
+			modinc(cprim);
+		}
+	 // find the max key at the current position across all sort data
+		float mxkey = search[cprim]->m_key;
+		int mxprim = cprim;
+		for (int p = modinc(cprim); p != cprim; p = modinc(p)) {
+			if (search[p] != 0 && search[p]->m_key < mxkey) {
+				mxkey = search[p]->m_key;
+				mxprim = p;
+			}
+		}
 
-	dl.m_primType = DrawPrimitive_Triangles;
-	dl.m_start = m_triangles[1].data();
-	dl.m_count = m_triangles[1].size();
-	m_sortedDrawLists.push_back(dl);
+	 // if primitive changed, start a new draw list
+		if (mxprim != cprim || m_sortedDrawLists.empty()) {
+			cprim = mxprim;
+			DrawList dl;
+			dl.m_primType = (DrawPrimitiveType)cprim;
+			dl.m_start = search[cprim]->m_start;
+			dl.m_count = 0;
+			m_sortedDrawLists.push_back(dl);
+		}
 
-	//SortData* sortData[3] = {
-	//	pointsD2.begin(),
-	//	linesD2.begin(),
-	//	trianglesD2.begin()
-	//};
-	//int currentPrim = 0;
-	//while (true) {
-	//	float mx = sortData[0]->m_key;
-	//	
-	//	
-	//}
-/*	while !done (i.e. not checked all primitives
-		find the furthest D2 of points/lines/tris
-			increment the 'selected' primitive iterator only
-			if m_sortedDrawLists.empty() || primtive !m_sortedDrawLists.back().m_primitive
-				push a new draw list
-			else
-				increment draw list count
+	 // increment the vertex count for the current draw list
+		m_sortedDrawLists.back().m_count += kPrimCount[cprim];
+		++search[cprim];
+		if (search[cprim] == sortData[cprim].end()) {
+			search[cprim] = 0;
+			++emptyCount;
+		}
 
-
-*/
+	}
+	#undef modinc
 }
 
 float Context::pixelsToWorldSize(const Vec3& _position, float _pixels)

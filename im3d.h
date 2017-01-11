@@ -196,7 +196,9 @@ enum DrawPrimitiveType
 {
 	DrawPrimitive_Points,
 	DrawPrimitive_Lines,
-	DrawPrimitive_Triangles
+	DrawPrimitive_Triangles,
+
+	DrawPrimitive_Count
 };
 typedef void (DrawPrimitivesCallback)(DrawPrimitiveType _primType, const VertexData* _data, U32 _count);
 
@@ -339,9 +341,7 @@ private:
 	Vector<Id>         m_idStack;
 
  // primitive data: [0] unsorted, [1] sorted
-	Vector<VertexData> m_points[2];
-	Vector<VertexData> m_lines[2];
-	Vector<VertexData> m_triangles[2];
+	Vector<VertexData> m_vertexData[DrawPrimitive_Count][2];
 
 	struct DrawList
 	{

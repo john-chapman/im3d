@@ -57,7 +57,7 @@ int main(int, char**)
 			float z = -4.0f;
 			for (int i = 0; i < 3; ++i, z -= 2.0f, x += 0.2f){
 				Im3d::SetSize(1.0f);
-				Im3d::SetAlpha(0.5f);
+				Im3d::SetAlpha(0.9f);
 				Im3d::BeginTriangles();
 					Im3d::Vertex( 1.0f + x, -1.0f, z, Color_Blue);
 					Im3d::Vertex( 0.0f + x,  1.0f, z, Color_Red);
