@@ -27,6 +27,8 @@ int main(int, char**)
 		glAssert(glClearColor(0.25f, 0.25f, 0.25f, 1.0f));
 		glAssert(glClear(GL_COLOR_BUFFER_BIT));
 		
+		RandSeed(123);
+
 		static const int   kGridSize = 20;
 		static const float kGridHalf = (float)kGridSize * 0.5f;
 		Im3d::PushDrawState();
@@ -43,21 +45,23 @@ int main(int, char**)
 				}
 			Im3d::End();
 
-			Im3d::SetSize(8.0f);
+			/*Im3d::SetSize(8.0f);
 			Im3d::BeginPoints();
 				RandSeed(123);
 				for (int i = 0; i < 200; ++i) {
 					Im3d::SetColor(RandFloat(0.5f, 1.0f), RandFloat(0.5f, 1.0f), RandFloat(0.5f, 1.0f));
 					Im3d::Vertex(RandVec3(-10.0f, 10.0f));
 				}
-			Im3d::End();
+			Im3d::End();*/
 
-			Im3d::EnableSorting(true);
-			float x = -0.2f;
+			static bool s_sorting = true;
+			ImGui::Checkbox("Enable Sorting", &s_sorting);
+			Im3d::EnableSorting(s_sorting);
+			/*float x = -0.2f;
 			float z = -4.0f;
 			for (int i = 0; i < 3; ++i, z -= 2.0f, x += 0.2f){
 				Im3d::SetSize(1.0f);
-				Im3d::SetAlpha(0.9f);
+				Im3d::SetAlpha(0.8f);
 				Im3d::BeginTriangles();
 					Im3d::Vertex( 1.0f + x, -1.0f, z, Color_Blue);
 					Im3d::Vertex( 0.0f + x,  1.0f, z, Color_Red);
@@ -71,8 +75,37 @@ int main(int, char**)
 					Im3d::Vertex( 0.0f + x,  1.0f, z, Color_Magenta);
 					Im3d::Vertex(-1.0f + x, -1.0f, z, Color_Green);
 				Im3d::End();
-			}
+			}*/
 
+			static const int kCount = 1000;
+			Im3d::SetAlpha(0.7f);
+			for (int i = 0; i < kCount; ++i) {
+				Im3d::PushMatrix();
+					Im3d::Mat4 m = Im3d::Rotate(Im3d::Mat4(1.0f), Im3d::Vec3(0.0f, 0.0f, 1.0f), RandFloat(-3.0f, 3.0f));
+					m = Im3d::Rotate(m, Im3d::Vec3(1.0f, 0.0f, 0.0f), RandFloat(-3.0f, 3.0f));
+					m = Im3d::Rotate(m, Im3d::Vec3(0.0f, 1.0f, 0.0f), RandFloat(-3.0f, 3.0f));
+					m = Im3d::Translate(m, RandVec3(-10.0f, 10.0f));
+					Im3d::SetMatrix(m);
+					Im3d::BeginTriangles();
+						Im3d::Vertex( 1.0f, -1.0f, 0.0f, Color_Blue);
+						Im3d::Vertex( 0.0f,  1.0f, 0.0f, Color_Red);
+						Im3d::Vertex(-1.0f, -1.0f, 0.0f, Color_Green);
+					Im3d::End();
+				Im3d::PopMatrix();
+
+				Im3d::PushMatrix();
+					m = Im3d::Rotate(Im3d::Mat4(1.0f), Im3d::Vec3(0.0f, 0.0f, 1.0f), RandFloat(-3.0f, 3.0f));
+					m = Im3d::Rotate(m, Im3d::Vec3(1.0f, 0.0f, 0.0f), RandFloat(-3.0f, 3.0f));
+					m = Im3d::Rotate(m, Im3d::Vec3(0.0f, 1.0f, 0.0f), RandFloat(-3.0f, 3.0f));
+					m = Im3d::Translate(m, RandVec3(-10.0f, 10.0f));
+					Im3d::SetMatrix(m);
+					Im3d::SetSize(10.0f);
+					Im3d::BeginLines();
+						Im3d::Vertex( 0.0f, -1.0f, 0.0f, Color_Yellow);
+						Im3d::Vertex( 0.0f,  1.0f, 0.0f, Color_Magenta);
+					Im3d::End();
+				Im3d::PopMatrix();
+			}
 		Im3d::PopDrawState();
 
 		app.draw();

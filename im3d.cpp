@@ -191,7 +191,7 @@ Mat4 Im3d::Rotate(const Mat4& _m, const Vec3& _axis, float _rads)
 	float c  = cosf(_rads);
 	float rc = 1.0f - c;
 	float s  = sinf(_rads);
-	return Mat4(
+	return _m * Mat4(
 		_axis.x * _axis.x + (1.0f - _axis.x * _axis.x) * c, _axis.x * _axis.y * rc - _axis.z * s,                _axis.x * _axis.z * rc + _axis.y * s,                0.0f,
 		_axis.x * _axis.y * rc + _axis.z * s,               _axis.y * _axis.y + (1.0f - _axis.y * _axis.y) * c,  _axis.y * _axis.z * rc - _axis.x * s,                0.0f,
 		_axis.x * _axis.z * rc - _axis.y * s,               _axis.y * _axis.z * rc + _axis.x * s,                _axis.z * _axis.z + (1.0f - _axis.z * _axis.z) * c,  0.0f,
@@ -521,8 +521,8 @@ void Context::sort()
 			}
 		 // qsort is not necessarily stable but it doesn't matter assuming the prims are pushed in
 		 //   roughly the same order each frame
-			qsort(vd.data(), vd.size(), sizeof(SortData), SortCmp);
-			Reorder(m_vertexData[i][1], sortData[i].data(), vd.size(), kPrimCount[i]);
+			qsort(sortData[i].data(), sortData[i].size(), sizeof(SortData), SortCmp);
+			Reorder(m_vertexData[i][1], sortData[i].data(), sortData[i].size(), kPrimCount[i]);
 		}
 	}
 
@@ -541,24 +541,24 @@ void Context::sort()
 	#define modinc(v) ((v + 1) % DrawPrimitive_Count)
 	while (emptyCount != DrawPrimitive_Count) {
 		while (search[cprim] == 0) {
-			modinc(cprim);
+			cprim = modinc(cprim);
 		}
 	 // find the max key at the current position across all sort data
 		float mxkey = search[cprim]->m_key;
 		int mxprim = cprim;
 		for (int p = modinc(cprim); p != cprim; p = modinc(p)) {
-			if (search[p] != 0 && search[p]->m_key < mxkey) {
+			if (search[p] != 0 && search[p]->m_key > mxkey) {
 				mxkey = search[p]->m_key;
 				mxprim = p;
 			}
 		}
 
-	 // if primitive changed, start a new draw list
-		if (mxprim != cprim || m_sortedDrawLists.empty()) {
+	 // if draw list is empty or primitive changed start a new draw list
+		if (m_sortedDrawLists.empty() || m_sortedDrawLists.back().m_primType != mxprim) {
 			cprim = mxprim;
 			DrawList dl;
 			dl.m_primType = (DrawPrimitiveType)cprim;
-			dl.m_start = search[cprim]->m_start;
+			dl.m_start = m_vertexData[cprim][1].data() + (search[cprim] - sortData[cprim].data()) * kPrimCount[cprim];
 			dl.m_count = 0;
 			m_sortedDrawLists.push_back(dl);
 		}

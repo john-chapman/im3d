@@ -332,19 +332,19 @@ static void Im3d_Draw(Im3d::DrawPrimitiveType _primType, const Im3d::VertexData*
 	case Im3d::DrawPrimitive_Points:
 		prim = GL_POINTS;
 		sh = s_shIm3dPoints;
-		ImGui::Text("Points (%d)", _count);
+		//ImGui::Text("Points (%d)", _count);
 		glAssert(glDisable(GL_CULL_FACE)); // points are view-aligned
 		break;
 	case Im3d::DrawPrimitive_Lines:
 		prim = GL_LINES;
 		sh = s_shIm3dLines;
-		ImGui::Text("Lines (%d)", _count / 2);
+		//ImGui::Text("Lines (%d)", _count / 2);
 		glAssert(glDisable(GL_CULL_FACE)); // lines are view-aligned
 		break;
 	case Im3d::DrawPrimitive_Triangles:
 		prim = GL_TRIANGLES;
 		sh = s_shIm3dTriangles;
-		ImGui::Text("Tris (%d)", _count / 3);
+		//ImGui::Text("Tris (%d)", _count / 3);
 		//glAssert(glEnable(GL_CULL_FACE)); // culling valid for triangles, but optional
 		break;
 	default:
@@ -807,7 +807,7 @@ bool TestApp::update()
 	Im3d::NewFrame();
 
 	ImGui::SliderFloat("Fov", &m_camFov, 1.0f, 90.0f);
-	ImGui::Text("Delta t: %.2f", m_deltaTime);
+	ImGui::Text("FPS: %.2f", 1.0f/m_deltaTime);
 	ImGui::Text("Cam pos: %.2f,%.2f,%.2f", m_camPos.x, m_camPos.y, m_camPos.z);
 	ImGui::Text("Cam dir: %.2f,%.2f,%.2f", m_camDir.x, m_camDir.y, m_camDir.z);
 
