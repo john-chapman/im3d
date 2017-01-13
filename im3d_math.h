@@ -57,28 +57,23 @@ inline Vec4  Normalize(const Vec4& _v)                     { return _v / Length(
 
 inline Mat4 operator*(const Mat4& _lhs, const Mat4& _rhs)
 {
-	// \todo expand, remove Dot calls
 	Mat4 ret;
-	ret(0, 0) = Dot(_lhs.getRow(0), _rhs.getCol(0));
-	ret(0, 1) = Dot(_lhs.getRow(0), _rhs.getCol(1));
-	ret(0, 2) = Dot(_lhs.getRow(0), _rhs.getCol(2));
-	ret(0, 3) = Dot(_lhs.getRow(0), _rhs.getCol(3));
-
-	ret(1, 0) = Dot(_lhs.getRow(1), _rhs.getCol(0));
-	ret(1, 1) = Dot(_lhs.getRow(1), _rhs.getCol(1));
-	ret(1, 2) = Dot(_lhs.getRow(1), _rhs.getCol(2));
-	ret(1, 3) = Dot(_lhs.getRow(1), _rhs.getCol(3));
-
-	ret(2, 0) = Dot(_lhs.getRow(2), _rhs.getCol(0));
-	ret(2, 1) = Dot(_lhs.getRow(2), _rhs.getCol(1));
-	ret(2, 2) = Dot(_lhs.getRow(2), _rhs.getCol(2));
-	ret(2, 3) = Dot(_lhs.getRow(2), _rhs.getCol(3));
-
-	ret(3, 0) = Dot(_lhs.getRow(3), _rhs.getCol(0));
-	ret(3, 1) = Dot(_lhs.getRow(3), _rhs.getCol(1));
-	ret(3, 2) = Dot(_lhs.getRow(3), _rhs.getCol(2));
-	ret(3, 3) = Dot(_lhs.getRow(3), _rhs.getCol(3));
-
+	ret(0, 0) = _lhs(0, 0) * _rhs(0, 0) + _lhs(0, 1) * _rhs(1, 0) + _lhs(0, 2) * _rhs(2, 0) + _lhs(0, 3) * _rhs(3, 0);
+	ret(0, 1) = _lhs(0, 0) * _rhs(0, 1) + _lhs(0, 1) * _rhs(1, 1) + _lhs(0, 2) * _rhs(2, 1) + _lhs(0, 3) * _rhs(3, 1);
+	ret(0, 2) = _lhs(0, 0) * _rhs(0, 2) + _lhs(0, 1) * _rhs(1, 2) + _lhs(0, 2) * _rhs(2, 2) + _lhs(0, 3) * _rhs(3, 2);
+	ret(0, 3) = _lhs(0, 0) * _rhs(0, 3) + _lhs(0, 1) * _rhs(1, 3) + _lhs(0, 2) * _rhs(2, 3) + _lhs(0, 3) * _rhs(3, 3);
+	ret(1, 0) = _lhs(1, 0) * _rhs(0, 0) + _lhs(1, 1) * _rhs(1, 0) + _lhs(1, 2) * _rhs(2, 0) + _lhs(1, 3) * _rhs(3, 0);
+	ret(1, 1) = _lhs(1, 0) * _rhs(0, 1) + _lhs(1, 1) * _rhs(1, 1) + _lhs(1, 2) * _rhs(2, 1) + _lhs(1, 3) * _rhs(3, 1);
+	ret(1, 2) = _lhs(1, 0) * _rhs(0, 2) + _lhs(1, 1) * _rhs(1, 2) + _lhs(1, 2) * _rhs(2, 2) + _lhs(1, 3) * _rhs(3, 2);
+	ret(1, 3) = _lhs(1, 0) * _rhs(0, 3) + _lhs(1, 1) * _rhs(1, 3) + _lhs(1, 2) * _rhs(2, 3) + _lhs(1, 3) * _rhs(3, 3);
+	ret(2, 0) = _lhs(2, 0) * _rhs(0, 0) + _lhs(2, 1) * _rhs(1, 0) + _lhs(2, 2) * _rhs(2, 0) + _lhs(2, 3) * _rhs(3, 0);
+	ret(2, 1) = _lhs(2, 0) * _rhs(0, 1) + _lhs(2, 1) * _rhs(1, 1) + _lhs(2, 2) * _rhs(2, 1) + _lhs(2, 3) * _rhs(3, 1);
+	ret(2, 2) = _lhs(2, 0) * _rhs(0, 2) + _lhs(2, 1) * _rhs(1, 2) + _lhs(2, 2) * _rhs(2, 2) + _lhs(2, 3) * _rhs(3, 2);
+	ret(2, 3) = _lhs(2, 0) * _rhs(0, 3) + _lhs(2, 1) * _rhs(1, 3) + _lhs(2, 2) * _rhs(2, 3) + _lhs(2, 3) * _rhs(3, 3);
+	ret(3, 0) = _lhs(3, 0) * _rhs(0, 0) + _lhs(3, 1) * _rhs(1, 0) + _lhs(3, 2) * _rhs(2, 0) + _lhs(3, 3) * _rhs(3, 0);
+	ret(3, 1) = _lhs(3, 0) * _rhs(0, 1) + _lhs(3, 1) * _rhs(1, 1) + _lhs(3, 2) * _rhs(2, 1) + _lhs(3, 3) * _rhs(3, 1);
+	ret(3, 2) = _lhs(3, 0) * _rhs(0, 2) + _lhs(3, 1) * _rhs(1, 2) + _lhs(3, 2) * _rhs(2, 2) + _lhs(3, 3) * _rhs(3, 2);
+	ret(3, 3) = _lhs(3, 0) * _rhs(0, 3) + _lhs(3, 1) * _rhs(1, 3) + _lhs(3, 2) * _rhs(2, 3) + _lhs(3, 3) * _rhs(3, 3);
 	return ret;
 }
 
@@ -101,11 +96,13 @@ inline Vec4 operator*(const Mat4& _m, const Vec4& _v)
 }
 
 // defined in im3d.cpp
-Mat4  Inverse(const Mat4& _m);
-Mat4  Transpose(const Mat4& _m);
-Mat4  Translate(const Mat4& _m, const Vec3& _t);
-Mat4  Rotate(const Mat4& _m, const Vec3& _axis, float _rads); // _angle must be unit length
-Mat4  LookAt(const Vec3& _from, const Vec3& _to, const Vec3& _up = Vec3(0.0f, 1.0f, 0.0f)); // aligns +z with (_to - _from)
+Mat4 Inverse(const Mat4& _m);
+Mat4 Transpose(const Mat4& _m);
+Mat4 Translate(const Mat4& _m, const Vec3& _t);
+Mat4 Rotate(const Mat4& _m, const Vec3& _axis, float _rads); // _angle must be unit length
+Mat4 LookAt(const Vec3& _from, const Vec3& _to, const Vec3& _up = Vec3(0.0f, 1.0f, 0.0f)); // aligns +z with (_to - _from)
+
+
 } // namespace Im3d
 
 #endif // im3d_math_h
