@@ -45,6 +45,13 @@
 #define IM3D_VERIFY_MSG(e, msg, ...)   IM3D_ASSERT_MSG(e, msg, __VA_ARGS__)
 #define IM3D_VERIFY(e)                 IM3D_VERIFY_MSG(e, 0, 0)
 
+#ifndef __COUNTER__
+	#define __COUNTER__ __LINE__
+#endif
+#define IM3D_TOKEN_CONCATENATE_(_t0, _t1) _t0 ## _t1
+#define IM3D_TOKEN_CONCATENATE(_t0, _t1)  IM3D_TOKEN_CONCATENATE_(_t0, _t1)
+#define IM3D_UNIQUE_NAME(_base) IM3D_TOKEN_CONCATENATE(_base, __COUNTER__)
+
 
 #if defined(IM3D_GL)
 	#include "GL/glew.h"
@@ -89,6 +96,7 @@ const char* GetPlatformErrorString(void* _err);
 
 
 void        RandSeed(int _seed);
+int         RandInt(int _min, int _max);
 float       RandFloat(float _min, float _max);
 Im3d::Vec3  RandVec3(float _min, float _max);
 

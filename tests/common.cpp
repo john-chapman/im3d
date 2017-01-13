@@ -84,9 +84,13 @@ const char* Im3d::GetPlatformErrorString(void* _err)
 #endif
 
 
-void  RandSeed(int _seed)
+void RandSeed(int _seed)
 {
 	srand(_seed);
+}
+int RandInt(int _min, int _max)
+{
+	return _min + (int)rand() % (_max - _min);
 }
 float RandFloat(float _min, float _max)
 {

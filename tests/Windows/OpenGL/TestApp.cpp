@@ -16,6 +16,36 @@ static const char* kGlslVersionString = "#version 450";
 // \todo make everything static?
 static TestApp* s_testApp = 0;
 
+static LARGE_INTEGER s_sysTimerFreq;
+
+struct AutoTimer
+{
+	const char*   m_name;
+	LARGE_INTEGER m_start;
+	AutoTimer(const char* _name)
+		: m_name(_name)
+	{
+		IM3D_PLATFORM_ASSERT(QueryPerformanceCounter(&m_start));
+	}
+
+	~AutoTimer()
+	{
+		LARGE_INTEGER end;
+		IM3D_PLATFORM_ASSERT(QueryPerformanceCounter(&end));
+		double microseconds = (double)((end.QuadPart - m_start.QuadPart) * 1000000ll / s_sysTimerFreq.QuadPart);
+		if (microseconds > 1000.0) {
+			microseconds /= 1000.0;
+			ImGui::Text("%s -- %fms", m_name, (float)microseconds);
+		} else if (microseconds > 1000000.0) {
+			microseconds /= 1000000.0;
+			ImGui::Text("%s -- %fs", m_name, (float)microseconds);
+		} else {
+			ImGui::Text("%s -- %fus", m_name, (float)microseconds);
+		}
+	}
+};
+#define AUTO_TIMER(_name) AutoTimer IM3D_UNIQUE_NAME(_AutoTimer)(_name)
+
 static void Append(const char* _str, Vector<char>& _out_)
 {
 	while (*_str) {
@@ -212,7 +242,12 @@ static void ImGui_Draw(ImDrawData* _drawData)
 		0.0f,                  0.0f,                   0.0f,  1.0f
 		);
 	glAssert(glUseProgram(s_shImGui));
-	glAssert(glUniformMatrix4fv(glGetUniformLocation(s_shImGui, "uProjMatrix"), 1, false, (const GLfloat*)ortho));
+
+	bool transpose = false;
+	#ifdef IM3D_MATRIX_ROW_MAJOR
+		transpose = true;
+	#endif
+	glAssert(glUniformMatrix4fv(glGetUniformLocation(s_shImGui, "uProjMatrix"), 1, transpose, (const GLfloat*)ortho));
 	glAssert(glBindVertexArray(s_vaImGui));
 
 	for (int i = 0; i < _drawData->CmdListsCount; ++i) {
@@ -356,9 +391,13 @@ static void Im3d_Draw(Im3d::DrawPrimitiveType _primType, const Im3d::VertexData*
 	glAssert(glBindBuffer(GL_ARRAY_BUFFER, s_vbIm3d));
 	glAssert(glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)_count * sizeof(Im3d::VertexData), (GLvoid*)_data, GL_STREAM_DRAW));
 	glAssert(glUseProgram(sh));
-	glAssert(glUniformMatrix4fv(glGetUniformLocation(sh, "uViewProjMatrix"), 1, false, (const GLfloat*)s_testApp->m_camViewProj));
+	bool transpose = false;
+	#ifdef IM3D_MATRIX_ROW_MAJOR
+		transpose = true;
+	#endif
+	glAssert(glUniformMatrix4fv(glGetUniformLocation(sh, "uViewProjMatrix"), 1, transpose, (const GLfloat*)s_testApp->m_camViewProj));
 	glAssert(glUniform2f(glGetUniformLocation(sh, "uViewport"), (float)s_testApp->getWidth(), (float)s_testApp->getHeight()));
-	glAssert(glDrawArrays(prim, 0, (GLsizei)_count));
+	//glAssert(glDrawArrays(prim, 0, (GLsizei)_count));
 
 	glAssert(glDisable(GL_PROGRAM_POINT_SIZE));
 }
@@ -383,7 +422,6 @@ struct TestApp::Impl
 
  // time
 	LARGE_INTEGER m_currTime, m_prevTime;
-	LARGE_INTEGER m_sysFreq;
 	float m_deltaTime; // seconds
 
  // gl context
@@ -392,6 +430,7 @@ struct TestApp::Impl
 
 	bool initGl(int _vmaj, int _vmin);
 };
+
 
 LRESULT CALLBACK TestApp::Impl::WindowProc(HWND _hwnd, UINT _umsg, WPARAM _wparam, LPARAM _lparam)
 {
@@ -698,7 +737,7 @@ bool TestApp::init(int _width, int _height, const char* _title)
 	Im3d::GetAppData().drawPrimitives = &Im3d_Draw;
 
 	m_impl->m_prevCursorPos = m_impl->getWindowRelativeCursor();
-	IM3D_PLATFORM_VERIFY(QueryPerformanceFrequency(&m_impl->m_sysFreq));
+	IM3D_PLATFORM_VERIFY(QueryPerformanceFrequency(&s_sysTimerFreq));
 	IM3D_PLATFORM_VERIFY(QueryPerformanceCounter(&m_impl->m_currTime));
 
 	ShowWindow(m_impl->m_hwnd, SW_SHOW);
@@ -720,7 +759,7 @@ bool TestApp::update()
 {
 	m_impl->m_prevTime = m_impl->m_currTime;
 	IM3D_PLATFORM_VERIFY(QueryPerformanceCounter(&m_impl->m_currTime));
-	double microseconds = (double)((m_impl->m_currTime.QuadPart - m_impl->m_prevTime.QuadPart) * 1000000ll / m_impl->m_sysFreq.QuadPart);
+	double microseconds = (double)((m_impl->m_currTime.QuadPart - m_impl->m_prevTime.QuadPart) * 1000000ll / s_sysTimerFreq.QuadPart);
 	m_impl->m_deltaTime = (float)(microseconds / 1000000.0);
 	m_deltaTime = m_impl->m_deltaTime;
 
@@ -818,7 +857,9 @@ void TestApp::draw()
 {
 	glAssert(glViewport(0, 0, m_width, m_height));
 
-	Im3d::Draw();
+	{ AUTO_TIMER("Im3d::Draw");
+		Im3d::Draw();
+	}
 	ImGui::Render();
 
 	glAssert(glBindVertexArray(0));

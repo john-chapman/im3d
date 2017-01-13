@@ -77,7 +77,7 @@ int main(int, char**)
 				Im3d::End();
 			}*/
 
-			static const int kCount = 1000;
+			static const int kCount = 5000;
 			Im3d::SetAlpha(0.7f);
 			for (int i = 0; i < kCount; ++i) {
 				Im3d::PushMatrix();
