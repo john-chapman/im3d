@@ -8,6 +8,12 @@
 
 namespace Im3d {
 
+template <typename T>
+inline T Max(T _a, T _b)                                   { return _a < _b ? _b : _a; }
+template <typename T>
+inline T Min(T _a, T _b)                                   { return _a < _b ? _a : _b; }
+
+// Vec2
 inline Vec2  operator+(const Vec2& _lhs, const Vec2& _rhs) { return Vec2(_lhs.x + _rhs.x, _lhs.y + _rhs.y); }
 inline Vec2  operator-(const Vec2& _lhs, const Vec2& _rhs) { return Vec2(_lhs.x - _rhs.x, _lhs.y - _rhs.y); }
 inline Vec2  operator*(const Vec2& _lhs, const Vec2& _rhs) { return Vec2(_lhs.x * _rhs.x, _lhs.y * _rhs.y); }
@@ -21,6 +27,7 @@ inline float Length2(const Vec2& _v)                       { return Dot(_v, _v);
 inline Vec2  Abs(const Vec2& _v)                           { return Vec2(fabs(_v.x), fabs(_v.y));           }
 inline Vec2  Normalize(const Vec2& _v)                     { return _v / Length(_v);                        }
 
+// Vec3
 inline Vec3  operator+(const Vec3& _lhs, const Vec3& _rhs) { return Vec3(_lhs.x + _rhs.x, _lhs.y + _rhs.y, _lhs.z + _rhs.z); }
 inline Vec3  operator-(const Vec3& _lhs, const Vec3& _rhs) { return Vec3(_lhs.x - _rhs.x, _lhs.y - _rhs.y, _lhs.z - _rhs.z); }
 inline Vec3  operator*(const Vec3& _lhs, const Vec3& _rhs) { return Vec3(_lhs.x * _rhs.x, _lhs.y * _rhs.y, _lhs.z * _rhs.z); }
@@ -42,6 +49,7 @@ inline Vec3  Cross(const Vec3& _a, const Vec3& _b)
 		);
 }
 
+// Vec4
 inline Vec4  operator+(const Vec4& _lhs, const Vec4& _rhs) { return Vec4(_lhs.x + _rhs.x, _lhs.y + _rhs.y, _lhs.z + _rhs.z, _lhs.w + _rhs.w); }
 inline Vec4  operator-(const Vec4& _lhs, const Vec4& _rhs) { return Vec4(_lhs.x - _rhs.x, _lhs.y - _rhs.y, _lhs.z - _rhs.z, _lhs.w - _rhs.w); }
 inline Vec4  operator*(const Vec4& _lhs, const Vec4& _rhs) { return Vec4(_lhs.x * _rhs.x, _lhs.y * _rhs.y, _lhs.z * _rhs.z, _lhs.w * _rhs.w); }
@@ -55,6 +63,7 @@ inline float Length2(const Vec4& _v)                       { return Dot(_v, _v);
 inline Vec4  Abs(const Vec4& _v)                           { return Vec4(fabs(_v.x), fabs(_v.y), fabs(_v.z), fabs(_v.w));                     }
 inline Vec4  Normalize(const Vec4& _v)                     { return _v / Length(_v);                        }
 
+// Mat4
 inline Mat4 operator*(const Mat4& _lhs, const Mat4& _rhs)
 {
 	Mat4 ret;
@@ -76,7 +85,6 @@ inline Mat4 operator*(const Mat4& _lhs, const Mat4& _rhs)
 	ret(3, 3) = _lhs(3, 0) * _rhs(0, 3) + _lhs(3, 1) * _rhs(1, 3) + _lhs(3, 2) * _rhs(2, 3) + _lhs(3, 3) * _rhs(3, 3);
 	return ret;
 }
-
 inline Vec3 operator*(const Mat4& _m, const Vec3& _pos)
 {
 	return Vec3(
@@ -102,6 +110,76 @@ Mat4 Translate(const Mat4& _m, const Vec3& _t);
 Mat4 Rotate(const Mat4& _m, const Vec3& _axis, float _rads); // _angle must be unit length
 Mat4 LookAt(const Vec3& _from, const Vec3& _to, const Vec3& _up = Vec3(0.0f, 1.0f, 0.0f)); // aligns +z with (_to - _from)
 
+/* Geom requirements:
+	- Ray-capsule intersection
+	- Ray-line nearest point
+*/
+
+// Extends to infinity from m_origin in ±m_direciton.
+struct Line
+{
+	Vec3 m_origin;
+	Vec3 m_direction; //< Must be unit length.
+
+	Line() {}
+	Line(const Vec3& _origin, const Vec3& _direction);
+};
+
+// Extends to infinity from m_origin in +m_direction (i.e. a line bounded at the origin).
+struct Ray
+{
+	Vec3 m_origin;
+	Vec3 m_direction; //< Must be unit length.
+
+	Ray() {}
+	Ray(const Vec3& _origin, const Vec3& _direction);
+};
+
+struct LineSegment
+{
+	Vec3 m_start;
+	Vec3 m_end;
+
+	LineSegment() {}
+	LineSegment(const Vec3& _start, const Vec3& _end);	
+};
+
+struct Sphere
+{
+	Vec3  m_origin;
+	float m_radius;
+
+	Sphere() {}
+	Sphere(const Vec3& _origin, float _radius);	
+};
+
+struct Plane
+{
+	Vec3  m_normal;
+	float m_offset;
+
+	Plane() {}
+	Plane(const Vec3& _normal, float _offset);
+	Plane(const Vec3& _normal, const Vec3& _origin);
+};
+
+struct Capsule
+{
+	Vec3  m_start;
+	Vec3  m_end;
+	float m_radius;
+	
+	Capsule() {}
+	Capsule(const Vec3& _start, const Vec3& _end, float _radius);
+};
+
+// Ray-primitive intersections. Use Intersects() when you don't need t0_/t1_.
+bool Intersects(const Ray& _ray, const Plane& _plane);
+bool Intersect (const Ray& _ray, const Plane& _plane, float& t0_);
+bool Intersects(const Ray& _ray, const Sphere& _sphere);
+bool Intersect (const Ray& _ray, const Sphere& _sphere, float& t0_, float& t1_);
+bool Intersects(const Ray& _ray, const Capsule& _capsule);
+bool Intersect (const Ray& _ray, const Capsule& _capsule, float& t0_, float& t1_);
 
 } // namespace Im3d
 

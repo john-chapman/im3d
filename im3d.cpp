@@ -218,6 +218,92 @@ Mat4 Im3d::LookAt(const Vec3& _from, const Vec3& _to, const Vec3& _up)
 		);
 }
 
+Line::Line(const Vec3& _origin, const Vec3& _direction) 
+	: m_origin(_origin)
+	, m_direction(_direction)
+{
+}
+Ray::Ray(const Vec3& _origin, const Vec3& _direction)
+	: m_origin(_origin)
+	, m_direction(_direction)
+{
+}
+LineSegment::LineSegment(const Vec3& _start, const Vec3& _end)
+	: m_start(_start)
+	, m_end(_end)
+{
+}
+Sphere::Sphere(const Vec3& _origin, float _radius)
+	: m_origin(_origin)
+	, m_radius(_radius)
+{
+}
+Plane::Plane(const Vec3& _normal, float _offset)
+	: m_normal(_normal)
+	, m_offset(_offset)
+{
+}
+Plane::Plane(const Vec3& _normal, const Vec3& _origin)
+	: m_normal(_normal)
+	, m_offset(Dot(_normal, _origin))
+{
+}
+Capsule::Capsule(const Vec3& _start, const Vec3& _end, float _radius)
+	: m_start(_start)
+	, m_end(_end)
+	, m_radius(_radius)
+{
+}
+
+bool Im3d::Intersects(const Ray& _ray, const Plane& _plane)
+{
+	float x = Dot(_plane.m_normal, _ray.m_direction);
+	return x <= 0.0f;
+}
+bool Im3d::Intersect(const Ray& _ray, const Plane& _plane, float& t0_)
+{
+	t0_ = Dot(_plane.m_normal, (_plane.m_normal * _plane.m_offset) - _ray.m_origin) / Dot(_plane.m_normal, _ray.m_direction);
+	return t0_ >= 0.0f;
+}
+bool Im3d::Intersects(const Ray& _r, const Sphere& _s)
+{
+	Vec3 p = _s.m_origin - _r.m_origin;
+	float p2 = Length2(p);
+	float q = Dot(p, _r.m_direction);
+	float r2 = _s.m_radius * _s.m_radius;
+	if (q < 0.0f && p2 > r2) {
+		return false;
+	}
+	return p2 - (q * q) <= r2;
+}
+bool Im3d::Intersect(const Ray& _r, const Sphere& _s, float& t0_, float& t1_)
+{
+	Vec3 p = _s.m_origin - _r.m_origin; 
+	float q = Dot(p, _r.m_direction); 
+	if (q < 0.0f) {
+		return false;
+	}
+	float p2 = Length2(p) - q * q; 
+	float r2 = _s.m_radius * _s.m_radius;
+	if (p2 > r2) {
+		return false;
+	}
+	float s = sqrt(r2 - p2); 
+	t0_ = Max(q - s, 0.0f);
+	t1_ = q + s;
+	 
+	return true;
+}
+bool Im3d::Intersects(const Ray& _ray, const Capsule& _capsule)
+{
+	return Distance2(_r, LineSegment(_c.m_start, _c.m_end)) < _c.m_radius * _c.m_radius;
+}
+bool Im3d::Intersect(const Ray& _ray, const Capsule& _capsule, float& t0_, float& t1_)
+{
+	IM3D_ASSERT(false); // not implemented yet
+	return false;
+}
+
 /*******************************************************************************
 
                                   Vector
