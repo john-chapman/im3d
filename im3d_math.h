@@ -174,12 +174,17 @@ struct Capsule
 };
 
 // Ray-primitive intersections. Use Intersects() when you don't need t0_/t1_.
-bool Intersects(const Ray& _ray, const Plane& _plane);
-bool Intersect (const Ray& _ray, const Plane& _plane, float& t0_);
-bool Intersects(const Ray& _ray, const Sphere& _sphere);
-bool Intersect (const Ray& _ray, const Sphere& _sphere, float& t0_, float& t1_);
-bool Intersects(const Ray& _ray, const Capsule& _capsule);
-bool Intersect (const Ray& _ray, const Capsule& _capsule, float& t0_, float& t1_);
+bool  Intersects(const Ray& _ray, const Plane& _plane);
+bool  Intersect (const Ray& _ray, const Plane& _plane, float& t0_);
+bool  Intersects(const Ray& _ray, const Sphere& _sphere);
+bool  Intersect (const Ray& _ray, const Sphere& _sphere, float& t0_, float& t1_);
+bool  Intersects(const Ray& _ray, const Capsule& _capsule);
+bool  Intersect (const Ray& _ray, const Capsule& _capsule, float& t0_, float& t1_);
+
+/// Find point tr_ along _ray nearest to _segment, return point on segment nearest to _ray.
+Vec3  Nearest(const Ray& _ray, const LineSegment& _segment, float& tr_);
+float Distance2(const Ray& _ray, const LineSegment& _segment);
+
 
 } // namespace Im3d
 

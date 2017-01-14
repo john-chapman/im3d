@@ -54,6 +54,18 @@ int main(int, char**)
 				}
 			Im3d::End();*/
 
+			Im3d::SetAlpha(1.0f);
+			Im3d::SetSize(2.0f);
+			Im3d::DrawXyzAxes();
+			Im3d::SetColor(Im3d::Color_Magenta);
+			Im3d::DrawSphere(Vec3(2.0f, 0.0f, 0.0f), 1.0f);
+			Im3d::SetColor(Im3d::Color_Yellow);
+			Im3d::DrawCapsule(Vec3(4.0f, -1.0f, 0.0f), Vec3(4.0f, 1.0f, 0.0f), 1.0f);
+			Im3d::SetColor(Im3d::Color_Blue);
+			Im3d::DrawCylinder(Vec3(-2.0f, -1.0f, 0.0f), Vec3(-2.0f, 1.0f, 0.0f), 1.0f);
+			Im3d::SetColor(Im3d::Color_Red);
+			Im3d::DrawAlignedBox(Vec3(-5.0f, -1.0f, -2.0f), Vec3(-4.0f, 1.0f, 2.0f));
+
 			static bool s_sorting = true;
 			ImGui::Checkbox("Enable Sorting", &s_sorting);
 			Im3d::EnableSorting(s_sorting);
@@ -77,7 +89,7 @@ int main(int, char**)
 				Im3d::End();
 			}*/
 
-			static const int kCount = 5000;
+			static const int kCount = 50;
 			Im3d::SetAlpha(0.7f);
 			for (int i = 0; i < kCount; ++i) {
 				Im3d::PushMatrix();

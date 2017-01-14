@@ -124,11 +124,15 @@ Im3d::Id Im3d::MakeId(const char* _str)
 }
 
 // declared in im3d_math.h
+static const float kPi     = 3.14159265359f;
+static const float kTwoPi  = 2.0f * kPi;
+static const float kHalfPi = 0.5f * kPi;
+
 static inline bool Equal(const Vec3& _a, const Vec3& _b)
 {
-	if (fabs(_a.x - _b.x) < FLT_EPSILON) return false;
-	if (fabs(_a.y - _b.y) < FLT_EPSILON) return false;
-	if (fabs(_a.z - _b.z) < FLT_EPSILON) return false;
+	if (!(fabs(_a.x - _b.x) < FLT_EPSILON)) return false;
+	if (!(fabs(_a.y - _b.y) < FLT_EPSILON)) return false;
+	if (!(fabs(_a.z - _b.z) < FLT_EPSILON)) return false;
 	return true;
 }
 static inline float Determinant(const Mat4& _m)
@@ -296,12 +300,196 @@ bool Im3d::Intersect(const Ray& _r, const Sphere& _s, float& t0_, float& t1_)
 }
 bool Im3d::Intersects(const Ray& _ray, const Capsule& _capsule)
 {
-	return Distance2(_r, LineSegment(_c.m_start, _c.m_end)) < _c.m_radius * _c.m_radius;
+	return Distance2(_ray, LineSegment(_capsule.m_start, _capsule.m_end)) < _capsule.m_radius * _capsule.m_radius;
 }
 bool Im3d::Intersect(const Ray& _ray, const Capsule& _capsule, float& t0_, float& t1_)
 {
-	IM3D_ASSERT(false); // not implemented yet
+	IM3D_ASSERT(false); // \todo implement
 	return false;
+}
+Vec3 Im3d::Nearest(const Ray& _ray, const LineSegment& _segment, float& tr_)
+{
+	Vec3 ldir = _segment.m_end - _segment.m_start;
+	Vec3 p = _segment.m_start - _ray.m_origin;
+	float q = Length2(ldir);
+	float r = Dot(ldir, _ray.m_direction);
+	float s = Dot(ldir, p);
+	float t = Dot(_ray.m_direction, p);
+
+	float sn, sd, tn, td;
+	float denom = q - r * r;
+	if (denom < FLT_EPSILON) {
+		sd = td = 1.0f;
+		sn = 0.0f;
+		tn = t;
+	} else {
+		sd = td = denom;
+		sn = r * t - s;
+		tn = q * t - r * s;
+		if (sn < 0.0f) {
+		    sn = 0.0f;
+		    tn = t;
+		    td = 1.0f;
+		} else if (sn > sd) {
+			sn = sd;
+			tn = t + r;
+			td = 1.0f;
+		}
+	}
+
+	float ts;
+	if (tn < 0.0f) {
+		tr_ = 0.0f;
+		if (r >= 0.0f) {
+		    ts = 0.0f;
+		} else if (s <= q) {
+		    ts = 1.0f;
+		} else {
+		    ts = -s / q;
+		}
+	} else {
+		tr_ = tn / td;
+		ts = sn / sd;
+	}
+	return _segment.m_start + ldir * ts;
+}
+float Im3d::Distance2(const Ray& _ray, const LineSegment& _segment)
+{
+	float tr;
+	Vec3 p = Nearest(_ray, _segment, tr);
+	return Length2(_ray.m_origin + _ray.m_direction * tr - p);
+}
+
+
+void Im3d::DrawXyzAxes()
+{
+	Context& ctx = GetContext();
+	ctx.pushColor(ctx.getColor());
+		ctx.begin(Context::PrimitiveMode_Lines);
+			ctx.vertex(Vec3(0.0f, 0.0f, 0.0f), ctx.getSize(), Color_Red);
+			ctx.vertex(Vec3(1.0f, 0.0f, 0.0f), ctx.getSize(), Color_Red);
+			ctx.vertex(Vec3(0.0f, 0.0f, 0.0f), ctx.getSize(), Color_Green);
+			ctx.vertex(Vec3(0.0f, 1.0f, 0.0f), ctx.getSize(), Color_Green);
+			ctx.vertex(Vec3(0.0f, 0.0f, 0.0f), ctx.getSize(), Color_Blue);
+			ctx.vertex(Vec3(0.0f, 0.0f, 1.0f), ctx.getSize(), Color_Blue);
+		ctx.end();
+	ctx.popColor();
+
+}
+void Im3d::DrawSphere(const Vec3& _origin, float _radius, int _detail)
+{
+	Context& ctx = GetContext();
+ // xy circle
+	ctx.begin(Context::PrimitiveMode_LineLoop);
+		for (int i = 0; i < _detail; ++i) {
+			float rad = kTwoPi * ((float)i / (float)_detail);
+			ctx.vertex(Vec3(cosf(rad) * _radius + _origin.x, sinf(rad) * _radius + _origin.y, 0.0f + _origin.z));
+		}
+	ctx.end();
+ // xz circle
+	ctx.begin(Context::PrimitiveMode_LineLoop);
+		for (int i = 0; i < _detail; ++i) {
+			float rad = kTwoPi * ((float)i / (float)_detail);
+			ctx.vertex(Vec3(cosf(rad) * _radius + _origin.x, 0.0f + _origin.y, sinf(rad) * _radius + _origin.z));
+		}
+	ctx.end();
+ // yz circle
+	ctx.begin(Context::PrimitiveMode_LineLoop);
+		for (int i = 0; i < _detail; ++i) {
+			float rad = kTwoPi * ((float)i / (float)_detail);
+			ctx.vertex(Vec3(0.0f + _origin.x, cosf(rad) * _radius + _origin.y, sinf(rad) * _radius + _origin.z));
+		}
+	ctx.end();
+}
+void Im3d::DrawAlignedBox(const Vec3& _min, const Vec3& _max)
+{
+	Context& ctx = GetContext();
+	ctx.begin(Context::PrimitiveMode_LineLoop);
+		ctx.vertex(Vec3(_min.x, _min.y, _min.z)); 
+		ctx.vertex(Vec3(_max.x, _min.y, _min.z));
+		ctx.vertex(Vec3(_max.x, _min.y, _max.z));
+		ctx.vertex(Vec3(_min.x, _min.y, _max.z));
+	ctx.end();
+	ctx.begin(Context::PrimitiveMode_LineLoop);
+		ctx.vertex(Vec3(_min.x, _max.y, _min.z)); 
+		ctx.vertex(Vec3(_max.x, _max.y, _min.z));
+		ctx.vertex(Vec3(_max.x, _max.y, _max.z));
+		ctx.vertex(Vec3(_min.x, _max.y, _max.z));
+	ctx.end();
+	ctx.begin(Context::PrimitiveMode_Lines);
+		ctx.vertex(Vec3(_min.x, _min.y, _min.z));
+		ctx.vertex(Vec3(_min.x, _max.y, _min.z));
+		ctx.vertex(Vec3(_max.x, _min.y, _min.z));
+		ctx.vertex(Vec3(_max.x, _max.y, _min.z));
+		ctx.vertex(Vec3(_min.x, _min.y, _max.z));
+		ctx.vertex(Vec3(_min.x, _max.y, _max.z));
+		ctx.vertex(Vec3(_max.x, _min.y, _max.z));
+		ctx.vertex(Vec3(_max.x, _max.y, _max.z));
+	ctx.end();
+}
+void Im3d::DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, int _detail)
+{
+	Context& ctx = GetContext();
+	Vec3 org  = _start + (_end - _start) * 0.5f;
+	float ln  = Length(_end - _start) * 0.5f;
+	ctx.pushMatrix(ctx.getMatrix() * LookAt(org, _end));
+		ctx.begin(Context::PrimitiveMode_LineLoop);
+			for (int i = 0; i <= _detail; ++i) {
+				float rad = kTwoPi * ((float)i / (float)_detail) - kHalfPi;
+				ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
+			}
+			for (int i = 0; i <= _detail; ++i) {
+				float rad = kTwoPi * ((float)i / (float)_detail) - kHalfPi;
+				ctx.vertex(Vec3(0.0f, 0.0f, ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
+			}
+		ctx.end();
+		ctx.begin(Context::PrimitiveMode_Lines);
+			for (int i = 0; i <= _detail; ++i) {
+				float rad = kTwoPi * ((float)i / (float)_detail) - kHalfPi;
+				ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
+				ctx.vertex(Vec3(0.0f, 0.0f,  ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
+			}
+		ctx.end();
+	ctx.popMatrix();
+}
+void Im3d::DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int _detail)
+{
+	Context& ctx = GetContext();
+	Vec3 org = _start + (_end - _start) * 0.5f;
+	float ln = Length(_end - _start) * 0.5f;
+	int detail2 = _detail * 2; // force cap base detail to match ends
+	ctx.pushMatrix(ctx.getMatrix() * LookAt(org, _end));
+	 // yz silhoette + cap bases
+		ctx.begin(Context::PrimitiveMode_LineLoop);
+			for (int i = 0; i <= detail2; ++i) {
+				float rad = kTwoPi * ((float)i / (float)detail2) - kHalfPi;
+				ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
+			}
+			for (int i = 0; i < _detail; ++i) {
+				float rad = kPi * ((float)i / (float)_detail) + kPi;
+				ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(0.0f, cosf(rad), sinf(rad)) * _radius);
+			}
+			for (int i = 0; i < _detail; ++i) {
+				float rad = kPi * ((float)i / (float)_detail);
+				ctx.vertex(Vec3(0.0f, 0.0f, ln) + Vec3(0.0f, cosf(rad), sinf(rad)) * _radius);
+			}
+			for (int i = 0; i <= detail2; ++i) {
+				float rad = kTwoPi * ((float)i / (float)detail2) - kHalfPi;
+				ctx.vertex(Vec3(0.0f, 0.0f, ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
+			}
+		ctx.end();
+	 // xz silhoette
+		ctx.begin(Context::PrimitiveMode_LineLoop);
+			for (int i = 0; i < _detail; ++i) {
+				float rad = kPi * ((float)i / (float)_detail) + kPi;
+				ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(cosf(rad), 0.0f, sinf(rad)) * _radius);
+			}
+			for (int i = 0; i < _detail; ++i) {
+				float rad = kPi * ((float)i / (float)_detail);
+				ctx.vertex(Vec3(0.0f, 0.0f, ln) + Vec3(cosf(rad), 0.0f, sinf(rad)) * _radius);
+			}
+		ctx.end();
+	ctx.popMatrix();
 }
 
 /*******************************************************************************

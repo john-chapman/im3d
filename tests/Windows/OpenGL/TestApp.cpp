@@ -397,7 +397,7 @@ static void Im3d_Draw(Im3d::DrawPrimitiveType _primType, const Im3d::VertexData*
 	#endif
 	glAssert(glUniformMatrix4fv(glGetUniformLocation(sh, "uViewProjMatrix"), 1, transpose, (const GLfloat*)s_testApp->m_camViewProj));
 	glAssert(glUniform2f(glGetUniformLocation(sh, "uViewport"), (float)s_testApp->getWidth(), (float)s_testApp->getHeight()));
-	//glAssert(glDrawArrays(prim, 0, (GLsizei)_count));
+	glAssert(glDrawArrays(prim, 0, (GLsizei)_count));
 
 	glAssert(glDisable(GL_PROGRAM_POINT_SIZE));
 }

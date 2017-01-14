@@ -48,6 +48,13 @@ void  BeginTriangleStrip();
 // End the current primitive.
 void  End();
 
+// Higher-order shapes.
+void  DrawXyzAxes();
+void  DrawSphere(const Vec3& _origin, float _radius, int _detail = 24);
+void  DrawAlignedBox(const Vec3& _min, const Vec3& _max);
+void  DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, int _detail = 24);
+void  DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int _detail = 12);
+
 // Add a vertex to the current primitive (call between Begin*() and End()).
 void  Vertex(const Vec3& _position);
 void  Vertex(const Vec3& _position, Color _color);
@@ -291,6 +298,7 @@ public:
 	void        begin(PrimitiveMode _mode);
 	void        end();
 	void        vertex(const Vec3& _position, float _size, Color _color);
+	void        vertex(const Vec3& _position )   { vertex(_position, getSize(), getColor()); }
 
 	void        reset();
 	void        draw();
