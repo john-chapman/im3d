@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 using namespace Im3d;
@@ -14,7 +15,7 @@ using namespace Im3d;
 #if defined(IM3D_PLATFORM_WIN)
 	static LARGE_INTEGER g_SysTimerFreq;
 
-	const char* Im3d::GetWinErrorString(DWORD _err)
+	const char* Im3d::GetPlatformErrorString(DWORD _err)
 	{
 		const int kErrMsgMax = 1024;
 		static char buf[kErrMsgMax];
@@ -73,8 +74,8 @@ using namespace Im3d;
 			imgui.MouseWheel = (float)(GET_WHEEL_DELTA_WPARAM(_wparam)) / (float)(WHEEL_DELTA); 
 			break;
 		case WM_MOUSEMOVE:
-			io.MousePos.x = GET_X_LPARAM(_lparam);
-			io.MousePos.y = GET_Y_LPARAM(_lparam);
+			imgui.MousePos.x = LOWORD(_lparam);
+			imgui.MousePos.y = HIWORD(_lparam);
 			break;
 		case WM_SYSKEYDOWN:
 		case WM_SYSKEYUP:
@@ -133,7 +134,7 @@ using namespace Im3d;
 			memset(&wc, 0, sizeof(wc));
 			wc.cbSize = sizeof(wc);
 			wc.style = CS_OWNDC;// | CS_HREDRAW | CS_VREDRAW;
-			wc.lpfnWndProc = Impl::WindowProc;
+			wc.lpfnWndProc = WindowProc;
 			wc.hInstance = GetModuleHandle(0);
 			wc.lpszClassName = "Im3dTestApp";
 			wc.hCursor = LoadCursor(0, IDC_ARROW);
@@ -177,11 +178,11 @@ using namespace Im3d;
 	static void ShutdownWindow()
 	{
 		if (g_Example->m_hwnd) {
-			winAssert(DestroyWindow(g_Example->m_hwnd);
+			winAssert(DestroyWindow(g_Example->m_hwnd));
 		}
 	}
 	
-	#if defined(IM3D_GFX_OPENGL)
+	#if defined(IM3D_OPENGL)
 		#include "GL/wglew.h"
 		static PFNWGLCHOOSEPIXELFORMATARBPROC    wglChoosePixelFormat    = 0;
 		static PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs = 0;
@@ -203,7 +204,7 @@ using namespace Im3d;
 				winAssert(wndclassex = RegisterClassEx(&wc));
 			}
 			HWND hwndDummy = CreateWindowEx(0, MAKEINTATOM(wndclassex), 0, NULL, 0, 0, 1, 1, NULL, NULL, GetModuleHandle(0), NULL);
-			IM3D_PLATFORM_ASSERT(hwndDummy);
+			winAssert(hwndDummy);
 			HDC hdcDummy = 0;
 			winAssert(hdcDummy = GetDC(hwndDummy));	
 			PIXELFORMATDESCRIPTOR pfd;
@@ -234,7 +235,7 @@ using namespace Im3d;
 			winAssert(DestroyWindow(hwndDummy) != 0);
 		
 		// create true context
-			winAssert(m_hdc = GetDC(m_hwnd));
+			winAssert(g_Example->m_hdc = GetDC(g_Example->m_hwnd));
 			const int pfattr[] = {
 				WGL_SUPPORT_OPENGL_ARB, 1,
 				WGL_DRAW_TO_WINDOW_ARB, 1,
@@ -248,8 +249,8 @@ using namespace Im3d;
 				0
 			};
 			int pformat = -1, npformat = -1;
-			winAssert(wglChoosePixelFormat(m_hdc, pfattr, 0, 1, &pformat, (::UINT*)&npformat));
-			winAssert(SetPixelFormat(m_hdc, pformat, &pfd));
+			winAssert(wglChoosePixelFormat(g_Example->m_hdc, pfattr, 0, 1, &pformat, (::UINT*)&npformat));
+			winAssert(SetPixelFormat(g_Example->m_hdc, pformat, &pfd));
 			int profileBit = WGL_CONTEXT_CORE_PROFILE_BIT_ARB;
 			//profileBit = WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB;
 			int attr[] = {
@@ -258,10 +259,10 @@ using namespace Im3d;
 				WGL_CONTEXT_PROFILE_MASK_ARB,	profileBit,
 				0
 			};
-			winAssert(m_hglrc = wglCreateContextAttribs(m_hdc, 0, attr));
+			winAssert(g_Example->m_hglrc = wglCreateContextAttribs(g_Example->m_hdc, 0, attr));
 		
 		// load extensions
-			if (!wglMakeCurrent(m_hdc, m_hglrc)) {
+			if (!wglMakeCurrent(g_Example->m_hdc, g_Example->m_hglrc)) {
 				fprintf(stderr, "wglMakeCurrent failed");
 				return false;
 			}
@@ -305,7 +306,7 @@ using namespace Im3d;
 		_out_.push_back('\n');
 	}
 	
-	GLuint Im3d::LoadCompileShader(GLenum _stage, const char* _path, const char* _defines = 0)
+	GLuint Im3d::LoadCompileShader(GLenum _stage, const char* _path, const char* _defines)
 	{
 		Vector<char> src;
 		AppendLine(IM3D_OPENGL_VSHADER, src);
@@ -612,14 +613,14 @@ Vec3 Im3d::RandVec3(float _min, float _max)
 		io.ImeWindowHandle = g_Example->m_hwnd;
 		io.DisplaySize = ImVec2((float)g_Example->m_width, (float)g_Example->m_height);
 		io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
-		io.DeltaTime = g_Example->_deltaTime;
+		io.DeltaTime = g_Example->m_deltaTime;
 
 		ImGui::NewFrame();
 	}
 #endif
 
 /******************************************************************************/
-static Example* Example::g_Example;
+static Example* g_Example;
 
 bool Example::init(int _width, int _height, const char* _title)
 {
@@ -635,7 +636,7 @@ bool Example::init(int _width, int _height, const char* _title)
 		winAssert(SetCurrentDirectory(buf));
 		fprintf(stdout, "Set current directory: '%s'\n", buf);
 		
-		winAssert(QueryPerformanceFrequency(&s_SysTimerFreq));
+		winAssert(QueryPerformanceFrequency(&g_SysTimerFreq));
 		winAssert(QueryPerformanceCounter(&m_currTime));
 	#endif
 
@@ -681,17 +682,17 @@ bool Example::update()
 {
 	bool ret = true;
 	#if defined(IM3D_PLATFORM_WIN)
-		m_impl->m_prevTime = m_impl->m_currTime;
+		g_Example->m_prevTime = g_Example->m_currTime;
 		winAssert(QueryPerformanceCounter(&m_currTime));
-		double microseconds = (double)((m_impl->m_currTime.QuadPart - m_impl->m_prevTime.QuadPart) * 1000000ll / g_SysTimerFreq.QuadPart);
+		double microseconds = (double)((g_Example->m_currTime.QuadPart - g_Example->m_prevTime.QuadPart) * 1000000ll / g_SysTimerFreq.QuadPart);
 		m_deltaTime = (float)(microseconds / 1000000.0);
 	
 		MSG msg;
-		while (PeekMessage(&msg, (HWND)m_impl->m_hwnd, 0, 0, PM_REMOVE) && msg.message != WM_QUIT) {
+		while (PeekMessage(&msg, g_Example->m_hwnd, 0, 0, PM_REMOVE) && msg.message != WM_QUIT) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
-		ret = msg != WM_QUIT;
+		ret = msg.message != WM_QUIT;
 	#endif
 
 	ImGui_Update();
@@ -733,8 +734,8 @@ Vec2 Example::getWindowRelativeCursor() const
 {
 	#if defined(IM3D_PLATFORM_WIN)
 		POINT p = {};
-		WinAssert(GetCursorPos(&p));
-		WinAssert(ScreenToClient(m_hwnd, &p));
+		winAssert(GetCursorPos(&p));
+		winAssert(ScreenToClient(m_hwnd, &p));
 		return Vec2((float)p.x, (float)p.y);
 	#endif
 }

@@ -51,9 +51,9 @@
 		
 	namespace Im3d {
 		// Return 0 on failure (prints log info to stderr). _defines is a list of null-separated strings e.g. "DEFINE1 1\0DEFINE2 1\0"
-		static GLuint LoadCompileShader(GLenum _stage, const char* _path, const char* _defines = 0);
+		GLuint LoadCompileShader(GLenum _stage, const char* _path, const char* _defines = 0);
 		// Return false on failure (prints log info to stderr).
-		static bool LinkShaderProgram(GLuint _handle);
+		bool LinkShaderProgram(GLuint _handle);
 		
 		const char* GetGlEnumString(GLenum _enum);
 		const char* GlGetString(GLenum _name);
@@ -106,7 +106,6 @@ Im3d::Vec3  RandVec3(float _min, float _max);
 
 struct Example
 {
-	static Example* g_Example;
 	
 	bool init(int _width, int _height, const char* _title);
 	void shutdown();
@@ -124,6 +123,7 @@ struct Example
     Vec3  m_camPos;
 	Vec3  m_camDir;
 	float m_camFovDeg;
+	float m_camFovRad;
 	Mat4  m_camWorld;
 	Mat4  m_camView;
 	Mat4  m_camProj;
@@ -145,6 +145,7 @@ struct Example
 
 }; // struct Example
 
+static Example* g_Example;
 
 } // namespace Im3d
 

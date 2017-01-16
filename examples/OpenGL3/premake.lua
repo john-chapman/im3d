@@ -39,6 +39,7 @@ workspace "im3d_opengl3"
 		["im3d"]   = { IM3D_DIR .. "*.h", IM3D_DIR .. "*.cpp" },
 		["imgui"]  = EXAMPLE_COMMON_DIR .. "imgui/**",
 		["common"] = { EXAMPLE_COMMON_DIR .. "*.h", EXAMPLE_COMMON_DIR .. "*.cpp" },
+		["*"]      = "*.cpp"
 		})
 	
 	files({ 
@@ -49,7 +50,7 @@ workspace "im3d_opengl3"
 	project "im3d_opengl3"
 		kind "ConsoleApp"
 		language "C++"
-		targetdir "../bin"
+		targetdir ""
 	
 		
 		includedirs({
@@ -61,5 +62,5 @@ workspace "im3d_opengl3"
 			EXAMPLE_COMMON_DIR .. "**.hpp",
 			EXAMPLE_COMMON_DIR .. "**.c",
 			EXAMPLE_COMMON_DIR .. "**.cpp",
-			"*.cpp",
+			"*.cpp"
 			})

@@ -1,4 +1,4 @@
-#include "common/common.h"
+#include "im3d_example.h"
 
 using namespace Im3d;
 
