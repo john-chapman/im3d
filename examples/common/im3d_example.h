@@ -145,7 +145,7 @@ struct Example
 
 }; // struct Example
 
-static Example* g_Example;
+extern Example* g_Example;
 
 } // namespace Im3d
 

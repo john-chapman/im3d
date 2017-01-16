@@ -11,8 +11,6 @@ int main(int, char**)
 
 	while (example.update()) {
 
-		
-		ImGui::ShowTestWindow();
 
 		example.draw();
 	}

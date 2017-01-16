@@ -172,6 +172,7 @@ using namespace Im3d;
 			NULL
 			);
 		IM3D_ASSERT(g_Example->m_hwnd);
+		ShowWindow(g_Example->m_hwnd, SW_SHOW);
 		return true;
 	}
 	
@@ -357,7 +358,7 @@ using namespace Im3d;
 			fprintf(stderr, log);
 			delete[] log;
 	
-			fprintf(stderr, "\n\n%s", src.data());
+			//fprintf(stderr, "\n\n%s", src.data());
 			fprintf(stderr, "\n");
 			glAssert(glDeleteShader(ret));
 			return 0;
@@ -541,11 +542,19 @@ Vec3 Im3d::RandVec3(float _min, float _max)
 			glAssert(s_shImGui = glCreateProgram());
 			glAssert(glAttachShader(s_shImGui, vs));
 			glAssert(glAttachShader(s_shImGui, fs));
-			LinkShaderProgram(s_shImGui);
-
+			bool ret = LinkShaderProgram(s_shImGui);
 			glAssert(glDeleteShader(vs));
 			glAssert(glDeleteShader(fs));
+			if (!ret) {
+				return false;
+			}
+		} else {
+			return false;
 		}
+		glAssert(glUseProgram(s_shImGui));
+		glAssert(glUniform1i(glGetUniformLocation(s_shImGui, "txTexture"), 0));
+		glAssert(glUseProgram(0));
+
 		glAssert(glCreateBuffers(1, &s_vbImGui));
 		glAssert(glCreateBuffers(1, &s_ibImGui));
 		glAssert(glCreateVertexArrays(1, &s_vaImGui));	
@@ -620,7 +629,7 @@ Vec3 Im3d::RandVec3(float _min, float _max)
 #endif
 
 /******************************************************************************/
-static Example* g_Example;
+Example* Im3d::g_Example;
 
 bool Example::init(int _width, int _height, const char* _title)
 {
