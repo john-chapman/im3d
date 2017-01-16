@@ -4,15 +4,19 @@ using namespace Im3d;
 
 int main(int, char**)
 {
-	if (!Example_Init(-1, -1, "Im3d Example")) {
+	Example example;
+	if (!example.init(-1, -1, "Im3d Example")) {
 		return 1;
 	}
 
-	while (Example_update()) {
+	while (example.update()) {
 
-		Example_Draw();
+		
+		ImGui::ShowTestWindow();
+
+		example.draw();
 	}
-	Example_Shutdown();
+	example.shutdown();
 	
 	return 0;
 }

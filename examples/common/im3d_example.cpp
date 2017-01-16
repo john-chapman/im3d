@@ -463,20 +463,168 @@ Vec3 Im3d::RandVec3(float _min, float _max)
 }
 
 /******************************************************************************/
+#if defined(IM3D_OPENGL)
+	static GLuint s_vaImGui; // vertex array object
+	static GLuint s_vbImGui; // vertex buffer
+	static GLuint s_ibImGui; // index buffer
+	static GLuint s_shImGui;
+	static GLuint s_txImGui;
+
+	static void ImGui_Draw(ImDrawData* _drawData)
+	{
+		ImGuiIO& io = ImGui::GetIO();
+	
+		int fbX, fbY;
+		fbX = (int)(io.DisplaySize.x * io.DisplayFramebufferScale.x);
+		fbY = (int)(io.DisplaySize.y * io.DisplayFramebufferScale.y);
+		if (fbX == 0  || fbY == 0) {
+			return;
+		}
+		_drawData->ScaleClipRects(io.DisplayFramebufferScale);
+	
+		glAssert(glViewport(0, 0, (GLsizei)fbX, (GLsizei)fbY));
+		glAssert(glEnable(GL_BLEND));
+		glAssert(glBlendEquation(GL_FUNC_ADD));
+		glAssert(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+		glAssert(glDisable(GL_CULL_FACE));
+		glAssert(glDisable(GL_DEPTH_TEST));
+		glAssert(glEnable(GL_SCISSOR_TEST));
+		glAssert(glActiveTexture(GL_TEXTURE0));
+		
+		Mat4 ortho = Mat4(
+			2.0f/io.DisplaySize.x, 0.0f,                   0.0f, -1.0f,
+			0.0f,                  2.0f/-io.DisplaySize.y, 0.0f,  1.0f,
+			0.0f,                  0.0f,                  -1.0f,  0.0f,
+			0.0f,                  0.0f,                   0.0f,  1.0f
+			);
+		glAssert(glUseProgram(s_shImGui));
+	
+		bool transpose = false;
+		#ifdef IM3D_MATRIX_ROW_MAJOR
+			transpose = true;
+		#endif
+		glAssert(glUniformMatrix4fv(glGetUniformLocation(s_shImGui, "uProjMatrix"), 1, transpose, (const GLfloat*)ortho));
+		glAssert(glBindVertexArray(s_vaImGui));
+	
+		for (int i = 0; i < _drawData->CmdListsCount; ++i) {
+			const ImDrawList* drawList = _drawData->CmdLists[i];
+			const ImDrawIdx* indexOffset = 0;
+	
+			glAssert(glBindBuffer(GL_ARRAY_BUFFER, s_vbImGui));
+			glAssert(glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)drawList->VtxBuffer.size() * sizeof(ImDrawVert), (GLvoid*)&drawList->VtxBuffer.front(), GL_STREAM_DRAW));
+			glAssert(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_ibImGui));
+			glAssert(glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)drawList->IdxBuffer.Size * sizeof(ImDrawIdx), (const GLvoid*)drawList->IdxBuffer.Data, GL_STREAM_DRAW));
+	
+			for (const ImDrawCmd* pcmd = drawList->CmdBuffer.begin(); pcmd != drawList->CmdBuffer.end(); ++pcmd) {
+				if (pcmd->UserCallback) {
+					pcmd->UserCallback(drawList, pcmd);
+				} else {
+					glAssert(glBindTexture(GL_TEXTURE_2D, (GLuint)pcmd->TextureId));
+					glAssert(glScissor((int)pcmd->ClipRect.x, (int)(fbY - pcmd->ClipRect.w), (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y)));
+					glAssert(glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, GL_UNSIGNED_SHORT, (GLvoid*)indexOffset));
+				}
+				indexOffset += pcmd->ElemCount;
+			}
+		}
+	
+		glAssert(glDisable(GL_SCISSOR_TEST));
+		glAssert(glDisable(GL_BLEND));
+		glAssert(glUseProgram(0));
+	}
+
+	static bool ImGui_Init()
+	{
+		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "imgui.glsl", "VERTEX_SHADER\0");
+		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "imgui.glsl", "FRAGMENT_SHADER\0");
+		if (vs && fs) {
+			glAssert(s_shImGui = glCreateProgram());
+			glAssert(glAttachShader(s_shImGui, vs));
+			glAssert(glAttachShader(s_shImGui, fs));
+			LinkShaderProgram(s_shImGui);
+
+			glAssert(glDeleteShader(vs));
+			glAssert(glDeleteShader(fs));
+		}
+		glAssert(glCreateBuffers(1, &s_vbImGui));
+		glAssert(glCreateBuffers(1, &s_ibImGui));
+		glAssert(glCreateVertexArrays(1, &s_vaImGui));	
+		glAssert(glBindVertexArray(s_vaImGui));
+		glAssert(glBindBuffer(GL_ARRAY_BUFFER, s_vbImGui));
+		glAssert(glEnableVertexAttribArray(0));
+		glAssert(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*)offsetof(ImDrawVert, pos)));
+		glAssert(glEnableVertexAttribArray(1));
+		glAssert(glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*)offsetof(ImDrawVert, uv)));
+		glAssert(glEnableVertexAttribArray(2));
+		glAssert(glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ImDrawVert), (GLvoid*)offsetof(ImDrawVert, col)));
+		glAssert(glBindVertexArray(0));
+	
+		unsigned char* txbuf;
+		int txX, txY;
+		ImGuiIO& io = ImGui::GetIO();
+		io.Fonts->GetTexDataAsAlpha8(&txbuf, &txX, &txY);
+		glAssert(glGenTextures(1, &s_txImGui));
+		glAssert(glBindTexture(GL_TEXTURE_2D, s_txImGui));
+		glAssert(glTextureParameteri(s_txImGui, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+		glAssert(glTextureParameteri(s_txImGui, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+		glAssert(glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, txX, txY, 0, GL_RED, GL_UNSIGNED_BYTE, (const GLvoid*)txbuf));
+		io.Fonts->TexID = (void*)s_txImGui;
+	
+		io.RenderDrawListsFn = &ImGui_Draw;
+
+		return true;
+
+	}
+
+	static void ImGui_Shutdown()
+	{
+		glAssert(glDeleteVertexArrays(1, &s_vaImGui));
+		glAssert(glDeleteBuffers(1, &s_vbImGui));
+		glAssert(glDeleteBuffers(1, &s_ibImGui));		
+		glAssert(glDeleteProgram(s_shImGui));
+		glAssert(glDeleteTextures(1, &s_txImGui));
+	}
+#endif
+
+#if defined(IM3D_PLATFORM_WIN)
+	static void ImGui_Update()
+	{
+		ImGuiIO& io = ImGui::GetIO();
+		io.KeyMap[ImGuiKey_Tab]        = VK_TAB;
+		io.KeyMap[ImGuiKey_LeftArrow]  = VK_LEFT;
+		io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
+		io.KeyMap[ImGuiKey_UpArrow]	   = VK_UP;
+		io.KeyMap[ImGuiKey_DownArrow]  = VK_DOWN;
+		io.KeyMap[ImGuiKey_PageUp]	   = VK_PRIOR;
+		io.KeyMap[ImGuiKey_PageDown]   = VK_NEXT;
+		io.KeyMap[ImGuiKey_Home]	   = VK_HOME;
+		io.KeyMap[ImGuiKey_End]		   = VK_END;
+		io.KeyMap[ImGuiKey_Delete]	   = VK_DELETE;
+		io.KeyMap[ImGuiKey_Backspace]  = VK_BACK;
+		io.KeyMap[ImGuiKey_Enter]	   = VK_RETURN;
+		io.KeyMap[ImGuiKey_Escape]	   = VK_ESCAPE;
+		io.KeyMap[ImGuiKey_A]		   = 0x41;
+		io.KeyMap[ImGuiKey_C]		   = 0x43;
+		io.KeyMap[ImGuiKey_V]		   = 0x56;
+		io.KeyMap[ImGuiKey_X]		   = 0x58;
+		io.KeyMap[ImGuiKey_Y]		   = 0x59;
+		io.KeyMap[ImGuiKey_Z]		   = 0x5A;
+
+		io.ImeWindowHandle = g_Example->m_hwnd;
+		io.DisplaySize = ImVec2((float)g_Example->m_width, (float)g_Example->m_height);
+		io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
+		io.DeltaTime = g_Example->_deltaTime;
+
+		ImGui::NewFrame();
+	}
+#endif
+
+/******************************************************************************/
 static Example* Example::g_Example;
 
 bool Example::init(int _width, int _height, const char* _title)
 {
 	g_Example = this;
 
-	m_width  = _width;
-	m_height = _height;
-	m_title  = _title;
-	if (!InitWindow(m_width, m_height, m_title)) {
-		shutdown();
-		return false;
-	}
-	
 	#if defined(IM3D_PLATFORM_WIN)
 	 // force the current working directory to the exe location
 		TCHAR buf[MAX_PATH] = {};
@@ -490,19 +638,38 @@ bool Example::init(int _width, int _height, const char* _title)
 		winAssert(QueryPerformanceFrequency(&s_SysTimerFreq));
 		winAssert(QueryPerformanceCounter(&m_currTime));
 	#endif
-	
+
+	m_width  = _width;
+	m_height = _height;
+	m_title  = _title;
+	if (!InitWindow(m_width, m_height, m_title)) {
+		goto Example_init_fail;
+	}
 	#if defined(IM3D_OPENGL) 
 		if (!InitOpenGL(IM3D_OPENGL_VMAJ, IM3D_OPENGL_VMIN)) {
-			shutdown();
-			return false;
+			goto Example_init_fail;
 		}
 	#endif
+
+	if (!ImGui_Init()) {
+		goto Example_init_fail;
+	}	
+	if (!Im3d_Init()) {	
+		goto Example_init_fail;
+	}
 	
 	return true;
+
+Example_init_fail:
+	shutdown();
+	return false;
 }
 
 void Example::shutdown()
 {
+	ImGui_Shutdown();
+	Im3d_Shutdown();
+
 	#if defined(IM3D_OPENGL) 
 		ShutdownOpenGL();
 	#endif
@@ -526,12 +693,18 @@ bool Example::update()
 		}
 		ret = msg != WM_QUIT;
 	#endif
+
+	ImGui_Update();
+	Im3d_Update();
 	
 	return ret;
 }
 
 void Example::draw()
 {
+	Im3d::Draw();
+	ImGui::Render();
+
 	#if defined(IM3D_PLATFORM_WIN)
 		#if defined(IM3D_OPENGL)
 			winAssert(SwapBuffers(m_hdc));
