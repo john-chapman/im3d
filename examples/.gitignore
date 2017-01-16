@@ -1,0 +1,9 @@
+**.exe
+
+# Visual Studio
+**.ilk
+**.pdb
+**/vs*/**
+!**/vs*/*.sln
+!**/vs*/*.vcxproj
+!**/vs*/*.filters
