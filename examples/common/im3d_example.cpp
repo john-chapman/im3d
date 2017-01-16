@@ -667,6 +667,10 @@ bool Example::init(int _width, int _height, const char* _title)
 	if (!Im3d_Init()) {	
 		goto Example_init_fail;
 	}
+
+	m_camPos = Vec3(0.0f, 5.0f, 5.0f);
+	m_camDir = Normalize(Vec3(0.0f, -0.5f, -1.0f));
+	m_camFovDeg = 50.0f;
 	
 	return true;
 
@@ -703,8 +707,75 @@ bool Example::update()
 		}
 		ret = msg.message != WM_QUIT;
 	#endif
-
+		
 	ImGui_Update();
+
+
+
+	float kCamSpeed = 2.0f;
+	float kCamSpeedMul = 10.0f;
+	float kCamRotationMul = 0.8f;
+	m_camWorld = LookAt(m_camPos, m_camPos - m_camDir);
+	m_camView = Inverse(m_camWorld);
+	#if defined(IM3D_PLATFORM_WIN)
+		Vec2 cursorPos = getWindowRelativeCursor();
+		if (hasFocus()) {
+			if (!ImGui::GetIO().WantCaptureKeyboard) {
+				if (GetAsyncKeyState(VK_LSHIFT) & 0x8000) {
+					kCamSpeed *= 10.0f;
+				}
+				if (GetAsyncKeyState(0x57) & 0x8000) { // W (forward)
+					m_camPos = m_camPos - m_camWorld.getCol(2) * (m_deltaTime * kCamSpeed);
+				}
+				if (GetAsyncKeyState(0x41) & 0x8000) { // A (left)
+					m_camPos = m_camPos - m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
+				}
+				if (GetAsyncKeyState(0x53) & 0x8000) { // S (backward)
+					m_camPos = m_camPos + m_camWorld.getCol(2) * (m_deltaTime * kCamSpeed);
+				}
+				if (GetAsyncKeyState(0x44) & 0x8000) { // D (right)
+					m_camPos = m_camPos + m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
+				}
+				if (GetAsyncKeyState(0x51) & 0x8000) { // Q (down)
+					m_camPos = m_camPos - m_camWorld.getCol(1)* (m_deltaTime * kCamSpeed);
+				}
+				if (GetAsyncKeyState(0x45) & 0x8000) { // D (up)
+					m_camPos = m_camPos + m_camWorld.getCol(1) * (m_deltaTime * kCamSpeed);
+				}
+			}
+			if (!ImGui::GetIO().WantCaptureMouse) {
+				if (GetAsyncKeyState(VK_RBUTTON) & 0x8000) {
+					Vec2 cursorDelta = (cursorPos - m_prevCursorPos) * m_deltaTime * kCamRotationMul;
+					m_camDir = Rotate(Mat4(1.0f), Vec3(0.0f, 1.0f, 0.0f), -cursorDelta.x) * m_camDir;
+					m_camDir = Rotate(Mat4(1.0f), m_camWorld.getCol(0), -cursorDelta.y) * m_camDir;
+				}
+			}
+		}
+		m_prevCursorPos = cursorPos;
+	#endif
+
+	m_camFovRad = m_camFovDeg * (3.1415926f / 180.0f);
+	float n = 0.1f;
+	float f = 10000.0f;
+	float a = (float)m_width / (float)m_height;
+	float scale = tanf(m_camFovRad * 0.5f) * n;
+	float r = a * scale;
+	float l = -r;
+	float t = scale;
+	float b = -t;
+
+	m_camProj = Mat4(
+		2.0f * n / (r - l),  0.0f,                 (r + l) / (r - l),   0.0f,
+		0.0f,                2.0f * n / (t - b),   (t + b) / (t - b),   0.0f,
+		0.0f,                0.0f,                -(f + n) / (f - n),  -2.0f * f * n / (f - n),
+		0.0f,                0.0f,                -1.0f,                0.0f
+		);
+
+	m_camWorld = LookAt(m_camPos, m_camPos - m_camDir);
+	m_camView  = Inverse(m_camWorld);
+	m_camViewProj = m_camProj * m_camView;
+
+
 	Im3d_Update();
 	
 	return ret;

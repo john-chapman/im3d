@@ -24,7 +24,7 @@
 	
 	void main() 
 	{
-		vData.m_color = aColor;
+		vData.m_color = aColor.abgr;
 		vData.m_color.a *= smoothstep(0.0, 1.0, aPositionSize.w / kAntialiasing);
 		vData.m_size = max(aPositionSize.w, kAntialiasing);
 		gl_Position = uViewProjMatrix * vec4(aPositionSize.xyz, 1.0);
@@ -86,7 +86,7 @@
 	
 	void main() 
 	{
-		fResult = vData.m_color.abgr;
+		fResult = vData.m_color;
 		
 		#if   defined(LINES)
 			float d = abs(vData.m_edgeDistance) / vData.m_size;

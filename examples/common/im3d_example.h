@@ -115,6 +115,7 @@ struct Example
  // window 
 	int m_width, m_height;
 	const char* m_title;
+	Vec2  m_prevCursorPos;
 	
 	bool hasFocus() const;
 	Vec2 getWindowRelativeCursor() const;
