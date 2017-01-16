@@ -1,4 +1,5 @@
-**.exe
+*.exe
+*.ini
 
 # Visual Studio
 **.ilk
