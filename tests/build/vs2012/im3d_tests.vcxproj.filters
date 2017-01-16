@@ -15,6 +15,9 @@
     <ClInclude Include="..\..\..\im3d.h">
       <Filter>im3d</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\im3d_config.h">
+      <Filter>im3d</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\im3d_math.h">
       <Filter>im3d</Filter>
     </ClInclude>

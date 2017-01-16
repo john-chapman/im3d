@@ -190,6 +190,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\im3d.h" />
+    <ClInclude Include="..\..\..\im3d_config.h" />
     <ClInclude Include="..\..\..\im3d_math.h" />
     <ClInclude Include="..\..\GL\glew.h" />
     <ClInclude Include="..\..\GL\glxew.h" />

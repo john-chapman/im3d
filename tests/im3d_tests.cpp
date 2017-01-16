@@ -45,6 +45,20 @@ int main(int, char**)
 				}
 			Im3d::End();
 
+			Im3d::AppData& ad = Im3d::GetAppData();
+			Im3d::Ray ray(ad.m_cursorRayOrigin, ad.m_cursorRayDirection);
+			Im3d::Plane plane(Im3d::Vec3(0.0f, 1.0f, 0.0f), Im3d::Vec3(0.0f));
+			float t0, t1;
+			if (Im3d::Intersect(ray, plane, t0)) {
+				Im3d::SetColor(Im3d::Color_Magenta);
+				Im3d::SetSize(12.0f);
+				Im3d::BeginPoints();
+					Im3d::Vertex(ray.m_origin + ray.m_direction * t0);
+				Im3d::End();
+			}
+			ImGui::Text("Ray = %f,%f,%f", ad.m_cursorRayDirection.x, ad.m_cursorRayDirection.y, ad.m_cursorRayDirection.z);
+			ImGui::Text("t0 = %f", t0);
+
 			/*Im3d::SetSize(8.0f);
 			Im3d::BeginPoints();
 				RandSeed(123);

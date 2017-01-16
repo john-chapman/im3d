@@ -843,6 +843,16 @@ bool TestApp::update()
 	ad.m_viewportSize = Vec2((float)m_width, (float)m_height);
 	ad.m_viewOrigin = m_camPos;
 	ad.m_tanHalfFov = tanf(fovRads * 0.5f);
+
+ // cursor ray
+	Vec2 cursorPos = m_impl->getWindowRelativeCursor();
+	Vec2 viewportSize = Vec2((float)m_width, (float)m_height);
+	cursorPos = (cursorPos / viewportSize) * 2.0f - 1.0f;
+	cursorPos.y = -cursorPos.y; // window origin is top-left, ndc is bottom-left
+	ad.m_cursorRayOrigin = ad.m_viewOrigin;
+	float aspect = (float)m_width / (float)m_height;
+	ad.m_cursorRayDirection = m_camWorld * Normalize(Vec4(cursorPos.x * ad.m_tanHalfFov * aspect, cursorPos.y * ad.m_tanHalfFov, -1.0f, 0.0f));
+
 	Im3d::NewFrame();
 
 	ImGui::SliderFloat("Fov", &m_camFov, 1.0f, 90.0f);

@@ -5,6 +5,19 @@
 #include <cstring>
 #include <cfloat>
 
+#if defined(IM3D_MALLOC) && !defined(IM3D_FREE)
+		#error im3d: IM3D_MALLOC defined without IM3D_FREE; define both or neither
+#endif
+#if defined(IM3D_FREE) && !defined(IM3D_MALLOC)
+	#error im3d: IM3D_FREE defined without IM3D_MALLOC; define both or neither
+#endif
+#ifndef IM3D_MALLOC
+	#define IM3D_MALLOC(size) malloc(size)
+#endif
+#ifndef IM3D_FREE
+	#define IM3D_FREE(ptr) free(ptr)
+#endif
+
 // Compiler
 #if defined(__GNUC__)
 	#define IM3D_COMPILER_GNU
@@ -502,7 +515,7 @@ template <typename T>
 Vector<T>::~Vector()
 {
 	if (m_data) {
-		delete[] m_data;
+		IM3D_FREE(m_data);
 		m_data = 0;
 	}
 }
@@ -514,10 +527,10 @@ void Vector<T>::reserve(U32 _capacity)
 	if (_capacity < m_capacity) {
 		return;
 	}
-	T* data = new T[_capacity];
+	T* data = (T*)IM3D_MALLOC(sizeof(T) * _capacity);
 	if (m_data) {
 		memcpy(data, m_data, sizeof(T) * m_size);
-		delete[] m_data;
+		IM3D_FREE(m_data);
 	}
 	m_data = data;
 	m_capacity = _capacity;
@@ -565,6 +578,7 @@ Context* Im3d::internal::g_CurrentContext = &s_DefaultContext;
 
 void Context::begin(PrimitiveMode _mode)
 {
+	IM3D_ASSERT(!m_drawCalled); // Begin*() called after Draw() but before NewFrame()
 	IM3D_ASSERT(m_primMode == PrimitiveMode_None); // forgot to call End()
 	m_primMode = _mode;
 	m_vertCountThisPrim = 0;
@@ -621,7 +635,9 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 
 	// \todo optim: force alpha/matrix stack bottom to be 1/identity, then skip the transform if the stack size == 1
 	VertexData vd(m_matrixStack.back() * _position, _size, _color);
-	vd.m_color.setA(vd.m_color.getA() * m_alphaStack.back());
+	if (m_alphaStack.size() > 1) {
+		vd.m_color.setA(vd.m_color.getA() * m_alphaStack.back());
+	}
 	
 	switch (m_primMode) {
 	case PrimitiveMode_Points:
@@ -657,6 +673,15 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 
 void Context::reset()
 {
+ // All state stacks should be default here, else there was a mismatched Push*()/Pop*()
+	IM3D_ASSERT(m_colorStack.size() == 1);
+	IM3D_ASSERT(m_alphaStack.size() == 1);
+	IM3D_ASSERT(m_sizeStack.size() == 1);
+	IM3D_ASSERT(m_enableSortingStack.size() == 1);
+	IM3D_ASSERT(m_matrixStack.size() == 1);
+	IM3D_ASSERT(m_idStack.size() == 1);
+	
+	
 	IM3D_ASSERT(m_primMode == PrimitiveMode_None);
 	m_primMode = PrimitiveMode_None;
 
@@ -669,7 +694,8 @@ void Context::reset()
 	}
 	m_sortedDrawLists.clear();
 	m_sortCalled = false;
-
+	m_drawCalled = false;
+	
  // copy keydown array internally so that we can make a delta to detect key presses
 	memcpy(m_keyDownPrev, m_keyDownCurr,       Key_Count); // \todo avoid this copy, use an index
 	memcpy(m_keyDownCurr, m_appData.m_keyDown, Key_Count); // must copy in case m_keyDown is updated after reset (e.g. by an app callback)
@@ -678,7 +704,7 @@ void Context::reset()
 void Context::draw()
 {
 	IM3D_ASSERT(m_appData.drawPrimitives); // must set the draw callback
-
+	
  // draw unsorted prims first
 	for (int i = 0; i < DrawPrimitive_Count; ++i) {
 		if (m_vertexData[i][0].size() > 0) {
@@ -694,6 +720,8 @@ void Context::draw()
 	for (auto dl = m_sortedDrawLists.begin(); dl != m_sortedDrawLists.end(); ++dl) {
 		m_appData.drawPrimitives(dl->m_primType, dl->m_start, dl->m_count);
 	}
+	
+	m_drawCalled = true;
 }
 
 void Context::pushEnableSorting(bool _enable)
@@ -718,6 +746,7 @@ void Context::setEnableSorting(bool _enable)
 Context::Context()
 {
 	m_sortCalled = false;
+	m_drawCalled = false;
 	m_primMode = PrimitiveMode_None;
 	m_primList = 0; // = sorting disabled
 	m_firstVertThisPrim = 0;

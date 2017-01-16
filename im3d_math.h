@@ -110,10 +110,6 @@ Mat4 Translate(const Mat4& _m, const Vec3& _t);
 Mat4 Rotate(const Mat4& _m, const Vec3& _axis, float _rads); // _angle must be unit length
 Mat4 LookAt(const Vec3& _from, const Vec3& _to, const Vec3& _up = Vec3(0.0f, 1.0f, 0.0f)); // aligns +z with (_to - _from)
 
-/* Geom requirements:
-	- Ray-capsule intersection
-	- Ray-line nearest point
-*/
 
 // Extends to infinity from m_origin in ±m_direciton.
 struct Line

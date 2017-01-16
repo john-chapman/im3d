@@ -2,10 +2,10 @@
 #ifndef im3d_h
 #define im3d_h
 
-//#define IM3D_MATRIX_ROW_MAJOR
+#include "im3d_config.h"
 
 #ifndef IM3D_ASSERT
-	#include <assert.h>
+	#include <cassert>
 	#define IM3D_ASSERT(e) assert(e)
 #endif
 
@@ -35,8 +35,11 @@ extern const Color Color_Cyan;
 Context& GetContext();
 void     SetContext(Context& _ctx);
 AppData& GetAppData();
-void     NewFrame();
-void     Draw();
+
+// Call at the start of each frame, after filling the AppData struct.
+void  NewFrame();
+// Call 
+void  Draw();
 
 // Begin primitive. End() *must* be called before starting each new primitive type.
 void  BeginPoints();
@@ -95,16 +98,19 @@ bool  GizmoPosition(const char* _id, Vec3* _position_);
 
 struct Vec2
 {
-	float x; float y; 
+	float x, y; 
 	Vec2()                                                                   {}
 	Vec2(float _xy): x(_xy), y(_xy)                                          {}
 	Vec2(float _x, float _y): x(_x), y(_y)                                   {}
 	operator float*()                                                        { return &x; }
 	operator const float*() const                                            { return &x; }
+	#ifdef IM3D_VEC2_USER
+		IM3D_VEC2_USER
+	#endif
 };
 struct Vec3
 { 
-	float x; float y; float z; 
+	float x, y, z;
 	Vec3()                                                                   {}
 	Vec3(float _xyz): x(_xyz), y(_xyz), z(_xyz)                              {}
 	Vec3(float _x, float _y, float _z): x(_x), y(_y), z(_z)                  {}
@@ -112,10 +118,13 @@ struct Vec3
 	Vec3(const Vec4& _v); // discards w
 	operator float*()                                                        { return &x; }
 	operator const float*() const                                            { return &x; }
+	#ifdef IM3D_VEC3_USER
+		IM3D_VEC3_USER
+	#endif
 };
 struct Vec4
 { 
-	float x; float y; float z; float w;
+	float x, y, z, w;
 	Vec4()                                                                   {}
 	Vec4(float _xyzw): x(_xyzw), y(_xyzw), z(_xyzw), w(_xyzw)                {}
 	Vec4(float _x, float _y, float _z, float _w): x(_x), y(_y), z(_z), w(_w) {}
@@ -123,6 +132,9 @@ struct Vec4
 	Vec4(Color _rgba);
 	operator float*()                                                        { return &x; }
 	operator const float*() const                                            { return &x; }
+	#ifdef IM3D_VEC4_USER
+		IM3D_VEC4_USER
+	#endif
 };
 struct Mat4
 {
@@ -157,6 +169,10 @@ struct Mat4
 		return m[_col * 4 + _row];
 	#endif
 	}
+	
+	#ifdef IM3D_MAT4_USER
+		IM3D_MAT4_USER
+	#endif
 };
 struct Color
 {
@@ -359,6 +375,7 @@ private:
 	};
 	Vector<DrawList>   m_sortedDrawLists;
 	bool               m_sortCalled;               // Prevent sorting during every call to draw().
+	bool               m_drawCalled;               // For assert if primitives are pushed after draw() was called.
 
  // primitive state
 	PrimitiveMode      m_primMode;   
