@@ -155,6 +155,6 @@ extern Example* g_Example;
 extern bool Im3d_Init();
 extern void Im3d_Shutdown();
 extern void Im3d_Update();
-extern void Im3d_Draw(Im3d::DrawPrimitiveType _primType, const Im3d::VertexData* _data, Im3d::U32 _count);
+extern void Im3d_Draw(const Im3d::DrawList& _drawList);
 
 #endif // im3d_example_h

@@ -8,6 +8,82 @@ static GLuint g_shIm3dTriangles;
 
 using namespace Im3d;
 
+// The draw callback is where Im3d draw lists are rendered by the application. Im3d::Draw can potentially
+// call this function multiple times per primtive type, if sorting is enabled.
+// The example below shows the simplest possible draw callback. Variations on this are possible, for example
+// using a depth buffer. See the shader source file for more details.
+// For VR, the simplest option is to call Im3d::Draw() once per eye with the appropriate framebuffer bound,
+// passing the appropriate view-projection matrix. A more efficient scheme would be to render to both eyes
+// inside the draw callback to avoid uploading the vertex data twice.
+// Note that there is no guarantee that the data in _drawList will exist after this function exits.
+void Im3d_Draw(const Im3d::DrawList& _drawList)
+{
+	AppData& ad = GetAppData();
+
+ // setting the framebuffer, viewport and pipeline states can (and should) be done prior to calling Im3d::Draw
+	glAssert(glViewport(0, 0, (GLsizei)ad.m_viewportSize.x, (GLsizei)ad.m_viewportSize.y));
+	glAssert(glEnable(GL_BLEND));
+	glAssert(glBlendEquation(GL_FUNC_ADD));
+	glAssert(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+	glAssert(glEnable(GL_PROGRAM_POINT_SIZE));
+	
+	GLenum prim;
+	GLuint sh;
+	switch (_drawList.m_primType) {
+	case Im3d::DrawPrimitive_Points:
+		prim = GL_POINTS;
+		sh = g_shIm3dPoints;
+		glAssert(glDisable(GL_CULL_FACE)); // points are view-aligned
+		break;
+	case Im3d::DrawPrimitive_Lines:
+		prim = GL_LINES;
+		sh = g_shIm3dLines;
+		glAssert(glDisable(GL_CULL_FACE)); // lines are view-aligned
+		break;
+	case Im3d::DrawPrimitive_Triangles:
+		prim = GL_TRIANGLES;
+		sh = g_shIm3dTriangles;
+		//glAssert(glEnable(GL_CULL_FACE)); // culling valid for triangles, but optional
+		break;
+	default:
+		IM3D_ASSERT(false);
+		return;
+	};
+
+	glAssert(glBindVertexArray(g_vaIm3d));
+	glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_vbIm3d));
+	glAssert(glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)_drawList.m_vertexCount * sizeof(Im3d::VertexData), (GLvoid*)_drawList.m_vertexData, GL_STREAM_DRAW));
+
+	glAssert(glUseProgram(sh));
+	glAssert(glUniform2f(glGetUniformLocation(sh, "uViewport"), ad.m_viewportSize.x, ad.m_viewportSize.y));
+	glAssert(glUniformMatrix4fv(glGetUniformLocation(sh, "uViewProjMatrix"), 1, false, (const GLfloat*)g_Example->m_camViewProj));
+	glAssert(glDrawArrays(prim, 0, (GLsizei)_drawList.m_vertexCount));
+}
+
+// At the top of each frame, the application must fill the Im3d::AppData struct and then call Im3d::NewFrame.
+// The example below shows how to do this, in particular how to generate the 'cursor ray' from a mouse position
+// which is necessary for interacting with gizmos.
+void Im3d_Update()
+{
+	AppData& ad = GetAppData();
+	ad.m_deltaTime = g_Example->m_deltaTime;
+	ad.m_viewportSize = Vec2((float)g_Example->m_width, (float)g_Example->m_height);
+	ad.m_viewOrigin = g_Example->m_camPos;
+	ad.m_tanHalfFov = tanf(g_Example->m_camFovRad * 0.5f);
+
+ // cursor ray from mouse position; for VR this might be the position/orientation of the HMD or a tracked controller
+	Vec2 cursorPos = g_Example->getWindowRelativeCursor();
+	cursorPos = (cursorPos / ad.m_viewportSize) * 2.0f - 1.0f;
+	cursorPos.y = -cursorPos.y; // window origin is top-left, ndc is bottom-left
+	ad.m_cursorRayOrigin = ad.m_viewOrigin;
+	float aspect = ad.m_viewportSize.x / ad.m_viewportSize.y;
+	ad.m_cursorRayDirection = g_Example->m_camWorld * Normalize(Vec4(cursorPos.x * ad.m_tanHalfFov * aspect, cursorPos.y * ad.m_tanHalfFov, -1.0f, 0.0f));
+
+ // 
+
+	Im3d::NewFrame();
+}
+
 bool Im3d_Init()
 {
 	{
@@ -77,7 +153,7 @@ bool Im3d_Init()
     glAssert(glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Im3d::VertexData), (GLvoid*)offsetof(Im3d::VertexData, m_color)));
 	glAssert(glBindVertexArray(0));
 
-	GetAppData().drawPrimitives = &Im3d_Draw;
+	GetAppData().drawCallback = &Im3d_Draw;
 
 	return true;
 }
@@ -89,68 +165,4 @@ void Im3d_Shutdown()
 	glAssert(glDeleteProgram(g_shIm3dPoints));
 	glAssert(glDeleteProgram(g_shIm3dLines));
 	glAssert(glDeleteProgram(g_shIm3dTriangles));
-}
-
-void Im3d_Update()
-{
-	AppData& ad = GetAppData();
-	ad.m_deltaTime = g_Example->m_deltaTime;
-	ad.m_viewportSize = Vec2((float)g_Example->m_width, (float)g_Example->m_height);
-	ad.m_viewOrigin = g_Example->m_camPos;
-	ad.m_tanHalfFov = tanf(g_Example->m_camFovRad * 0.5f);
-
-	Vec2 cursorPos = g_Example->getWindowRelativeCursor();
-	cursorPos = (cursorPos / ad.m_viewportSize) * 2.0f - 1.0f;
-	cursorPos.y = -cursorPos.y; // window origin is top-left, ndc is bottom-left
-	ad.m_cursorRayOrigin = ad.m_viewOrigin;
-	float aspect = ad.m_viewportSize.x / ad.m_viewportSize.y;
-	ad.m_cursorRayDirection = g_Example->m_camWorld * Normalize(Vec4(cursorPos.x * ad.m_tanHalfFov * aspect, cursorPos.y * ad.m_tanHalfFov, -1.0f, 0.0f));
-
-	Im3d::NewFrame();
-}
-
-void Im3d_Draw(Im3d::DrawPrimitiveType _primType, const Im3d::VertexData* _data, Im3d::U32 _count)
-{
-	AppData& ad = GetAppData();
-
-	glAssert(glEnable(GL_BLEND));
-	glAssert(glBlendEquation(GL_FUNC_ADD));
-	glAssert(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
-	glAssert(glEnable(GL_PROGRAM_POINT_SIZE));
-	
-	GLenum prim;
-	GLuint sh;
-	switch (_primType) {
-	case Im3d::DrawPrimitive_Points:
-		prim = GL_POINTS;
-		sh = g_shIm3dPoints;
-		//ImGui::Text("Points (%d)", _count);
-		glAssert(glDisable(GL_CULL_FACE)); // points are view-aligned
-		break;
-	case Im3d::DrawPrimitive_Lines:
-		prim = GL_LINES;
-		sh = g_shIm3dLines;
-		//ImGui::Text("Lines (%d)", _count / 2);
-		glAssert(glDisable(GL_CULL_FACE)); // lines are view-aligned
-		break;
-	case Im3d::DrawPrimitive_Triangles:
-		prim = GL_TRIANGLES;
-		sh = g_shIm3dTriangles;
-		//ImGui::Text("Tris (%d)", _count / 3);
-		//glAssert(glEnable(GL_CULL_FACE)); // culling valid for triangles, but optional
-		break;
-	default:
-		IM3D_ASSERT(false);
-		return;
-	};
-
-	glAssert(glBindVertexArray(g_vaIm3d));
-	glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_vbIm3d));
-	glAssert(glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)_count * sizeof(Im3d::VertexData), (GLvoid*)_data, GL_STREAM_DRAW));
-	glAssert(glUseProgram(sh));
-	glAssert(glUniformMatrix4fv(glGetUniformLocation(sh, "uViewProjMatrix"), 1, false, (const GLfloat*)g_Example->m_camViewProj));
-	glAssert(glUniform2f(glGetUniformLocation(sh, "uViewport"), ad.m_viewportSize.x, ad.m_viewportSize.y));
-	glAssert(glDrawArrays(prim, 0, (GLsizei)_count));
-
-	glAssert(glDisable(GL_PROGRAM_POINT_SIZE));
 }

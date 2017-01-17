@@ -565,7 +565,7 @@ template class Vector<float>;
 template class Vector<Id>;
 template class Vector<Mat4>;
 template class Vector<Color>;
-template class Vector<Context::DrawList>;
+template class Vector<DrawList>;
 
 /*******************************************************************************
 
@@ -703,12 +703,16 @@ void Context::reset()
 
 void Context::draw()
 {
-	IM3D_ASSERT(m_appData.drawPrimitives); // must set the draw callback
+	IM3D_ASSERT(m_appData.drawCallback);
 	
  // draw unsorted prims first
 	for (int i = 0; i < DrawPrimitive_Count; ++i) {
 		if (m_vertexData[i][0].size() > 0) {
-			m_appData.drawPrimitives((DrawPrimitiveType)i, m_vertexData[i][0].data(), m_vertexData[i][0].size());
+			DrawList dl;
+			dl.m_primType = (DrawPrimitiveType)i;
+			dl.m_vertexData = m_vertexData[i][0].data();
+			dl.m_vertexCount = m_vertexData[i][0].size();
+			m_appData.drawCallback(dl);
 		}
 	}
 
@@ -718,7 +722,7 @@ void Context::draw()
 		m_sortCalled = true;
 	}
 	for (auto dl = m_sortedDrawLists.begin(); dl != m_sortedDrawLists.end(); ++dl) {
-		m_appData.drawPrimitives(dl->m_primType, dl->m_start, dl->m_count);
+		m_appData.drawCallback(*dl);
 	}
 	
 	m_drawCalled = true;
@@ -861,13 +865,13 @@ void Context::sort()
 			cprim = mxprim;
 			DrawList dl;
 			dl.m_primType = (DrawPrimitiveType)cprim;
-			dl.m_start = m_vertexData[cprim][1].data() + (search[cprim] - sortData[cprim].data()) * kPrimCount[cprim];
-			dl.m_count = 0;
+			dl.m_vertexData = m_vertexData[cprim][1].data() + (search[cprim] - sortData[cprim].data()) * kPrimCount[cprim];
+			dl.m_vertexCount= 0;
 			m_sortedDrawLists.push_back(dl);
 		}
 
 	 // increment the vertex count for the current draw list
-		m_sortedDrawLists.back().m_count += kPrimCount[cprim];
+		m_sortedDrawLists.back().m_vertexCount += kPrimCount[cprim];
 		++search[cprim];
 		if (search[cprim] == sortData[cprim].end()) {
 			search[cprim] = 0;

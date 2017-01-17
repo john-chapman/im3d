@@ -4,6 +4,8 @@
 
 #include "im3d_config.h"
 
+#define IM3D_VERSION "0.5"
+
 #ifndef IM3D_ASSERT
 	#include <cassert>
 	#define IM3D_ASSERT(e) assert(e)
@@ -38,7 +40,7 @@ AppData& GetAppData();
 
 // Call at the start of each frame, after filling the AppData struct.
 void  NewFrame();
-// Call 
+// Call after all Im3d calls have been made for the current frame.
 void  Draw();
 
 // Begin primitive. End() *must* be called before starting each new primitive type.
@@ -223,7 +225,13 @@ enum DrawPrimitiveType
 
 	DrawPrimitive_Count
 };
-typedef void (DrawPrimitivesCallback)(DrawPrimitiveType _primType, const VertexData* _data, U32 _count);
+struct DrawList
+{
+	DrawPrimitiveType m_primType;
+	const VertexData* m_vertexData;
+	U32               m_vertexCount;
+};
+typedef void (DrawPrimitivesCallback)(const DrawList& _drawList);
 
 enum Key
 {
@@ -253,7 +261,7 @@ struct AppData
 	float m_deltaTime;           // Time since previous frame (seconds).
 	void* m_userData;            // App-specific data (useful for passing app context to drawPrimitives).
 
-	DrawPrimitivesCallback* drawPrimitives;
+	DrawPrimitivesCallback* drawCallback;
 };
 
 // Minimal vector.
@@ -366,13 +374,6 @@ private:
 
  // primitive data: [0] unsorted, [1] sorted
 	Vector<VertexData> m_vertexData[DrawPrimitive_Count][2];
-
-	struct DrawList
-	{
-		DrawPrimitiveType m_primType;
-		VertexData*       m_start;
-		U32               m_count;
-	};
 	Vector<DrawList>   m_sortedDrawLists;
 	bool               m_sortCalled;               // Prevent sorting during every call to draw().
 	bool               m_drawCalled;               // For assert if primitives are pushed after draw() was called.
