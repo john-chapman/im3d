@@ -12,6 +12,11 @@ template <typename T>
 inline T Max(T _a, T _b)                                   { return _a < _b ? _b : _a; }
 template <typename T>
 inline T Min(T _a, T _b)                                   { return _a < _b ? _a : _b; }
+template <typename T>
+inline T Clamp(T _a, T _min, T _max)                       { return Max(Min(_a, _max), _min); }
+
+inline float Remap(float _x, float _start, float _end)     { return Clamp(_x * (1.0f / (_end - _start)) + (-_start / (_end - _start)), 0.0f, 1.0f); }
+
 
 // Vec2
 inline Vec2  operator+(const Vec2& _lhs, const Vec2& _rhs) { return Vec2(_lhs.x + _rhs.x, _lhs.y + _rhs.y); }
@@ -109,7 +114,6 @@ Mat4 Transpose(const Mat4& _m);
 Mat4 Translate(const Mat4& _m, const Vec3& _t);
 Mat4 Rotate(const Mat4& _m, const Vec3& _axis, float _rads); // _angle must be unit length
 Mat4 LookAt(const Vec3& _from, const Vec3& _to, const Vec3& _up = Vec3(0.0f, 1.0f, 0.0f)); // aligns +z with (_to - _from)
-
 
 // Extends to infinity from m_origin in ±m_direciton.
 struct Line

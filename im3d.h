@@ -363,6 +363,12 @@ public:
 	Context();
 	~Context();
 
+	
+	// Convert pixels -> world space size based on distance between _position and view origin.
+	float pixelsToWorldSize(const Vec3& _position, float _pixels);
+
+	void axisGizmo(Id _id, Vec3* _position_, const Vec3& _axis, Color _color, float _worldSize);
+
 private:
  // state stacks
 	Vector<Color>      m_colorStack;
@@ -387,11 +393,13 @@ private:
  // gizmo state
 	Id                 m_idActive;
 	Id                 m_idHot;
+	float              m_hotDepth;                 // Depth of the current hot gizmo, for handling occlusion.
+	Vec3               m_translationOffset;        // Offset for translation gizmos.
 
  // app data
 	AppData            m_appData;
-	bool               m_keyDownCurr[Key_Count];  // Key state captured during reset().
-	bool               m_keyDownPrev[Key_Count];  // Key state from previous frame.
+	bool               m_keyDownCurr[Key_Count];   // Key state captured during reset().
+	bool               m_keyDownPrev[Key_Count];   // Key state from previous frame.
 
 	// Interpret key state.
 	bool isKeyDown(Key _key) const     { return m_keyDownCurr[_key]; }
@@ -399,9 +407,7 @@ private:
 
 	// Sort primitive data.
 	void sort();
-
-	// Convert pixels -> world space size based on distance between _position and view origin.
-	float pixelsToWorldSize(const Vec3& _position, float _pixels);
+	
 };
 
 namespace internal {

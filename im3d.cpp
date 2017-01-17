@@ -58,6 +58,8 @@ const Color Im3d::Color_Magenta = Color(1.0f, 0.0f, 1.0f);
 const Color Im3d::Color_Yellow  = Color(1.0f, 1.0f, 0.0f);
 const Color Im3d::Color_Cyan    = Color(0.0f, 1.0f, 1.0f);
 
+static const Color Color_GizmoHighlight = Color(1.0f, 0.78f, 0.27f);
+
 void Im3d::MulMatrix(const Mat4& _mat)
 {
 	Context& ctx = GetContext();
@@ -505,6 +507,17 @@ void Im3d::DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int 
 	ctx.popMatrix();
 }
 
+bool Im3d::GizmoPosition(const char* _id, Vec3* _position_)
+{
+	Context& ctx = GetContext();
+	ctx.pushId(MakeId(_id));
+		float worldSize = ctx.pixelsToWorldSize(*_position_, 64.0f);
+		Id xaxisId = MakeId("xaxis");
+		ctx.axisGizmo(xaxisId, _position_, Vec3(1.0f, 0.0f, 0.0f), Color_Red, worldSize);
+	ctx.popId();
+	return false;
+}
+
 /*******************************************************************************
 
                                   Vector
@@ -635,9 +648,7 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 
 	// \todo optim: force alpha/matrix stack bottom to be 1/identity, then skip the transform if the stack size == 1
 	VertexData vd(m_matrixStack.back() * _position, _size, _color);
-	if (m_alphaStack.size() > 1) {
-		vd.m_color.setA(vd.m_color.getA() * m_alphaStack.back());
-	}
+	vd.m_color.setA(vd.m_color.getA() * m_alphaStack.back());
 	
 	switch (m_primMode) {
 	case PrimitiveMode_Points:
@@ -695,6 +706,9 @@ void Context::reset()
 	m_sortedDrawLists.clear();
 	m_sortCalled = false;
 	m_drawCalled = false;
+
+	m_idActive = m_idHot = Id_Invalid;
+	m_hotDepth = FLT_MAX;
 	
  // copy keydown array internally so that we can make a delta to detect key presses
 	memcpy(m_keyDownPrev, m_keyDownCurr,       Key_Count); // \todo avoid this copy, use an index
@@ -886,4 +900,58 @@ float Context::pixelsToWorldSize(const Vec3& _position, float _pixels)
 {
 	float d = Length(_position - m_appData.m_viewOrigin);
 	return m_appData.m_tanHalfFov * 2.0f * d * (_pixels / m_appData.m_viewportSize.y);
+}
+
+void Context::axisGizmo(Id _id, Vec3* _position_, const Vec3& _axis, Color _color, float _worldSize)
+{
+	Ray ray(m_appData.m_cursorRayOrigin, m_appData.m_cursorRayDirection);
+	Line axisLine(*_position_, _axis);
+	Capsule axisCapsule(
+		*_position_ + _axis * _worldSize * 0.2f, // *.2f = leave a small space around the origin
+		*_position_ + _axis * _worldSize,
+		0.05f * _worldSize
+		);
+
+	
+
+	Color color = _color;
+	if (_id == m_idActive) {
+		color = Color_GizmoHighlight;
+	} else if (_id == m_idHot) {
+		if (m_idActive == Id_Invalid && Intersects(ray, axisCapsule)) {
+			if (isKeyDown(MouseLeft)) {
+				m_idActive = _id;
+				float tr, tl;
+				//Nearest(ray, axisLine, tr, tl);
+				m_translationOffset = _axis * tl;
+			}
+
+		} else {
+			m_idHot = Id_Invalid;
+		}
+		color = Color_GizmoHighlight;
+
+	} else {
+	 	float d2 = Length2(axisCapsule.m_end - m_appData.m_viewOrigin);
+		if (m_idHot == Id_Invalid && d2 < m_hotDepth && Intersects(ray, axisCapsule)) {
+			m_idHot = _id;
+			m_hotDepth = d2;
+		}
+	}
+
+	float alignedAlpha = 1.0f - fabs(Dot(_axis, Normalize(m_appData.m_viewOrigin - *_position_)));
+	alignedAlpha = Remap(alignedAlpha, 0.1f, 0.2f);
+
+	pushColor(color);
+	pushAlpha(alignedAlpha);
+	pushSize(4.0f);
+		BeginLines();
+			Vertex(axisCapsule.m_start);
+			Vertex(axisCapsule.m_end);
+			//DrawArrow(cp.m_start, cp.m_end, 0.2f * screenScale);
+		End();
+	popSize();
+	popAlpha();
+	popColor();
+
 }
