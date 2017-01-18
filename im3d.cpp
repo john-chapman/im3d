@@ -322,6 +322,27 @@ bool Im3d::Intersect(const Ray& _ray, const Capsule& _capsule, float& t0_, float
 	IM3D_ASSERT(false); // \todo implement
 	return false;
 }
+void Im3d::Nearest(const Line& _line0, const Line& _line1, float& t0_, float& t1_)
+{
+	Vec3 p = _line0.m_origin - _line1.m_origin;
+	float q = Dot(_line0.m_direction, _line1.m_direction);
+	float s = Dot(_line1.m_direction, p);
+
+	float d = 1.0f - q * q;
+	if (d < FLT_EPSILON) { // lines are parallel
+		t0_ = 0.0f;
+		t1_ = s;
+	} else {
+		float r = Dot(_line0.m_direction, p);
+		t0_ = (q * s - r) / d;
+		t1_ = (s - q * r) / d;
+	}
+}
+void Im3d::Nearest(const Ray& _ray, const Line& _line, float& tr_, float& tl_)
+{
+	Nearest(Line(_ray.m_origin, _ray.m_direction), _line, tr_, tl_);
+	tr_ = Max(tr_, 0.0f);
+}
 Vec3 Im3d::Nearest(const Ray& _ray, const LineSegment& _segment, float& tr_)
 {
 	Vec3 ldir = _segment.m_end - _segment.m_start;
@@ -506,14 +527,36 @@ void Im3d::DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int 
 		ctx.end();
 	ctx.popMatrix();
 }
+void Im3d::DrawArrow(const Vec3& _start, const Vec3& _end, float _headLength)
+{
+	Context& ctx = GetContext();
+
+	float normHeadLength = _headLength / Length(_end - _start);
+	Vec3 head = _start + (_end - _start) * (1.0f - normHeadLength);
+	ctx.begin(Context::PrimitiveMode_Lines);
+		ctx.vertex(_start);
+		ctx.vertex(head);
+		ctx.vertex(head, Max(ctx.getSize() * 2.0f, 4.0f), ctx.getColor());
+		ctx.vertex(_end, 2.0f, ctx.getColor());
+	ctx.end();
+}
 
 bool Im3d::GizmoPosition(const char* _id, Vec3* _position_)
 {
 	Context& ctx = GetContext();
 	ctx.pushId(MakeId(_id));
+	ctx.pushEnableSorting(true);
 		float worldSize = ctx.pixelsToWorldSize(*_position_, 64.0f);
 		Id xaxisId = MakeId("xaxis");
 		ctx.axisGizmo(xaxisId, _position_, Vec3(1.0f, 0.0f, 0.0f), Color_Red, worldSize);
+
+		Id yaxisId = MakeId("yaxis");
+		ctx.axisGizmo(yaxisId, _position_, Vec3(0.0f, 1.0f, 0.0f), Color_Green, worldSize);
+
+		Id zaxisId = MakeId("zaxis");
+		ctx.axisGizmo(zaxisId, _position_, Vec3(0.0f, 0.0f, 1.0f), Color_Blue, worldSize);
+
+	ctx.popEnableSorting();
 	ctx.popId();
 	return false;
 }
@@ -706,9 +749,6 @@ void Context::reset()
 	m_sortedDrawLists.clear();
 	m_sortCalled = false;
 	m_drawCalled = false;
-
-	m_idActive = m_idHot = Id_Invalid;
-	m_hotDepth = FLT_MAX;
 	
  // copy keydown array internally so that we can make a delta to detect key presses
 	memcpy(m_keyDownPrev, m_keyDownCurr,       Key_Count); // \todo avoid this copy, use an index
@@ -769,6 +809,9 @@ Context::Context()
 	m_primList = 0; // = sorting disabled
 	m_firstVertThisPrim = 0;
 	m_vertCountThisPrim = 0;
+	m_idHot = Id_Invalid;
+	m_idActive = Id_Invalid;
+	m_hotDepth = FLT_MAX;
 	memset(&m_appData, 0, sizeof(m_appData));
 	memset(&m_keyDownCurr, 0, sizeof(m_keyDownCurr));
 	memset(&m_keyDownPrev, 0, sizeof(m_keyDownPrev));
@@ -912,46 +955,76 @@ void Context::axisGizmo(Id _id, Vec3* _position_, const Vec3& _axis, Color _colo
 		0.05f * _worldSize
 		);
 
-	
 
 	Color color = _color;
 	if (_id == m_idActive) {
 		color = Color_GizmoHighlight;
-	} else if (_id == m_idHot) {
-		if (m_idActive == Id_Invalid && Intersects(ray, axisCapsule)) {
-			if (isKeyDown(MouseLeft)) {
-				m_idActive = _id;
-				float tr, tl;
-				//Nearest(ray, axisLine, tr, tl);
-				m_translationOffset = _axis * tl;
-			}
+		if (isKeyDown(Action_Select)) {
+			m_idActive = _id;
+			float tr, tl;
+			Nearest(ray, axisLine, tr, tl);
+			*_position_ = *_position_ + _axis * tl - m_translationOffset;
 
+		 // draw the axis
+			begin(PrimitiveMode_Lines);
+				vertex(*_position_ - _axis * 9999.0f, 1.0f, _color);
+				vertex(*_position_ + _axis * 9999.0f, 1.0f, _color);
+			end();
 		} else {
-			m_idHot = Id_Invalid;
+			m_idActive = Id_Invalid;
+			makeCold();
 		}
+
+	} else if (_id == m_idHot) {
 		color = Color_GizmoHighlight;
 
-	} else {
-	 	float d2 = Length2(axisCapsule.m_end - m_appData.m_viewOrigin);
-		if (m_idHot == Id_Invalid && d2 < m_hotDepth && Intersects(ray, axisCapsule)) {
-			m_idHot = _id;
-			m_hotDepth = d2;
+		if (m_idActive == Id_Invalid && Intersects(ray, axisCapsule)) {
+			if (isKeyDown(Action_Select)) {
+				m_idActive = _id;
+				float tr, tl;
+				Nearest(ray, axisLine, tr, tl);
+				m_translationOffset = _axis * tl;
+				color = Color_Blue;
+			}
+		} else {
+			makeCold();
 		}
+
+	} else {
+	 	float depth = Length2(axisCapsule.m_end - m_appData.m_viewOrigin);
+		bool intersects = Intersects(ray, axisCapsule);
+		makeHot(_id, depth, intersects);
 	}
 
 	float alignedAlpha = 1.0f - fabs(Dot(_axis, Normalize(m_appData.m_viewOrigin - *_position_)));
-	alignedAlpha = Remap(alignedAlpha, 0.1f, 0.2f);
+	alignedAlpha = Remap(alignedAlpha, 0.05f, 0.1f);
+	if (m_idHot == _id) {
+		alignedAlpha = 1.0f;
+	}
 
 	pushColor(color);
 	pushAlpha(alignedAlpha);
+	DrawCapsule(axisCapsule.m_start, axisCapsule.m_end, axisCapsule.m_radius);
 	pushSize(4.0f);
-		BeginLines();
-			Vertex(axisCapsule.m_start);
-			Vertex(axisCapsule.m_end);
-			//DrawArrow(cp.m_start, cp.m_end, 0.2f * screenScale);
-		End();
+		DrawArrow(axisCapsule.m_start, axisCapsule.m_end, 0.2f * _worldSize);
 	popSize();
 	popAlpha();
 	popColor();
 
+}
+
+bool Context::makeHot(Id _id, float _depth, bool _intersects)
+{
+	if (m_idActive == Id_Invalid && _depth < m_hotDepth && _intersects) {
+		m_idHot = _id;
+		m_hotDepth = _depth;
+		return true;
+	}
+	return false;
+}
+
+void Context::makeCold()
+{
+	m_idActive = m_idHot = Id_Invalid;
+	m_hotDepth = FLT_MAX;
 }

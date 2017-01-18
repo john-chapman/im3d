@@ -71,7 +71,7 @@ void Im3d_Update()
 	ad.m_viewOrigin = g_Example->m_camPos;
 	ad.m_tanHalfFov = tanf(g_Example->m_camFovRad * 0.5f);
 
- // cursor ray from mouse position; for VR this might be the position/orientation of the HMD or a tracked controller
+ // Cursor ray from mouse position; for VR this might be the position/orientation of the HMD or a tracked controller
 	Vec2 cursorPos = g_Example->getWindowRelativeCursor();
 	cursorPos = (cursorPos / ad.m_viewportSize) * 2.0f - 1.0f;
 	cursorPos.y = -cursorPos.y; // window origin is top-left, ndc is bottom-left
@@ -79,7 +79,10 @@ void Im3d_Update()
 	float aspect = ad.m_viewportSize.x / ad.m_viewportSize.y;
 	ad.m_cursorRayDirection = g_Example->m_camWorld * Normalize(Vec4(cursorPos.x * ad.m_tanHalfFov * aspect, cursorPos.y * ad.m_tanHalfFov, -1.0f, 0.0f));
 
- // 
+ // Fill the key state array; using GetAsyncKeyState here but this could equally well be done via the window proc.
+ // All key states have an equivalent 'Action_' enum which may be more intuitive to use for VR 
+ // (e.g. Mouse_Down == Action_Select).
+	ad.m_keyDown[Im3d::Mouse_Left] = GetAsyncKeyState(VK_LBUTTON) & 0x8000;
 
 	Im3d::NewFrame();
 }

@@ -59,6 +59,7 @@ void  DrawSphere(const Vec3& _origin, float _radius, int _detail = 24);
 void  DrawAlignedBox(const Vec3& _min, const Vec3& _max);
 void  DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, int _detail = 24);
 void  DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int _detail = 12);
+void  DrawArrow(const Vec3& _start, const Vec3& _end, float _headLength);
 
 // Add a vertex to the current primitive (call between Begin*() and End()).
 void  Vertex(const Vec3& _position);
@@ -235,19 +236,12 @@ typedef void (DrawPrimitivesCallback)(const DrawList& _drawList);
 
 enum Key
 {
-	MouseLeft,
-	MouseRight,
-	MouseMiddle,
-		
-	Key_Ctrl,
-	Key_Shift,
-	Key_Alt,
+	Mouse_Left,
 
-	Key_T,           // Select translation gizmo.
-	Key_R,           // Select rotation gizmo.
-	Key_S,           // Select scale gizmo.
+	Key_Count,
 
-	Key_Count
+ // the following maps keys -> 'action' states which may be more intuitive, especially for VR
+	Action_Select = Mouse_Left
 };
 struct AppData
 {
@@ -357,19 +351,19 @@ public:
 	void        popId()                          { m_idStack.pop_back();     }
 	void        setId(Id _id)                    { m_idStack.back() = _id;   }
 	Id          getId() const                    { return m_idStack.back();  }
-
+	
 	AppData&    getAppData()                     { return m_appData; }
 
 	Context();
 	~Context();
 
-	
+
 	// Convert pixels -> world space size based on distance between _position and view origin.
 	float pixelsToWorldSize(const Vec3& _position, float _pixels);
 
 	void axisGizmo(Id _id, Vec3* _position_, const Vec3& _axis, Color _color, float _worldSize);
 
-private:
+//private:
  // state stacks
 	Vector<Color>      m_colorStack;
 	Vector<float>      m_alphaStack;
@@ -407,6 +401,9 @@ private:
 
 	// Sort primitive data.
 	void sort();
+
+	bool makeHot(Id _id, float _depth, bool _intersects);
+	void makeCold();
 	
 };
 

@@ -27,21 +27,28 @@ int main(int, char**)
 				}
 			Im3d::End();
 		
-			Im3d::BeginTriangles();
-				Im3d::Vertex(-1.0f,  0.0f, -1.0f, Im3d::Color_Red);
-				Im3d::Vertex( 0.0f,  2.0f, -1.0f, Im3d::Color_Green);
-				Im3d::Vertex( 1.0f,  0.0f, -1.0f, Im3d::Color_Blue);
-			Im3d::End();
-			Im3d::SetSize(2.0f);
-			Im3d::BeginLineLoop();
-				Im3d::Vertex(-1.0f,  0.0f, -1.0f, Im3d::Color_Magenta);
-				Im3d::Vertex( 0.0f,  2.0f, -1.0f, Im3d::Color_Yellow);
-				Im3d::Vertex( 1.0f,  0.0f, -1.0f, Im3d::Color_Cyan);
-			Im3d::End();
+			//Im3d::BeginTriangles();
+			//	Im3d::Vertex(-1.0f,  0.0f, -1.0f, Im3d::Color_Red);
+			//	Im3d::Vertex( 0.0f,  2.0f, -1.0f, Im3d::Color_Green);
+			//	Im3d::Vertex( 1.0f,  0.0f, -1.0f, Im3d::Color_Blue);
+			//Im3d::End();
+			//Im3d::SetSize(2.0f);
+			//Im3d::BeginLineLoop();
+			//	Im3d::Vertex(-1.0f,  0.0f, -1.0f, Im3d::Color_Magenta);
+			//	Im3d::Vertex( 0.0f,  2.0f, -1.0f, Im3d::Color_Yellow);
+			//	Im3d::Vertex( 1.0f,  0.0f, -1.0f, Im3d::Color_Cyan);
+			//Im3d::End();
 
 			if (ImGui::TreeNode("Gizmos")) {
-				static Im3d::Vec3 pos(-1.0f, 2.0f, 0.0f);
-				Im3d::GizmoPosition("GizmoPosition", &pos);
+				ImGui::Text("Hot ID:    0x%x", Im3d::GetContext().m_idHot);
+				ImGui::Text("Active ID: 0x%x", Im3d::GetContext().m_idActive);
+				ImGui::Text("Hot Depth: %.3f", Im3d::GetContext().m_hotDepth);
+				static Im3d::Vec3 pos0(0.0f, 0.0f, 0.0f);
+				Im3d::GizmoPosition("GizmoPos0", &pos0);
+
+				static Im3d::Vec3 pos1(0.0f, 0.0f, -1.0f);
+				Im3d::GizmoPosition("GizmoPos1", &pos1);
+
 				ImGui::TreePop();
 			}
 

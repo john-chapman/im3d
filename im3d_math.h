@@ -181,6 +181,8 @@ bool  Intersect (const Ray& _ray, const Sphere& _sphere, float& t0_, float& t1_)
 bool  Intersects(const Ray& _ray, const Capsule& _capsule);
 bool  Intersect (const Ray& _ray, const Capsule& _capsule, float& t0_, float& t1_);
 
+void  Nearest(const Line& _line0, const Line& _line1, float& t0_, float& t1_);
+void  Nearest(const Ray& _ray, const Line& _line, float& tr_, float& tl_);
 /// Find point tr_ along _ray nearest to _segment, return point on segment nearest to _ray.
 Vec3  Nearest(const Ray& _ray, const LineSegment& _segment, float& tr_);
 float Distance2(const Ray& _ray, const LineSegment& _segment);
