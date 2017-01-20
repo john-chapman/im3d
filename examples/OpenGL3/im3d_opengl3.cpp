@@ -68,8 +68,8 @@ void Im3d_Update()
 	AppData& ad = GetAppData();
 	ad.m_deltaTime = g_Example->m_deltaTime;
 	ad.m_viewportSize = Vec2((float)g_Example->m_width, (float)g_Example->m_height);
-	ad.m_viewOrigin = g_Example->m_camPos;
-	ad.m_tanHalfFov = tanf(g_Example->m_camFovRad * 0.5f);
+	ad.m_tanHalfFov = tanf(g_Example->m_camFovRad * 0.5f); // vertical fov
+	ad.m_viewOrigin = g_Example->m_camPos; // for VR use the head position
 
  // Cursor ray from mouse position; for VR this might be the position/orientation of the HMD or a tracked controller
 	Vec2 cursorPos = g_Example->getWindowRelativeCursor();
