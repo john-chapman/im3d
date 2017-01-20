@@ -462,6 +462,18 @@ void Im3d::DrawQuadFilled(const Vec3& _a, const Vec3& _b, const Vec3& _c, const 
 		ctx.vertex(_d);
 	ctx.end();
 }
+void Im3d::DrawCircle(const Vec3& _origin, const Vec3& _normal, float _radius, int _detail)
+{
+	Context& ctx = GetContext();
+ 	ctx.pushMatrix(ctx.getMatrix() * LookAt(_origin, _origin + _normal));
+	ctx.begin(Context::PrimitiveMode_LineLoop);
+		for (int i = 0; i < _detail; ++i) {
+			float rad = kTwoPi * ((float)i / (float)_detail);
+			ctx.vertex(Vec3(cosf(rad) * _radius, sinf(rad) * _radius, 0.0f));
+		}
+	ctx.end();
+	ctx.popMatrix();
+}
 void Im3d::DrawSphere(const Vec3& _origin, float _radius, int _detail)
 {
 	Context& ctx = GetContext();
@@ -720,6 +732,23 @@ bool Im3d::GizmoPosition(const char* _id, Vec3* _position_)
 	ctx.popEnableSorting();
 	ctx.popId();
 
+	return ret;
+}
+bool Im3d::GizmoRotation(const char* _id, const Vec3& _origin, float* _x_, float* _y_, float* _z_)
+{
+	bool ret = false;
+	Context& ctx = Im3d::GetContext();
+	ctx.pushId(MakeId(_id));
+	ctx.pushEnableSorting(true);
+		float worldHeight = ctx.pixelsToWorldSize(_origin, ctx.m_gizmoHeightPixels);
+		float worldSize = ctx.pixelsToWorldSize(_origin, ctx.m_gizmoSizePixels);
+		
+		ret |= ctx.gizmoAngle(MakeId("xyplane"), _origin, Vec3(0.0f, 0.0f, 1.0f), _x_, Color_Blue,  worldHeight, worldSize); 
+		ret |= ctx.gizmoAngle(MakeId("xzplane"), _origin, Vec3(0.0f, 1.0f, 0.0f), _y_, Color_Green, worldHeight, worldSize);
+		ret |= ctx.gizmoAngle(MakeId("yzplane"), _origin, Vec3(1.0f, 0.0f, 0.0f), _z_, Color_Red,   worldHeight, worldSize);
+	
+	ctx.popEnableSorting();
+	ctx.popId();
 	return ret;
 }
 
@@ -1182,6 +1211,9 @@ bool Context::gizmoPlane(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _
 	Plane plane(_normal, _drawAt);
 	float tr;
 	bool intersects = Intersect(ray, plane, tr);
+	if (!intersects) {
+		return false;
+	}
 	Vec3 intersection = ray.m_origin + ray.m_direction * tr;
 	intersects &= AllLess(Abs(intersection - _drawAt), Vec3(_worldSize));	
 	bool ret = false;
@@ -1208,6 +1240,68 @@ bool Context::gizmoPlane(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _
 	}
 
 	return ret;
+}
+
+bool Context::gizmoAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, float* _out_, Color _color, float _worldRadius, float _worldSize)
+{
+	Ray ray(m_appData.m_cursorRayOrigin, m_appData.m_cursorRayDirection);
+	Plane plane(_axis, _drawAt);
+	float tr;
+	bool intersects = Intersect(ray, plane, tr);
+	if (!intersects) {
+		return false;
+	}
+	Vec3 intersection = ray.m_origin + ray.m_direction * tr;
+	float dist = Length(intersection - _drawAt);
+	intersects &= fabs(dist - _worldRadius) < _worldSize;
+	bool ret = false;
+	
+	Color color = _color;
+	if (_id == m_idActive) {
+		color = Color_GizmoHighlight;
+		if (isKeyDown(Action_Select)) {
+			plane = Plane(Normalize(m_appData.m_viewOrigin - _drawAt), _drawAt);
+			Intersect(ray, plane, tr);
+			intersection = ray.m_origin = ray.m_direction * tr;
+			*_out_ = Length(intersection - m_gizmoOffsetTranslation) / _worldRadius;
+			ret = true;
+
+			begin(PrimitiveMode_Lines);
+				vertex(_drawAt - _axis * 9999.0f, 1.0f, _color);
+				vertex(_drawAt + _axis * 9999.0f, 1.0f, _color);
+			end();
+		} else {
+			m_idActive = Id_Invalid;
+		}
+
+	} else if (_id == m_idHot) {
+		color = Color_GizmoHighlight;
+
+		if (m_idActive == Id_Invalid && intersects) {
+			if (isKeyDown(Action_Select)) {
+				m_idActive = _id;
+				m_gizmoOffsetTranslation = intersection;
+			}
+		} else {
+			makeCold();
+		}
+
+	} else {
+	 	float depth = Length2(_drawAt - m_appData.m_viewOrigin);
+		makeHot(_id, depth, intersects);
+	}
+	float alignedAlpha = fabs(Dot(_axis, Normalize(m_appData.m_viewOrigin - _drawAt)));
+	alignedAlpha = getAlpha() * Remap(alignedAlpha, 0.05f, 0.1f);
+	if (m_idHot == _id) {
+		alignedAlpha = 1.0f;
+	}
+	pushColor(color);
+	pushAlpha(alignedAlpha);
+	pushSize(m_gizmoSizePixels);
+		DrawCircle(_drawAt, _axis, _worldRadius, 32);
+	popSize();
+	popAlpha();
+	popColor();
 }
 
 bool Context::makeHot(Id _id, float _depth, bool _intersects)

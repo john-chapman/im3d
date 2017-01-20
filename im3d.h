@@ -58,6 +58,7 @@ void  DrawXyzAxes();
 void  DrawQuad(const Vec3& _a, const Vec3& _b, const Vec3& _c, const Vec3& _d);
 void  DrawQuad(const Vec3& _origin, const Vec3& _normal, const Vec2& _size);
 void  DrawQuadFilled(const Vec3& _a, const Vec3& _b, const Vec3& _c, const Vec3& _d);
+void  DrawCircle(const Vec3& _origin, const Vec3& _normal, float _radius, int _detail = 24);
 void  DrawSphere(const Vec3& _origin, float _radius, int _detail = 24);
 void  DrawAlignedBox(const Vec3& _min, const Vec3& _max);
 void  DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, int _detail = 24);
@@ -101,6 +102,7 @@ Id    MakeId(const char* _str);
 // Manipulate position/orientation/scale via a gizmo. Return true if the gizmo was used (if it modified its output).
 bool  Gizmo(const char* _id, Mat4* _mat_);
 bool  GizmoPosition(const char* _id, Vec3* _position_);
+bool  GizmoRotation(const char* _id, const Vec3& _origin, float* _x_, float* _y_, float* _z_);
 
 struct Vec2
 {
@@ -369,7 +371,7 @@ public:
 	float pixelsToWorldSize(const Vec3& _position, float _pixels);
 	bool  gizmoAxis(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _axis, Color _color, float _worldHeight, float _worldSize);
 	bool  gizmoPlane(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _normal, Color _color, float _worldSize);
-
+	bool  gizmoAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, float* _out_, Color _color, float _worldRadius, float _worldSize);
 //private:
  // state stacks
 	Vector<Color>      m_colorStack;
