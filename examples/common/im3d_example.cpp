@@ -799,6 +799,7 @@ void Example::draw()
 		glAssert(glUseProgram(0));
 		glAssert(glViewport(0, 0, m_width, m_height));
 		glAssert(glClearColor(0.5f, 0.5f, 0.5f, 0.0f));
+		//glAssert(glClearColor(0.0f, 0.0f, 0.0f, 0.0f));
 		glAssert(glClear(GL_COLOR_BUFFER_BIT));
 	#endif
 }

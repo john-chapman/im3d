@@ -10,6 +10,9 @@ int main(int, char**)
 	while (example.update()) {
 		Im3d::RandSeed(0);
 
+		Im3d::Context& ctx = Im3d::GetContext();
+		Im3d::AppData& ad  = Im3d::GetAppData();
+
 		static const int   kGridSize = 20;
 		static const float kGridHalf = (float)kGridSize * 0.5f;
 		Im3d::PushDrawState();
@@ -38,17 +41,38 @@ int main(int, char**)
 			//	Im3d::Vertex( 0.0f,  2.0f, -1.0f, Im3d::Color_Yellow);
 			//	Im3d::Vertex( 1.0f,  0.0f, -1.0f, Im3d::Color_Cyan);
 			//Im3d::End();
+			if (ImGui::TreeNode("Intersection")) {
+				Im3d::PushDrawState();
+					Im3d::Ray ray(ad.m_cursorRayOrigin, ad.m_cursorRayDirection);
+					float tr, tl;
+					
+					Im3d::Plane plane(Im3d::Vec3(0.0f, 1.0f, 0.0f), 0.0f);
+					if (Im3d::Intersect(ray, plane, tr)) {
+						Im3d::BeginPoints();
+							Im3d::Vertex(ray.m_origin + ray.m_direction * tr, 8.0f, Im3d::Color_Magenta);
+						Im3d::End();
+					}
+				Im3d::PopDrawState();
+
+				ImGui::TreePop();
+			}
 
 			if (ImGui::TreeNode("Gizmos")) {
-				ImGui::Text("Hot ID:    0x%x", Im3d::GetContext().m_idHot);
-				ImGui::Text("Active ID: 0x%x", Im3d::GetContext().m_idActive);
-				ImGui::Text("Hot Depth: %.3f", Im3d::GetContext().m_hotDepth);
+				ImGui::SliderFloat("Gizmo Size", &ctx.m_gizmoHeightPixels, 0.0f, 256.0f);
+				ImGui::SliderFloat("Gizmo Thickness", &ctx.m_gizmoSizePixels, 0.0f, 32.0f);
+				ImGui::Text("Hot ID:    0x%x", ctx.m_idHot);
+				ImGui::Text("Active ID: 0x%x", ctx.m_idActive);
+				ImGui::Text("Hot Depth: %.3f", ctx.m_hotDepth == FLT_MAX ? -1.0f : ctx.m_hotDepth);
 				static Im3d::Vec3 pos0(0.0f, 0.0f, 0.0f);
-				Im3d::GizmoPosition("GizmoPos0", &pos0);
+				if (Im3d::GizmoPosition("GizmoPos0", &pos0)) {
+					ImGui::Text("%.3f,%.3f,%.3f", pos0.x, pos0.y, pos0.z);
+				}
 
+				Im3d::PushAlpha();
+				Im3d::SetAlpha(0.1f);
 				static Im3d::Vec3 pos1(0.0f, 0.0f, -1.0f);
 				Im3d::GizmoPosition("GizmoPos1", &pos1);
-
+				Im3d::PopAlpha();
 				ImGui::TreePop();
 			}
 

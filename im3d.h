@@ -55,6 +55,9 @@ void  End();
 
 // Higher-order shapes.
 void  DrawXyzAxes();
+void  DrawQuad(const Vec3& _a, const Vec3& _b, const Vec3& _c, const Vec3& _d);
+void  DrawQuad(const Vec3& _origin, const Vec3& _normal, const Vec2& _size);
+void  DrawQuadFilled(const Vec3& _a, const Vec3& _b, const Vec3& _c, const Vec3& _d);
 void  DrawSphere(const Vec3& _origin, float _radius, int _detail = 24);
 void  DrawAlignedBox(const Vec3& _min, const Vec3& _max);
 void  DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, int _detail = 24);
@@ -155,6 +158,8 @@ struct Mat4
 
 	Vec4   getCol(int _i) const;
 	Vec4   getRow(int _i) const;
+	void   setCol(int _i, const Vec4& _v);
+	void   setRow(int _i, const Vec4& _v);
 	
 	float  operator()(int _row, int _col) const
 	{
@@ -358,10 +363,12 @@ public:
 	~Context();
 
 
+ // \todo low-level gizmo interface (users can write their own gizmos) - need ID helpers, etc.
+
 	// Convert pixels -> world space size based on distance between _position and view origin.
 	float pixelsToWorldSize(const Vec3& _position, float _pixels);
-
-	void axisGizmo(Id _id, Vec3* _position_, const Vec3& _axis, Color _color, float _worldSize);
+	bool  gizmoAxis(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _axis, Color _color, float _worldHeight, float _worldSize);
+	bool  gizmoPlane(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _normal, Color _color, float _worldSize);
 
 //private:
  // state stacks
@@ -385,10 +392,12 @@ public:
 	U32                m_vertCountThisPrim;        // # calls to vertex() since the last call to begin().
 
  // gizmo state
-	Id                 m_idActive;
+	Id                 m_idActive;                 // Currently active gizmo. If set, this is the same as m_idHot.
 	Id                 m_idHot;
 	float              m_hotDepth;                 // Depth of the current hot gizmo, for handling occlusion.
-	Vec3               m_translationOffset;        // Offset for translation gizmos.
+	Vec3               m_gizmoOffsetTranslation;   // Offset for translation gizmos.
+	float              m_gizmoHeightPixels;        // Height/radius of gizmos.
+	float              m_gizmoSizePixels;
 
  // app data
 	AppData            m_appData;
