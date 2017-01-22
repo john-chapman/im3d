@@ -397,9 +397,10 @@ public:
 	Id                 m_idActive;                 // Currently active gizmo. If set, this is the same as m_idHot.
 	Id                 m_idHot;
 	float              m_hotDepth;                 // Depth of the current hot gizmo, for handling occlusion.
-	Vec3               m_gizmoOffsetTranslation;   // Offset for translation gizmos.
+	Vec3               m_gizmoStateVec3;           // Stored state for the active gizmo.
+	float              m_gizmoStateFloat;          //               "
 	float              m_gizmoHeightPixels;        // Height/radius of gizmos.
-	float              m_gizmoSizePixels;
+	float              m_gizmoSizePixels;          // Thickenss of gizmo lines.
 
  // app data
 	AppData            m_appData;

@@ -53,6 +53,10 @@
 		vec2 tng1 = tng0 * vData[1].m_size / uViewport;
 		tng0 = tng0 * vData[0].m_size / uViewport;
 		
+	 // \hack thick polylines exhibit small breaks where adjoining segments aren't aligned, hence extend the line slightly to compensate?
+		//pos0 += dir * vData[0].m_size * 0.2 / uViewport;
+		//pos1 -= dir * vData[1].m_size * 0.2 / uViewport;
+		
 		gl_Position = vec4((pos0 - tng0) * gl_in[0].gl_Position.w, gl_in[0].gl_Position.zw); 
 		vDataOut.m_edgeDistance = -vData[0].m_size;
 		vDataOut.m_size = vData[0].m_size;

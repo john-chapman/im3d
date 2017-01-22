@@ -747,6 +747,10 @@ bool Im3d::GizmoRotation(const char* _id, const Vec3& _origin, float* _x_, float
 		ret |= ctx.gizmoAngle(MakeId("xzplane"), _origin, Vec3(0.0f, 1.0f, 0.0f), _y_, Color_Green, worldHeight, worldSize);
 		ret |= ctx.gizmoAngle(MakeId("yzplane"), _origin, Vec3(1.0f, 0.0f, 0.0f), _z_, Color_Red,   worldHeight, worldSize);
 	
+		//Vec3 planeNormal = Normalize(_origin - ctx.getAppData().m_viewOrigin);
+		//float v = 0.0f;
+		//ret |= ctx.gizmoAngle(MakeId("viewplane"), _origin, planeNormal, &v, Color_White, worldHeight * 1.5f, worldSize);
+
 	ctx.popEnableSorting();
 	ctx.popId();
 	return ret;
@@ -1142,6 +1146,8 @@ float Context::pixelsToWorldSize(const Vec3& _position, float _pixels)
 
 bool Context::gizmoAxis(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _axis, Color _color, float _worldHeight, float _worldSize)
 {
+	Vec3& storedPosition = m_gizmoStateVec3;
+
 	Ray ray(m_appData.m_cursorRayOrigin, m_appData.m_cursorRayDirection);
 	Line axisLine(_drawAt, _axis);
 	Capsule axisCapsule(
@@ -1158,12 +1164,12 @@ bool Context::gizmoAxis(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _a
 		if (isKeyDown(Action_Select)) {
 			float tr, tl;
 			Nearest(ray, axisLine, tr, tl);
-			*_out_ = *_out_ + _axis * tl - m_gizmoOffsetTranslation;
+			*_out_ = *_out_ + _axis * tl - storedPosition;
 			ret = true;			
 
 			begin(PrimitiveMode_Lines);
-				vertex(_drawAt - _axis * 9999.0f, 1.0f, _color);
-				vertex(_drawAt + _axis * 9999.0f, 1.0f, _color);
+				vertex(_drawAt - _axis * 9999.0f, m_gizmoSizePixels * 0.5f, _color);
+				vertex(_drawAt + _axis * 9999.0f, m_gizmoSizePixels * 0.5f, _color);
 			end();
 		} else {
 			m_idActive = Id_Invalid;
@@ -1177,7 +1183,7 @@ bool Context::gizmoAxis(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _a
 				m_idActive = _id;
 				float tr, tl;
 				Nearest(ray, axisLine, tr, tl);
-				m_gizmoOffsetTranslation = _axis * tl;
+				storedPosition = _axis * tl;
 			}
 		} else {
 			makeCold();
@@ -1207,6 +1213,7 @@ bool Context::gizmoAxis(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _a
 
 bool Context::gizmoPlane(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _normal, Color _color, float _worldSize)
 {
+	Vec3& storedPosition = m_gizmoStateVec3;
 	Ray ray(m_appData.m_cursorRayOrigin, m_appData.m_cursorRayDirection);
 	Plane plane(_normal, _drawAt);
 	float tr;
@@ -1220,7 +1227,7 @@ bool Context::gizmoPlane(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _
 	
 	if (_id == m_idActive) {
 		if (isKeyDown(Action_Select)) {
-			*_out_ = intersection + m_gizmoOffsetTranslation;
+			*_out_ = intersection + storedPosition;
 			ret = true;
 		} else {
 			m_idActive = Id_Invalid;
@@ -1229,7 +1236,7 @@ bool Context::gizmoPlane(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _
 		if (intersects) {
 			if (isKeyDown(Action_Select)) {
 				m_idActive = _id;
-				m_gizmoOffsetTranslation = *_out_ - intersection;
+				storedPosition = *_out_ - intersection;
 			}
 		} else {
 			makeCold();
@@ -1244,13 +1251,13 @@ bool Context::gizmoPlane(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _
 
 bool Context::gizmoAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, float* _out_, Color _color, float _worldRadius, float _worldSize)
 {
+	Vec3& storedVec = m_gizmoStateVec3;
+	float& storedAngle = m_gizmoStateFloat;
+
 	Ray ray(m_appData.m_cursorRayOrigin, m_appData.m_cursorRayDirection);
 	Plane plane(_axis, _drawAt);
 	float tr;
 	bool intersects = Intersect(ray, plane, tr);
-	if (!intersects) {
-		return false;
-	}
 	Vec3 intersection = ray.m_origin + ray.m_direction * tr;
 	float dist = Length(intersection - _drawAt);
 	intersects &= fabs(dist - _worldRadius) < _worldSize;
@@ -1260,15 +1267,19 @@ bool Context::gizmoAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, float* 
 	if (_id == m_idActive) {
 		color = Color_GizmoHighlight;
 		if (isKeyDown(Action_Select)) {
-			plane = Plane(Normalize(m_appData.m_viewOrigin - _drawAt), _drawAt);
-			Intersect(ray, plane, tr);
-			intersection = ray.m_origin = ray.m_direction * tr;
-			*_out_ = Length(intersection - m_gizmoOffsetTranslation) / _worldRadius;
+			Vec3 v = Normalize(intersection - _drawAt);
+			float sign = SignOf(Dot(Cross(v, storedVec), plane.m_normal));
+			*_out_ = storedAngle + acosf(Dot(v, storedVec)) * sign;
 			ret = true;
 
 			begin(PrimitiveMode_Lines);
-				vertex(_drawAt - _axis * 9999.0f, 1.0f, _color);
-				vertex(_drawAt + _axis * 9999.0f, 1.0f, _color);
+				vertex(_drawAt, m_gizmoSizePixels, Color_GizmoHighlight);
+				vertex(_drawAt + storedVec * _worldRadius, m_gizmoSizePixels, Color_GizmoHighlight);
+				vertex(_drawAt, m_gizmoSizePixels, Color_GizmoHighlight);
+				vertex(_drawAt + v * _worldRadius, m_gizmoSizePixels, Color_GizmoHighlight);
+
+				vertex(_drawAt - _axis * 9999.0f, m_gizmoSizePixels * 0.5f, _color);
+				vertex(_drawAt + _axis * 9999.0f, m_gizmoSizePixels * 0.5f, _color);
 			end();
 		} else {
 			m_idActive = Id_Invalid;
@@ -1280,7 +1291,8 @@ bool Context::gizmoAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, float* 
 		if (m_idActive == Id_Invalid && intersects) {
 			if (isKeyDown(Action_Select)) {
 				m_idActive = _id;
-				m_gizmoOffsetTranslation = intersection;
+				storedVec = Normalize(intersection - _drawAt);
+				storedAngle = *_out_;
 			}
 		} else {
 			makeCold();
@@ -1290,18 +1302,34 @@ bool Context::gizmoAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, float* 
 	 	float depth = Length2(_drawAt - m_appData.m_viewOrigin);
 		makeHot(_id, depth, intersects);
 	}
-	float alignedAlpha = fabs(Dot(_axis, Normalize(m_appData.m_viewOrigin - _drawAt)));
-	alignedAlpha = getAlpha() * Remap(alignedAlpha, 0.05f, 0.1f);
-	if (m_idHot == _id) {
-		alignedAlpha = 1.0f;
-	}
+	//float alignedAlpha = fabs(Dot(_axis, Normalize(m_appData.m_viewOrigin - _drawAt)));
+	//alignedAlpha = getAlpha() * Remap(alignedAlpha, 0.05f, 0.1f);
+	//if (m_idHot == _id) {
+	//	alignedAlpha = 1.0f;
+	//}
 	pushColor(color);
-	pushAlpha(alignedAlpha);
+	pushAlpha(/*alignedAlpha*/1.0f);
 	pushSize(m_gizmoSizePixels);
-		DrawCircle(_drawAt, _axis, _worldRadius, 32);
+		//DrawCircle(_drawAt, _axis, _worldRadius, 64);
+		pushMatrix(getMatrix() * LookAt(_drawAt, _drawAt + _axis));
+		begin(Context::PrimitiveMode_LineLoop);
+			const int _detail = 32;
+			for (int i = 0; i < _detail; ++i) {
+				float rad = kTwoPi * ((float)i / (float)_detail);
+				vertex(Vec3(cosf(rad) * _worldRadius, sinf(rad) * _worldRadius, 0.0f));
+				VertexData& vd = m_vertexData[DrawPrimitive_Lines][m_primList].back();
+				Vec3 v = vd.m_positionSize;
+				float d = Dot(v - _drawAt, m_appData.m_viewOrigin - _drawAt); 
+				if (d < 0.0f) {
+					vd.m_color.setA(vd.m_color.getA() * 0.1f);
+				}
+			}
+		end();
+		popMatrix();
 	popSize();
 	popAlpha();
 	popColor();
+	return ret;
 }
 
 bool Context::makeHot(Id _id, float _depth, bool _intersects)
