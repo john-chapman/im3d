@@ -244,11 +244,17 @@ typedef void (DrawPrimitivesCallback)(const DrawList& _drawList);
 enum Key
 {
 	Mouse_Left,
+	Key_T,
+	Key_R,
+	Key_S,
 
 	Key_Count,
 
  // the following maps keys -> 'action' states which may be more intuitive, especially for VR
-	Action_Select = Mouse_Left
+	Action_Select            = Mouse_Left,
+	Action_TransformPosition = Key_T,
+	Action_TransformRotation = Key_R,
+	Action_TransformScale    = Key_S
 };
 struct AppData
 {
@@ -319,6 +325,12 @@ public:
 		PrimitiveMode_LineLoop,
 		PrimitiveMode_Triangles,
 		PrimitiveMode_TriangleStrip
+	};
+	enum TransformMode
+	{
+		TransformMode_Position,
+		TransformMode_Rotation,
+		TransformMode_Scale
 	};
 	void        begin(PrimitiveMode _mode);
 	void        end();
@@ -394,6 +406,7 @@ public:
 	U32                m_vertCountThisPrim;        // # calls to vertex() since the last call to begin().
 
  // gizmo state
+	TransformMode      m_transformMode;
 	Id                 m_idActive;                 // Currently active gizmo. If set, this is the same as m_idHot.
 	Id                 m_idHot;
 	float              m_hotDepth;                 // Depth of the current hot gizmo, for handling occlusion.

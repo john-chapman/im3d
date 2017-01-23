@@ -724,23 +724,25 @@ bool Example::update()
 				if (GetAsyncKeyState(VK_LSHIFT) & 0x8000) {
 					kCamSpeed *= 10.0f;
 				}
-				if (GetAsyncKeyState(0x57) & 0x8000) { // W (forward)
-					m_camPos = m_camPos - m_camWorld.getCol(2) * (m_deltaTime * kCamSpeed);
-				}
-				if (GetAsyncKeyState(0x41) & 0x8000) { // A (left)
-					m_camPos = m_camPos - m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
-				}
-				if (GetAsyncKeyState(0x53) & 0x8000) { // S (backward)
-					m_camPos = m_camPos + m_camWorld.getCol(2) * (m_deltaTime * kCamSpeed);
-				}
-				if (GetAsyncKeyState(0x44) & 0x8000) { // D (right)
-					m_camPos = m_camPos + m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
-				}
-				if (GetAsyncKeyState(0x51) & 0x8000) { // Q (down)
-					m_camPos = m_camPos - m_camWorld.getCol(1)* (m_deltaTime * kCamSpeed);
-				}
-				if (GetAsyncKeyState(0x45) & 0x8000) { // D (up)
-					m_camPos = m_camPos + m_camWorld.getCol(1) * (m_deltaTime * kCamSpeed);
+				if ((GetAsyncKeyState(VK_LCONTROL) & 0x8000) == 0 ) { // ctrl not pressed
+					if (GetAsyncKeyState(0x57) & 0x8000) { // W (forward)
+						m_camPos = m_camPos - m_camWorld.getCol(2) * (m_deltaTime * kCamSpeed);
+					}
+					if (GetAsyncKeyState(0x41) & 0x8000) { // A (left)
+						m_camPos = m_camPos - m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
+					}
+					if (GetAsyncKeyState(0x53) & 0x8000) { // S (backward)
+						m_camPos = m_camPos + m_camWorld.getCol(2) * (m_deltaTime * kCamSpeed);
+					}
+					if (GetAsyncKeyState(0x44) & 0x8000) { // D (right)
+						m_camPos = m_camPos + m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
+					}
+					if (GetAsyncKeyState(0x51) & 0x8000) { // Q (down)
+						m_camPos = m_camPos - m_camWorld.getCol(1)* (m_deltaTime * kCamSpeed);
+					}
+					if (GetAsyncKeyState(0x45) & 0x8000) { // D (up)
+						m_camPos = m_camPos + m_camWorld.getCol(1) * (m_deltaTime * kCamSpeed);
+					}
 				}
 			}
 			if (!ImGui::GetIO().WantCaptureMouse) {

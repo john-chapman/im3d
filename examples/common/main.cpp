@@ -63,14 +63,27 @@ int main(int, char**)
 				ImGui::Text("Hot ID:    0x%x", ctx.m_idHot);
 				ImGui::Text("Active ID: 0x%x", ctx.m_idActive);
 				ImGui::Text("Hot Depth: %.3f", ctx.m_hotDepth == FLT_MAX ? -1.0f : ctx.m_hotDepth);
-				static Im3d::Vec3 pos0(0.0f, 2.0f, 0.0f);
+				//static Im3d::Vec3 pos0(0.0f, 2.0f, 0.0f);
 				//if (Im3d::GizmoPosition("GizmoPos0", &pos0)) {
 				//	ImGui::Text("%.3f,%.3f,%.3f", pos0.x, pos0.y, pos0.z);
 				//}
-				static Im3d::Vec3 rot0 = Im3d::Vec3(0.0f);
-				if (Im3d::GizmoRotation("GismoRot0", pos0, &rot0.x, &rot0.y, &rot0.z)) {
-					ImGui::Text("%.3f,%.3f,%.3f", rot0.x, rot0.y, rot0.z);
-				}
+				//static Im3d::Vec3 rot0 = Im3d::Vec3(0.0f);
+				//if (Im3d::GizmoRotation("GismoRot0", pos0, &rot0.x, &rot0.y, &rot0.z)) {
+				//	ImGui::Text("%.3f,%.3f,%.3f", rot0.x, rot0.y, rot0.z);
+				//}
+				static Im3d::Mat4 m(1.0f);
+				Im3d::PushDrawState();
+					Im3d::PushMatrix();
+						Im3d::SetSize(2.0f);
+						Im3d::SetMatrix(m);
+						Im3d::DrawXyzAxes();
+						Im3d::SetColor(1.0f, 0.1f, 0.4f);
+						Im3d::SetSize(4.0f);
+						Im3d::DrawAlignedBox(Im3d::Vec3(-0.5f), Im3d::Vec3(0.5f));
+					Im3d::PopMatrix();
+				Im3d::PopDrawState();
+				Im3d::Gizmo("GizmoTest", &m); // transform after drawing the object to avoid 1 frame lag
+				
 
 				ImGui::TreePop();
 			}

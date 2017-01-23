@@ -83,6 +83,10 @@ void Im3d_Update()
  // All key states have an equivalent 'Action_' enum which may be more intuitive to use for VR 
  // (e.g. Mouse_Down == Action_Select).
 	ad.m_keyDown[Im3d::Mouse_Left] = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+	bool ctrlDown = (GetAsyncKeyState(VK_LCONTROL) & 0x8000) != 0;
+	ad.m_keyDown[Im3d::Key_T]      = ctrlDown && (GetAsyncKeyState(0x54) & 0x8000) != 0;
+	ad.m_keyDown[Im3d::Key_R]      = ctrlDown && (GetAsyncKeyState(0x52) & 0x8000) != 0;
+	ad.m_keyDown[Im3d::Key_S]      = ctrlDown && (GetAsyncKeyState(0x53) & 0x8000) != 0;
 
 	Im3d::NewFrame();
 }

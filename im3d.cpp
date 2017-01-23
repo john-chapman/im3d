@@ -228,34 +228,38 @@ Mat4 Im3d::Rotate(const Mat4& _m, const Vec3& _axis, float _rads)
 }
 Vec3 Im3d::ToEulerXYZ(const Mat4& _m)
 {
-	return Vec3(
-		atan2f(_m(3, 2), _m(3, 3)),
-		atan2f(-_m(3, 1), sqrtf(_m(3, 2) * _m(3, 2) + _m(3, 3) * _m(3, 3))),
-		atan2f(_m(2, 1), _m(1, 1))
-		);
+	// see http://www.staff.city.ac.uk/~sbbh653/publications/euler.pdf
+	if (fabs(_m(2, 0)) < 1.0f) {
+	} else {
+	}
+	//return Vec3(
+	//	atan2f(_m(3, 2), _m(3, 3)),
+	//	atan2f(-_m(3, 1), sqrtf(_m(3, 2) * _m(3, 2) + _m(3, 3) * _m(3, 3))),
+	//	atan2f(_m(2, 1), _m(1, 1))
+	//	);
 }
-Mat4 Im3d::FromEulerXYZ(Vec3& _xyz)
+Mat4 Im3d::FromEulerXYZ(Vec3& _euler)
 {
 	float c, s;
 
-	c = cosf(_xyz.x);
-	s = sinf(_xyz.x);
+	c = cosf(_euler.x);
+	s = sinf(_euler.x);
 	Mat4 mx(
 		1.0f,  0.0f,  0.0f,  0.0f,
 		0.0f,     c,    -s,  0.0f,
 		0.0f,     s,     c,  0.0f,
 		0.0f,  0.0f,  0.0f,  1.0f
 		);
-	c = cosf(_xyz.y);
-	s = sinf(_xyz.y);
+	c = cosf(_euler.y);
+	s = sinf(_euler.y);
 	Mat4 my(
 		   c,  0.0f,     s,  0.0f,
 		0.0f,  1.0f,  0.0f,  0.0f,
 		  -s,  0.0f,     c,  0.0f,
 		0.0f,  0.0f,  0.0f,  1.0f
 		);
-	c = cosf(_xyz.z);
-	s = sinf(_xyz.z);
+	c = cosf(_euler.z);
+	s = sinf(_euler.z);
 	Mat4 mz(
 		   c,    -s,  0.0f,  0.0f,
 		   s,     c,  0.0f,  0.0f,
@@ -643,6 +647,48 @@ void Im3d::DrawArrow(const Vec3& _start, const Vec3& _end, float _headLength)
 	ctx.end();
 }
 
+
+bool Im3d::Gizmo(const char* _id, Mat4* _mat_)
+{
+	Context& ctx = GetContext();
+	if (ctx.wasKeyPressed(Action_TransformPosition)) {
+		ctx.m_transformMode = Context::TransformMode_Position;
+	} else if (ctx.wasKeyPressed(Action_TransformRotation)) {
+		ctx.m_transformMode = Context::TransformMode_Rotation;
+	} else if (ctx.wasKeyPressed(Action_TransformScale)) {
+		ctx.m_transformMode = Context::TransformMode_Scale;
+	}
+
+	switch (ctx.m_transformMode) {
+	case Context::TransformMode_Position: {
+		Vec3 pos = _mat_->getCol(3);
+		if (GizmoPosition(_id, &pos)) {
+			_mat_->setCol(3, Vec4(pos, 1.0f));
+			return true;
+		}
+		break;
+	}
+	case Context::TransformMode_Rotation: {
+		Vec3 euler = ToEulerXYZ(*_mat_);
+		ImGui::Text("EULER %.3f, %.3f, %.3f", euler.x, euler.y, euler.z);
+		if (GizmoRotation(_id, _mat_->getCol(3), &euler.x, &euler.y, &euler.z)) {
+			Mat4 rm = FromEulerXYZ(euler);
+			(*_mat_)(0, 0) = rm(0, 0);  (*_mat_)(0, 1) = rm(0, 1);  (*_mat_)(0, 2) = rm(0, 2);
+			(*_mat_)(1, 0) = rm(1, 0);  (*_mat_)(1, 1) = rm(1, 1);  (*_mat_)(1, 2) = rm(1, 2);
+			(*_mat_)(2, 0) = rm(2, 0);  (*_mat_)(2, 1) = rm(2, 1);  (*_mat_)(2, 2) = rm(2, 2);
+			return true;
+		}
+		break;
+	}
+		break;
+	case Context::TransformMode_Scale:
+		break;
+	default:
+		break;
+	};
+
+	return false;
+}
 
 bool Im3d::GizmoPosition(const char* _id, Vec3* _position_)
 {
@@ -1058,6 +1104,7 @@ Context::Context()
 	m_firstVertThisPrim = 0;
 	m_vertCountThisPrim = 0;
 
+	m_transformMode = TransformMode_Position;
 	m_idHot = Id_Invalid;
 	m_idActive = Id_Invalid;
 	m_hotDepth = FLT_MAX;
@@ -1322,7 +1369,8 @@ bool Context::gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, flo
 		color = Color_GizmoHighlight;
 		if (isKeyDown(Action_Select)) {
 			Vec3 v = Normalize(intersection - _drawAt);
-			float sign = SignOf(Dot(Cross(v, storedVec), plane.m_normal));
+			float sign = SignOf(Dot(Cross(storedVec, v), plane.m_normal));
+			ImGui::Text("%.3f + %.3f", storedAngle, acosf(Dot(v, storedVec)) * sign);
 			*_out_ = storedAngle + acosf(Dot(v, storedVec)) * sign;
 			ret = true;
 
