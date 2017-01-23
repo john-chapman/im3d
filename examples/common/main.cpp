@@ -45,7 +45,7 @@ int main(int, char**)
 				Im3d::PushDrawState();
 					Im3d::Ray ray(ad.m_cursorRayOrigin, ad.m_cursorRayDirection);
 					float tr, tl;
-					
+
 					Im3d::Plane plane(Im3d::Vec3(0.0f, 1.0f, 0.0f), 0.0f);
 					if (Im3d::Intersect(ray, plane, tr)) {
 						Im3d::BeginPoints();
@@ -64,13 +64,13 @@ int main(int, char**)
 				ImGui::Text("Active ID: 0x%x", ctx.m_idActive);
 				ImGui::Text("Hot Depth: %.3f", ctx.m_hotDepth == FLT_MAX ? -1.0f : ctx.m_hotDepth);
 				static Im3d::Vec3 pos0(0.0f, 2.0f, 0.0f);
-				if (Im3d::GizmoPosition("GizmoPos0", &pos0)) {
-					ImGui::Text("%.3f,%.3f,%.3f", pos0.x, pos0.y, pos0.z);
-				}
-				static Im3d::Vec3 rot0 = Im3d::Vec3(0.0f);
-				//if (Im3d::GizmoRotation("GismoRot0", pos0, &rot0.x, &rot0.y, &rot0.z)) {
-				//	ImGui::Text("%.3f,%.3f,%.3f", rot0.x, rot0.y, rot0.z);
+				//if (Im3d::GizmoPosition("GizmoPos0", &pos0)) {
+				//	ImGui::Text("%.3f,%.3f,%.3f", pos0.x, pos0.y, pos0.z);
 				//}
+				static Im3d::Vec3 rot0 = Im3d::Vec3(0.0f);
+				if (Im3d::GizmoRotation("GismoRot0", pos0, &rot0.x, &rot0.y, &rot0.z)) {
+					ImGui::Text("%.3f,%.3f,%.3f", rot0.x, rot0.y, rot0.z);
+				}
 
 				ImGui::TreePop();
 			}

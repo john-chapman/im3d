@@ -132,6 +132,8 @@ Mat4 Inverse(const Mat4& _m);
 Mat4 Transpose(const Mat4& _m);
 Mat4 Translate(const Mat4& _m, const Vec3& _t);
 Mat4 Rotate(const Mat4& _m, const Vec3& _axis, float _rads); // _angle must be unit length
+Vec3 ToEulerXYZ(const Mat4& _m);
+Mat4 FromEulerXYZ(Vec3& _xyz);
 Mat4 AlignZ(const Vec3& _axis, const Vec3& _up = Vec3(0.0f, 1.0f, 0.0f)); // generate an orthonormal bases with +z as _axis, which must be unit length
 Mat4 LookAt(const Vec3& _from, const Vec3& _to, const Vec3& _up = Vec3(0.0f, 1.0f, 0.0f)); // align _z with (_to - _from), set _from as translation
 
