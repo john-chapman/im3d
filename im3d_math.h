@@ -87,6 +87,39 @@ inline float Length2(const Vec4& _v)                       { return Dot(_v, _v);
 inline Vec4  Abs(const Vec4& _v)                           { return Vec4(fabs(_v.x), fabs(_v.y), fabs(_v.z), fabs(_v.w));                     }
 inline Vec4  Normalize(const Vec4& _v)                     { return _v / Length(_v);                        }
 
+// Mat3
+inline Mat3 operator*(const Mat3& _lhs, const Mat3& _rhs)
+{
+	Mat3 ret;
+	ret(0, 0) = _lhs(0, 0) * _rhs(0, 0) + _lhs(0, 1) * _rhs(1, 0) + _lhs(0, 2) * _rhs(2, 0);
+	ret(0, 1) = _lhs(0, 0) * _rhs(0, 1) + _lhs(0, 1) * _rhs(1, 1) + _lhs(0, 2) * _rhs(2, 1);
+	ret(0, 2) = _lhs(0, 0) * _rhs(0, 2) + _lhs(0, 1) * _rhs(1, 2) + _lhs(0, 2) * _rhs(2, 2);
+	ret(1, 0) = _lhs(1, 0) * _rhs(0, 0) + _lhs(1, 1) * _rhs(1, 0) + _lhs(1, 2) * _rhs(2, 0);
+	ret(1, 1) = _lhs(1, 0) * _rhs(0, 1) + _lhs(1, 1) * _rhs(1, 1) + _lhs(1, 2) * _rhs(2, 1);
+	ret(1, 2) = _lhs(1, 0) * _rhs(0, 2) + _lhs(1, 1) * _rhs(1, 2) + _lhs(1, 2) * _rhs(2, 2);
+	ret(2, 0) = _lhs(2, 0) * _rhs(0, 0) + _lhs(2, 1) * _rhs(1, 0) + _lhs(2, 2) * _rhs(2, 0);
+	ret(2, 1) = _lhs(2, 0) * _rhs(0, 1) + _lhs(2, 1) * _rhs(1, 1) + _lhs(2, 2) * _rhs(2, 1);
+	ret(2, 2) = _lhs(2, 0) * _rhs(0, 2) + _lhs(2, 1) * _rhs(1, 2) + _lhs(2, 2) * _rhs(2, 2);	
+	return ret;
+}
+inline Vec3 operator*(const Mat3& _m, const Vec3& _v)
+{
+	return Vec3(
+		_m(0, 0) * _v.x + _m(0, 1) * _v.y + _m(0, 2) * _v.z,
+		_m(1, 0) * _v.x + _m(1, 1) * _v.y + _m(1, 2) * _v.z,
+		_m(2, 0) * _v.x + _m(2, 1) * _v.y + _m(2, 2) * _v.z
+		);
+}
+inline Vec4 operator*(const Mat3& _m, const Vec4& _v)
+{
+	return Vec4(
+		_m(0, 0) * _v.x + _m(0, 1) * _v.y + _m(0, 2) * _v.z,
+		_m(1, 0) * _v.x + _m(1, 1) * _v.y + _m(1, 2) * _v.z,
+		_m(2, 0) * _v.x + _m(2, 1) * _v.y + _m(2, 2) * _v.z,
+		_v.w
+		);
+}
+
 // Mat4
 inline Mat4 operator*(const Mat4& _lhs, const Mat4& _rhs)
 {
@@ -132,8 +165,8 @@ Mat4 Inverse(const Mat4& _m);
 Mat4 Transpose(const Mat4& _m);
 Mat4 Translate(const Mat4& _m, const Vec3& _t);
 Mat4 Rotate(const Mat4& _m, const Vec3& _axis, float _rads); // _angle must be unit length
-Vec3 ToEulerXYZ(const Mat4& _m);
-Mat4 FromEulerXYZ(Vec3& _xyz);
+Vec3 ToEulerXYZ(const Mat3& _m);
+Mat3 FromEulerXYZ(Vec3& _xyz);
 Mat4 AlignZ(const Vec3& _axis, const Vec3& _up = Vec3(0.0f, 1.0f, 0.0f)); // generate an orthonormal bases with +z as _axis, which must be unit length
 Mat4 LookAt(const Vec3& _from, const Vec3& _to, const Vec3& _up = Vec3(0.0f, 1.0f, 0.0f)); // align _z with (_to - _from), set _from as translation
 

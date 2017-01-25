@@ -63,10 +63,10 @@ const Color Im3d::Color_Cyan    = Color(0.0f, 1.0f, 1.0f);
 
 static const Color Color_GizmoHighlight = Color(1.0f, 0.78f, 0.27f);
 
-void Im3d::MulMatrix(const Mat4& _mat)
+void Im3d::MulMatrix(const Mat4& _mat4)
 {
 	Context& ctx = GetContext();
-	ctx.setMatrix(ctx.getMatrix() * _mat);
+	ctx.setMatrix(ctx.getMatrix() * _mat4);
 }
 
 Vec3::Vec3(const Vec4& _v)
@@ -83,6 +83,49 @@ Vec4::Vec4(Color _rgba)
 	, w(_rgba.getA())
 {
 }
+
+Mat3::Mat3(float _diagonal)
+{
+	(*this)(0, 0) = _diagonal; (*this)(0, 1) = 0.0f;      (*this)(0, 2) = 0.0f;
+	(*this)(1, 0) = 0.0f;      (*this)(1, 1) = _diagonal; (*this)(1, 2) = 0.0f;
+	(*this)(2, 0) = 0.0f;      (*this)(2, 1) = 0.0f;      (*this)(2, 2) = _diagonal;
+}
+Mat3::Mat3(
+	float m00, float m01, float m02,
+	float m10, float m11, float m12,
+	float m20, float m21, float m22
+	)
+{
+	(*this)(0, 0) = m00; (*this)(0, 1) = m01; (*this)(0, 2) = m02;
+	(*this)(1, 0) = m10; (*this)(1, 1) = m11; (*this)(1, 2) = m12;
+	(*this)(2, 0) = m20; (*this)(2, 1) = m21; (*this)(2, 2) = m22;
+}
+Mat3::Mat3(const Mat4& _mat4)
+{
+	(*this)(0, 0) = _mat4(0, 0); (*this)(0, 1) = _mat4(0, 1); (*this)(0, 2) = _mat4(0, 2);
+	(*this)(1, 0) = _mat4(1, 0); (*this)(1, 1) = _mat4(1, 1); (*this)(1, 2) = _mat4(1, 2);
+	(*this)(2, 0) = _mat4(2, 0); (*this)(2, 1) = _mat4(2, 1); (*this)(2, 2) = _mat4(2, 2);
+}
+Vec3 Mat3::getCol(int _i) const
+{
+	return Vec3((*this)(0, _i), (*this)(1, _i), (*this)(2, _i));
+}
+Vec3 Mat3::getRow(int _i) const
+{
+	return Vec3((*this)(_i, 0), (*this)(_i, 1), (*this)(_i, 2));
+}
+void Mat3::setCol(int _i, const Vec3& _v)
+{
+	(*this)(0, _i) = _v.x;
+	(*this)(1, _i) = _v.y;
+	(*this)(2, _i) = _v.z;
+}
+void Mat3::setRow(int _i, const Vec3& _v)
+{
+	(*this)(_i, 0) = _v.x;
+	(*this)(_i, 1) = _v.y;
+	(*this)(_i, 2) = _v.z;
+}	
 
 Mat4::Mat4(float _diagonal)
 {
@@ -124,7 +167,13 @@ void Mat4::setRow(int _i, const Vec4& _v)
 	(*this)(_i, 1) = _v.y;
 	(*this)(_i, 2) = _v.z;
 	(*this)(_i, 3) = _v.w;
-}	
+}
+void Mat4::insert(const Mat3& _m)
+{
+	(*this)(0, 0) = _m(0, 0); (*this)(0, 1) = _m(0, 1); (*this)(0, 2) = _m(0, 2);
+	(*this)(1, 0) = _m(1, 0); (*this)(1, 1) = _m(1, 1); (*this)(1, 2) = _m(1, 2);
+	(*this)(2, 0) = _m(2, 0); (*this)(2, 1) = _m(2, 1); (*this)(2, 2) = _m(2, 2);
+}
 
 Color::Color(const Vec4& _rgba)
 {
@@ -226,48 +275,60 @@ Mat4 Im3d::Rotate(const Mat4& _m, const Vec3& _axis, float _rads)
 		0.0f,                                               0.0f,                                                0.0f,                                                1.0f
 		);
 }
-Vec3 Im3d::ToEulerXYZ(const Mat4& _m)
+Vec3 Im3d::ToEulerXYZ(const Mat3& _m)
 {
-	// see http://www.staff.city.ac.uk/~sbbh653/publications/euler.pdf
-	if (fabs(_m(2, 0)) < 1.0f) {
+ // http://www.staff.city.ac.uk/~sbbh653/publications/euler.pdf
+	Vec3 ret;
+	if_likely (fabs(_m(2, 0)) < 1.0f) {
+		ret.y = -asinf(_m(2, 0));
+		float c = 1.0f / cosf(ret.y);
+		ret.x = atan2f(_m(2, 1) * c, _m(2, 2) * c);
+		ret.z = atan2f(_m(1, 0) * c, _m(0, 0) * c);
 	} else {
+ImGui::Text("GIMBAL LOCK!");
+		ret.z = 0.0f;
+		if (!(_m(3, 1) > -1.0f)) {
+			ret.x = ret.z + atan2f(_m(0, 1), _m(0, 2));
+			ret.y = kHalfPi;
+		} else {
+			ret.x = -ret.z + atan2f(-_m(0, 1), -_m(0, 2));			
+			ret.y = -kHalfPi;
+		}
 	}
+	return ret;
+
 	//return Vec3(
-	//	atan2f(_m(3, 2), _m(3, 3)),
-	//	atan2f(-_m(3, 1), sqrtf(_m(3, 2) * _m(3, 2) + _m(3, 3) * _m(3, 3))),
-	//	atan2f(_m(2, 1), _m(1, 1))
+	//	atan2f(_m(2, 1), _m(2, 2)),
+	//	atan2f(-_m(2, 0), sqrtf(_m(2, 1) * _m(2, 1) + _m(2, 2) * _m(2, 2))),
+	//	atan2f(_m(1, 0), _m(0, 0))
 	//	);
 }
-Mat4 Im3d::FromEulerXYZ(Vec3& _euler)
+Mat3 Im3d::FromEulerXYZ(Vec3& _euler)
 {
 	float c, s;
-
 	c = cosf(_euler.x);
 	s = sinf(_euler.x);
-	Mat4 mx(
-		1.0f,  0.0f,  0.0f,  0.0f,
-		0.0f,     c,    -s,  0.0f,
-		0.0f,     s,     c,  0.0f,
-		0.0f,  0.0f,  0.0f,  1.0f
+	Mat3 mx(
+		1.0f,  0.0f,  0.0f,
+		0.0f,     c,    -s,
+		0.0f,     s,     c
 		);
 	c = cosf(_euler.y);
 	s = sinf(_euler.y);
-	Mat4 my(
-		   c,  0.0f,     s,  0.0f,
-		0.0f,  1.0f,  0.0f,  0.0f,
-		  -s,  0.0f,     c,  0.0f,
-		0.0f,  0.0f,  0.0f,  1.0f
+	Mat3 my(
+		   c,  0.0f,     s,
+		0.0f,  1.0f,  0.0f,
+		  -s,  0.0f,     c
 		);
 	c = cosf(_euler.z);
 	s = sinf(_euler.z);
-	Mat4 mz(
-		   c,    -s,  0.0f,  0.0f,
-		   s,     c,  0.0f,  0.0f,
-		0.0f,  0.0f,  1.0f,  0.0f,
-		0.0f,  0.0f,  0.0f,  1.0f
+	Mat3 mz(
+		   c,    -s,  0.0f,
+		   s,     c,  0.0f,
+		0.0f,  0.0f,  1.0f
 		);
 
- // \todo conflate matrix multiplications
+ // \todo conflate matrix multiplications?
 	return mz * my * mx;
 }
 Mat4 Im3d::AlignZ(const Vec3& _axis, const Vec3& _up)
@@ -648,8 +709,11 @@ void Im3d::DrawArrow(const Vec3& _start, const Vec3& _end, float _headLength)
 }
 
 
-bool Im3d::Gizmo(const char* _id, Mat4* _mat_)
+bool Im3d::Gizmo(const char* _id, float* _mat4_)
 {
+ // \todo this should be safe but may need a static assert to check alignment?
+	Mat4* m4 = (Mat4*)_mat4_;
+
 	Context& ctx = GetContext();
 	if (ctx.wasKeyPressed(Action_TransformPosition)) {
 		ctx.m_transformMode = Context::TransformMode_Position;
@@ -661,21 +725,20 @@ bool Im3d::Gizmo(const char* _id, Mat4* _mat_)
 
 	switch (ctx.m_transformMode) {
 	case Context::TransformMode_Position: {
-		Vec3 pos = _mat_->getCol(3);
+		Vec3 pos = m4->getCol(3);
 		if (GizmoPosition(_id, &pos)) {
-			_mat_->setCol(3, Vec4(pos, 1.0f));
+			m4->setCol(3, Vec4(pos, 1.0f));
 			return true;
 		}
 		break;
 	}
 	case Context::TransformMode_Rotation: {
-		Vec3 euler = ToEulerXYZ(*_mat_);
-		ImGui::Text("EULER %.3f, %.3f, %.3f", euler.x, euler.y, euler.z);
-		if (GizmoRotation(_id, _mat_->getCol(3), &euler.x, &euler.y, &euler.z)) {
-			Mat4 rm = FromEulerXYZ(euler);
-			(*_mat_)(0, 0) = rm(0, 0);  (*_mat_)(0, 1) = rm(0, 1);  (*_mat_)(0, 2) = rm(0, 2);
-			(*_mat_)(1, 0) = rm(1, 0);  (*_mat_)(1, 1) = rm(1, 1);  (*_mat_)(1, 2) = rm(1, 2);
-			(*_mat_)(2, 0) = rm(2, 0);  (*_mat_)(2, 1) = rm(2, 1);  (*_mat_)(2, 2) = rm(2, 2);
+		Mat3 m3(*m4);
+		Vec3 euler = ToEulerXYZ(m3);
+ImGui::Text("EULER %.3f, %.3f, %.3f", euler.x, euler.y, euler.z);
+		if (GizmoRotation(_id, m4->getCol(3), &euler.x, &euler.y, &euler.z)) {
+			Mat3 rm = FromEulerXYZ(euler);
+			m4->insert(rm);
 			return true;
 		}
 		break;
@@ -835,13 +898,13 @@ bool Im3d::GizmoRotation(const char* _id, const Vec3& _origin, float* _x_, float
 		Id idYz = MakeId("yzplane");
 		Id idV  = MakeId("viewplane");
 		if (ctx.m_idActive != idXz && ctx.m_idActive != idYz && ctx.m_idActive != idV) {
-			ret |= ctx.gizmoAxisAngle(idXy, _origin, Vec3(0.0f, 0.0f, 1.0f), _x_, Color_Blue,  worldHeight, worldSize); 
+			ret |= ctx.gizmoAxisAngle(idXy, _origin, Vec3(0.0f, 0.0f, 1.0f), _z_, Color_Blue,  worldHeight, worldSize); 
 		}
 		if (ctx.m_idActive != idXy && ctx.m_idActive != idYz && ctx.m_idActive != idV) {
 			ret |= ctx.gizmoAxisAngle(idXz, _origin, Vec3(0.0f, 1.0f, 0.0f), _y_, Color_Green, worldHeight, worldSize);
 		}
 		if (ctx.m_idActive != idXy && ctx.m_idActive != idXz && ctx.m_idActive != idV) {
-			ret |= ctx.gizmoAxisAngle(idYz, _origin, Vec3(1.0f, 0.0f, 0.0f), _z_, Color_Red,   worldHeight, worldSize);
+			ret |= ctx.gizmoAxisAngle(idYz, _origin, Vec3(1.0f, 0.0f, 0.0f), _x_, Color_Red,   worldHeight, worldSize);
 		}
 		// \todo efficient conversion from an arbitrary axis-angle to XYZ rotation
 		//if (ctx.m_idActive != idXy && ctx.m_idActive != idXz && ctx.m_idActive != idYz) {

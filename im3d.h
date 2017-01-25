@@ -14,7 +14,7 @@
 namespace Im3d {
 
 typedef unsigned int U32;
-typedef U32  Id;
+typedef U32 Id;
 struct Vec2;
 struct Vec3;
 struct Vec4;
@@ -90,9 +90,9 @@ void  EnableSorting(bool _enable);
 // Current transform state (affects all subsequent primitives).
 void  PushMatrix();
 void  PopMatrix();
-void  SetMatrix(const Mat4& _mat);
+void  SetMatrix(const Mat4& _mat4);
 void  SetIdentity();
-void  MulMatrix(const Mat4& _mat);
+void  MulMatrix(const Mat4& _mat4);
 void  Translate(float _x, float _y, float _z);
 void  Scale(float _x, float _y, float _z);
 
@@ -100,7 +100,7 @@ void  Scale(float _x, float _y, float _z);
 Id    MakeId(const char* _str);
 
 // Manipulate position/orientation/scale via a gizmo. Return true if the gizmo was used (if it modified its output).
-bool  Gizmo(const char* _id, Mat4* _mat_);
+bool  Gizmo(const char* _id, float* _mat4_);
 bool  GizmoPosition(const char* _id, Vec3* _position_);
 bool  GizmoRotation(const char* _id, const Vec3& _origin, float* _x_, float* _y_, float* _z_);
 
@@ -144,6 +144,48 @@ struct Vec4
 		IM3D_VEC4_USER
 	#endif
 };
+struct Mat3
+{
+	float m[9]; // column-major unless IM3D_MATRIX_ROW_MAJOR defined
+	Mat3()                                                                   {}
+	Mat3(float _diagonal);
+	Mat3(
+		float m00, float m01, float m02,
+		float m10, float m11, float m12,
+		float m20, float m21, float m22
+		);
+	Mat3(const Mat4& _mat4); // extract upper 3x3
+	operator float*()                                                        { return m; }
+	operator const float*() const                                            { return m; }
+
+	Vec3 getCol(int _i) const;
+	Vec3 getRow(int _i) const;
+	void setCol(int _i, const Vec3& _v);
+	void setRow(int _i, const Vec3& _v);
+	
+	float operator()(int _row, int _col) const
+	{
+		#ifdef IM3D_MATRIX_ROW_MAJOR
+			int i = _row * 3 + _col;
+		#else
+			int i = _col * 3 + _row;
+		#endif
+		return m[i];
+	}
+	float& operator()(int _row, int _col)
+	{ 
+		#ifdef IM3D_MATRIX_ROW_MAJOR
+			int i = _row * 3 + _col;
+		#else
+			int i = _col * 3 + _row;
+		#endif
+		return m[i];
+	}
+	
+	#ifdef IM3D_MAT3_USER
+		IM3D_MAT3_USER
+	#endif
+};
 struct Mat4
 {
 	float m[16]; // column-major unless IM3D_MATRIX_ROW_MAJOR defined
@@ -158,26 +200,29 @@ struct Mat4
 	operator float*()                                                        { return m; }
 	operator const float*() const                                            { return m; }
 
-	Vec4   getCol(int _i) const;
-	Vec4   getRow(int _i) const;
-	void   setCol(int _i, const Vec4& _v);
-	void   setRow(int _i, const Vec4& _v);
+	Vec4 getCol(int _i) const;
+	Vec4 getRow(int _i) const;
+	void setCol(int _i, const Vec4& _v);
+	void setRow(int _i, const Vec4& _v);
+	void insert(const Mat3& _m); // insert upper 3x3
 	
-	float  operator()(int _row, int _col) const
+	float operator()(int _row, int _col) const
 	{
-	#ifdef IM3D_MATRIX_ROW_MAJOR
-		return m[_row * 4 + _col];
-	#else
-		return m[_col * 4 + _row];
-	#endif
+		#ifdef IM3D_MATRIX_ROW_MAJOR
+			int i = _row * 4 + _col;
+		#else
+			int i = _col * 4 + _row;
+		#endif
+		return m[i];
 	}
 	float& operator()(int _row, int _col)
 	{ 
-	#ifdef IM3D_MATRIX_ROW_MAJOR
-		return m[_row * 4 + _col];
-	#else
-		return m[_col * 4 + _row];
-	#endif
+		#ifdef IM3D_MATRIX_ROW_MAJOR
+			int i = _row * 4 + _col;
+		#else
+			int i = _col * 4 + _row;
+		#endif
+		return m[i];
 	}
 	
 	#ifdef IM3D_MAT4_USER
@@ -361,10 +406,10 @@ public:
 	void        setEnableSorting(bool _enable);
 	bool        getEnableSorting() const         { return m_enableSortingStack.back();      }
 
-	void        pushMatrix(const Mat4& _mat)     { m_matrixStack.push_back(_mat); }
-	void        popMatrix()                      { m_matrixStack.pop_back();      }
-	void        setMatrix(const Mat4& _mat)      { m_matrixStack.back() = _mat;   }
-	const Mat4& getMatrix() const                { return m_matrixStack.back();   }
+	void        pushMatrix(const Mat4& _mat4)    { m_matrixStack.push_back(_mat4); }
+	void        popMatrix()                      { m_matrixStack.pop_back();       }
+	void        setMatrix(const Mat4& _mat4)     { m_matrixStack.back() = _mat4;   }
+	const Mat4& getMatrix() const                { return m_matrixStack.back();    }
 
 	void        pushId(Id _id)                   { m_idStack.push_back(_id); }
 	void        popId()                          { m_idStack.pop_back();     }
@@ -478,7 +523,7 @@ inline void  EnableSorting(bool _enable)                                     { G
 
 inline void  PushMatrix()                                                    { GetContext().pushMatrix(GetContext().getMatrix()); }
 inline void  PopMatrix()                                                     { GetContext().popMatrix();           }
-inline void  SetMatrix(const Mat4& _mat)                                     { GetContext().setMatrix(_mat);       }
+inline void  SetMatrix(const Mat4& _mat4)                                    { GetContext().setMatrix(_mat4);       }
 inline void  SetIdentity()                                                   { GetContext().setMatrix(Mat4(1.0f)); }
 
 } // namespac Im3d

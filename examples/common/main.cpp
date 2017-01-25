@@ -82,7 +82,7 @@ int main(int, char**)
 						Im3d::DrawAlignedBox(Im3d::Vec3(-0.5f), Im3d::Vec3(0.5f));
 					Im3d::PopMatrix();
 				Im3d::PopDrawState();
-				Im3d::Gizmo("GizmoTest", &m); // transform after drawing the object to avoid 1 frame lag
+				Im3d::Gizmo("GizmoTest", m); // transform after drawing the object to avoid 1 frame lag
 				
 
 				ImGui::TreePop();
