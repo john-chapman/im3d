@@ -704,6 +704,7 @@ bool Example::update()
 		while (PeekMessage(&msg, g_Example->m_hwnd, 0, 0, PM_REMOVE) && msg.message != WM_QUIT) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
+printf("msg.message = 0x%x\n", msg.message);
 		}
 		ret = msg.message != WM_QUIT;
 	#endif
