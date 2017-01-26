@@ -18,6 +18,7 @@ typedef U32 Id;
 struct Vec2;
 struct Vec3;
 struct Vec4;
+struct Mat3;
 struct Mat4;
 struct Color;
 struct VertexData;
@@ -102,7 +103,7 @@ Id    MakeId(const char* _str);
 // Manipulate position/orientation/scale via a gizmo. Return true if the gizmo was used (if it modified its output).
 bool  Gizmo(const char* _id, float* _mat4_);
 bool  GizmoPosition(const char* _id, Vec3* _position_);
-bool  GizmoRotation(const char* _id, const Vec3& _origin, float* _x_, float* _y_, float* _z_);
+bool  GizmoRotation(const char* _id, const Vec3& _origin, float* _mat3_);
 
 struct Vec2
 {
@@ -456,6 +457,7 @@ public:
 	Id                 m_idHot;
 	float              m_hotDepth;                 // Depth of the current hot gizmo, for handling occlusion.
 	Vec3               m_gizmoStateVec3;           // Stored state for the active gizmo.
+	Mat3               m_gizmoStateMat3;           //               "
 	float              m_gizmoStateFloat;          //               "
 	float              m_gizmoHeightPixels;        // Height/radius of gizmos.
 	float              m_gizmoSizePixels;          // Thickenss of gizmo lines.

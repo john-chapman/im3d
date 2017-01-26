@@ -285,7 +285,8 @@ Vec3 Im3d::ToEulerXYZ(const Mat3& _m)
 		ret.x = atan2f(_m(2, 1) * c, _m(2, 2) * c);
 		ret.z = atan2f(_m(1, 0) * c, _m(0, 0) * c);
 	} else {
-ImGui::Text("GIMBAL LOCK!");
+		IM3D_ASSERT(false);
+	 // \todo bug here? this results in a degenerate matrix
 		ret.z = 0.0f;
 		if (!(_m(3, 1) > -1.0f)) {
 			ret.x = ret.z + atan2f(_m(0, 1), _m(0, 2));
@@ -711,8 +712,7 @@ void Im3d::DrawArrow(const Vec3& _start, const Vec3& _end, float _headLength)
 
 bool Im3d::Gizmo(const char* _id, float* _mat4_)
 {
- // \todo this should be safe but may need a static assert to check alignment?
-	Mat4* m4 = (Mat4*)_mat4_;
+ 	Mat4* m4 = (Mat4*)_mat4_;
 
 	Context& ctx = GetContext();
 	if (ctx.wasKeyPressed(Action_TransformPosition)) {
@@ -734,11 +734,8 @@ bool Im3d::Gizmo(const char* _id, float* _mat4_)
 	}
 	case Context::TransformMode_Rotation: {
 		Mat3 m3(*m4);
-		Vec3 euler = ToEulerXYZ(m3);
-ImGui::Text("EULER %.3f, %.3f, %.3f", euler.x, euler.y, euler.z);
-		if (GizmoRotation(_id, m4->getCol(3), &euler.x, &euler.y, &euler.z)) {
-			Mat3 rm = FromEulerXYZ(euler);
-			m4->insert(rm);
+		if (GizmoRotation(_id, m4->getCol(3), m3)) {
+			m4->insert(m3);
 			return true;
 		}
 		break;
@@ -757,7 +754,6 @@ bool Im3d::GizmoPosition(const char* _id, Vec3* _position_)
 {
 	Vec3 drawAt = *_position_; // copy to prevent lag in the sub-gizmos 
 	bool ret = false;
-
 	Context& ctx = GetContext();
 	ctx.pushId(MakeId(_id));
 	ctx.pushEnableSorting(false);
@@ -783,7 +779,7 @@ bool Im3d::GizmoPosition(const char* _id, Vec3* _position_)
 					colorX = colorZ = Color_GizmoHighlight;
 				}
 				ctx.pushAlpha(ctx.getAlpha() * alignedAlpha);
-					ctx.pushAlpha(ctx.m_idHot == planeId ? 1.0f : 0.1f * ctx.getAlpha());
+					ctx.pushAlpha(ctx.m_idHot == planeId ? 0.7f : 0.1f * ctx.getAlpha());
 						DrawQuadFilled(
 							planeOrigin + Vec3(-1.0f,  0.0f,  1.0f) * planeSize,
 							planeOrigin + Vec3( 1.0f,  0.0f,  1.0f) * planeSize,
@@ -812,7 +808,7 @@ bool Im3d::GizmoPosition(const char* _id, Vec3* _position_)
 					colorX = colorY = Color_GizmoHighlight;
 				}
 				ctx.pushAlpha(ctx.getAlpha() * alignedAlpha);
-					ctx.pushAlpha(ctx.m_idHot == planeId ? 1.0f : 0.1f * ctx.getAlpha());
+					ctx.pushAlpha(ctx.m_idHot == planeId ? 0.7f : 0.1f * ctx.getAlpha());
 						DrawQuadFilled(
 							planeOrigin + Vec3(-1.0f,  1.0f,  0.0f) * planeSize,
 							planeOrigin + Vec3( 1.0f,  1.0f,  0.0f) * planeSize,
@@ -841,7 +837,7 @@ bool Im3d::GizmoPosition(const char* _id, Vec3* _position_)
 					colorY = colorZ = Color_GizmoHighlight;
 				}
 				ctx.pushAlpha(ctx.getAlpha() * alignedAlpha);
-					ctx.pushAlpha(ctx.m_idHot == planeId ? 1.0f : 0.1f * ctx.getAlpha());
+					ctx.pushAlpha(ctx.m_idHot == planeId ? 0.7f : 0.1f * ctx.getAlpha());
 						DrawQuadFilled(
 							planeOrigin + Vec3(0.0f, -1.0f,  1.0f) * planeSize,
 							planeOrigin + Vec3(0.0f,  1.0f,  1.0f) * planeSize,
@@ -884,10 +880,15 @@ bool Im3d::GizmoPosition(const char* _id, Vec3* _position_)
 
 	return ret;
 }
-bool Im3d::GizmoRotation(const char* _id, const Vec3& _origin, float* _x_, float* _y_, float* _z_)
+bool Im3d::GizmoRotation(const char* _id, const Vec3& _origin, float* _mat3_)
 {
+// \todo need to store the orginal matrix in the context and apply the rotation to that
+	Mat3* m3 = (Mat3*)_mat3_;
+	Vec3 euler = ToEulerXYZ(*m3);
 	bool ret = false;
 	Context& ctx = Im3d::GetContext();
+	Id currentId = ctx.m_idActive;
+	Mat3& storedRotation = ctx.m_gizmoStateMat3;
 	ctx.pushId(MakeId(_id));
 	ctx.pushEnableSorting(false);
 		float worldHeight = ctx.pixelsToWorldSize(_origin, ctx.m_gizmoHeightPixels);
@@ -898,13 +899,46 @@ bool Im3d::GizmoRotation(const char* _id, const Vec3& _origin, float* _x_, float
 		Id idYz = MakeId("yzplane");
 		Id idV  = MakeId("viewplane");
 		if (ctx.m_idActive != idXz && ctx.m_idActive != idYz && ctx.m_idActive != idV) {
-			ret |= ctx.gizmoAxisAngle(idXy, _origin, Vec3(0.0f, 0.0f, 1.0f), _z_, Color_Blue,  worldHeight, worldSize); 
+			if (ctx.gizmoAxisAngle(idXy, _origin, Vec3(0.0f, 0.0f, 1.0f), &euler.z, Color_Blue,  worldHeight, worldSize)) {
+				euler.z -= ctx.m_gizmoStateFloat;
+				float c = cosf(euler.z);
+				float s = sinf(euler.z);
+				Mat3 mz(
+					   c,    -s,  0.0f,
+					   s,     c,  0.0f,
+					0.0f,  0.0f,  1.0f
+					);
+				*m3 = mz * storedRotation;
+				ret = true;
+			}
 		}
 		if (ctx.m_idActive != idXy && ctx.m_idActive != idYz && ctx.m_idActive != idV) {
-			ret |= ctx.gizmoAxisAngle(idXz, _origin, Vec3(0.0f, 1.0f, 0.0f), _y_, Color_Green, worldHeight, worldSize);
+			if (ctx.gizmoAxisAngle(idXz, _origin, Vec3(0.0f, 1.0f, 0.0f), &euler.y, Color_Green, worldHeight, worldSize)) {
+				euler.y -= ctx.m_gizmoStateFloat;
+				float c = cosf(euler.y);
+				float s = sinf(euler.y);
+				Mat3 my(
+					   c,  0.0f,     s,
+					0.0f,  1.0f,  0.0f,
+					  -s,  0.0f,     c
+					);
+				*m3 = my * storedRotation;
+				ret = true;
+			}
 		}
 		if (ctx.m_idActive != idXy && ctx.m_idActive != idXz && ctx.m_idActive != idV) {
-			ret |= ctx.gizmoAxisAngle(idYz, _origin, Vec3(1.0f, 0.0f, 0.0f), _x_, Color_Red,   worldHeight, worldSize);
+			if (ctx.gizmoAxisAngle(idYz, _origin, Vec3(1.0f, 0.0f, 0.0f), &euler.x, Color_Red, worldHeight, worldSize)) {
+				euler.x -= ctx.m_gizmoStateFloat;
+				float c = cosf(euler.x);
+				float s = sinf(euler.x);
+				Mat3 mx(
+					1.0f,  0.0f,  0.0f,
+					0.0f,     c,    -s,
+					0.0f,     s,     c
+					);			
+				*m3 = mx * storedRotation;
+				ret = true;
+				}
 		}
 		// \todo efficient conversion from an arbitrary axis-angle to XYZ rotation
 		//if (ctx.m_idActive != idXy && ctx.m_idActive != idXz && ctx.m_idActive != idYz) {
@@ -912,6 +946,11 @@ bool Im3d::GizmoRotation(const char* _id, const Vec3& _origin, float* _x_, float
 		//	float v = 0.0f;
 		//	ret |= ctx.gizmoAxisAngle(idV, _origin, planeNormal, &v, Color_White, worldHeight * 1.2f, worldSize);
 		//}
+
+		if (ctx.m_idActive != currentId) {
+		 // active id changed, store rotation matrix
+			storedRotation = *m3;
+		}
 
 	ctx.popEnableSorting();
 	ctx.popId();
