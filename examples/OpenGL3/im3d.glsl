@@ -25,7 +25,9 @@
 	void main() 
 	{
 		vData.m_color = aColor.abgr;
-		vData.m_color.a *= smoothstep(0.0, 1.0, aPositionSize.w / kAntialiasing);
+		#if !defined(TRIANGLES)
+			vData.m_color.a *= smoothstep(0.0, 1.0, aPositionSize.w / kAntialiasing);
+		#endif
 		vData.m_size = max(aPositionSize.w, kAntialiasing);
 		gl_Position = uViewProjMatrix * vec4(aPositionSize.xyz, 1.0);
 		#if defined(POINTS)
