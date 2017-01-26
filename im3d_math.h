@@ -164,7 +164,8 @@ inline Vec4 operator*(const Mat4& _m, const Vec4& _v)
 Mat4 Inverse(const Mat4& _m);
 Mat4 Transpose(const Mat4& _m);
 Mat4 Translate(const Mat4& _m, const Vec3& _t);
-Mat4 Rotate(const Mat4& _m, const Vec3& _axis, float _rads); // _angle must be unit length
+Mat4 Rotate(const Mat4& _m, const Vec3& _axis, float _rads); // _axis must be unit length
+Mat3 Rotate(const Mat3& _m, const Vec3& _axis, float _rads);
 Vec3 ToEulerXYZ(const Mat3& _m);
 Mat3 FromEulerXYZ(Vec3& _xyz);
 Mat4 AlignZ(const Vec3& _axis, const Vec3& _up = Vec3(0.0f, 1.0f, 0.0f)); // generate an orthonormal bases with +z as _axis, which must be unit length

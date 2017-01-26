@@ -16,31 +16,22 @@ int main(int, char**)
 		static const int   kGridSize = 20;
 		static const float kGridHalf = (float)kGridSize * 0.5f;
 		Im3d::PushDrawState();
-			static float sz = 1.0f;
-			Im3d::SetAlpha(1.0f);
-			Im3d::SetSize(1.0f);
-			Im3d::BeginLines();
-				for (int x = 0; x <= kGridSize; ++x) {
-					Im3d::Vertex(-kGridHalf, 0.0f, (float)x - kGridHalf,  Im3d::Color(0.0f, 0.0f, 0.0f));
-					Im3d::Vertex( kGridHalf, 0.0f, (float)x - kGridHalf,  Im3d::Color(1.0f, 0.0f, 0.0f));
-				}
-				for (int z = 0; z <= kGridSize; ++z) {
-					Im3d::Vertex((float)z - kGridHalf, 0.0f, -kGridHalf,  Im3d::Color(0.0f, 0.0f, 0.0f));
-					Im3d::Vertex((float)z - kGridHalf, 0.0f,  kGridHalf,  Im3d::Color(0.0f, 0.0f, 1.0f));
-				}
-			Im3d::End();
-		
-			//Im3d::BeginTriangles();
-			//	Im3d::Vertex(-1.0f,  0.0f, -1.0f, Im3d::Color_Red);
-			//	Im3d::Vertex( 0.0f,  2.0f, -1.0f, Im3d::Color_Green);
-			//	Im3d::Vertex( 1.0f,  0.0f, -1.0f, Im3d::Color_Blue);
-			//Im3d::End();
-			//Im3d::SetSize(2.0f);
-			//Im3d::BeginLineLoop();
-			//	Im3d::Vertex(-1.0f,  0.0f, -1.0f, Im3d::Color_Magenta);
-			//	Im3d::Vertex( 0.0f,  2.0f, -1.0f, Im3d::Color_Yellow);
-			//	Im3d::Vertex( 1.0f,  0.0f, -1.0f, Im3d::Color_Cyan);
-			//Im3d::End();
+			static bool s_showGrid = false;
+			ImGui::Checkbox("Show Grid", &s_showGrid);
+			if (s_showGrid) {
+				Im3d::SetAlpha(1.0f);
+				Im3d::SetSize(1.0f);
+				Im3d::BeginLines();
+					for (int x = 0; x <= kGridSize; ++x) {
+						Im3d::Vertex(-kGridHalf, 0.0f, (float)x - kGridHalf,  Im3d::Color(0.0f, 0.0f, 0.0f));
+						Im3d::Vertex( kGridHalf, 0.0f, (float)x - kGridHalf,  Im3d::Color(1.0f, 0.0f, 0.0f));
+					}
+					for (int z = 0; z <= kGridSize; ++z) {
+						Im3d::Vertex((float)z - kGridHalf, 0.0f, -kGridHalf,  Im3d::Color(0.0f, 0.0f, 0.0f));
+						Im3d::Vertex((float)z - kGridHalf, 0.0f,  kGridHalf,  Im3d::Color(0.0f, 0.0f, 1.0f));
+					}
+				Im3d::End();
+			}
 			if (ImGui::TreeNode("Intersection")) {
 				Im3d::PushDrawState();
 					Im3d::Ray ray(ad.m_cursorRayOrigin, ad.m_cursorRayDirection);
@@ -56,6 +47,20 @@ int main(int, char**)
 
 				ImGui::TreePop();
 			}
+			if (ImGui::TreeNode("LineLoop")) {
+				Im3d::PushDrawState();
+					Im3d::SetColor(Im3d::Color_Red);
+					Im3d::SetSize(8.0f);
+					Im3d::BeginLineLoop();
+						Im3d::Vertex(0.0f, 0.0f, 0.0f);
+						Im3d::Vertex(0.0f, 2.0f, 0.0f);
+						Im3d::Vertex(2.0f, 2.0f, 0.0f);
+						Im3d::Vertex(4.0f, 2.0f, 0.0f);
+					Im3d::End();
+				Im3d::PopDrawState();
+
+				ImGui::TreePop();
+			}
 
 			if (ImGui::TreeNode("Gizmos")) {
 				ImGui::SliderFloat("Gizmo Size", &ctx.m_gizmoHeightPixels, 0.0f, 256.0f);
@@ -63,14 +68,6 @@ int main(int, char**)
 				ImGui::Text("Hot ID:    0x%x", ctx.m_idHot);
 				ImGui::Text("Active ID: 0x%x", ctx.m_idActive);
 				ImGui::Text("Hot Depth: %.3f", ctx.m_hotDepth == FLT_MAX ? -1.0f : ctx.m_hotDepth);
-				//static Im3d::Vec3 pos0(0.0f, 2.0f, 0.0f);
-				//if (Im3d::GizmoPosition("GizmoPos0", &pos0)) {
-				//	ImGui::Text("%.3f,%.3f,%.3f", pos0.x, pos0.y, pos0.z);
-				//}
-				//static Im3d::Vec3 rot0 = Im3d::Vec3(0.0f);
-				//if (Im3d::GizmoRotation("GismoRot0", pos0, &rot0.x, &rot0.y, &rot0.z)) {
-				//	ImGui::Text("%.3f,%.3f,%.3f", rot0.x, rot0.y, rot0.z);
-				//}
 				static Im3d::Mat4 m(1.0f);
 				Im3d::PushDrawState();
 					Im3d::PushMatrix();

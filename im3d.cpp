@@ -254,26 +254,39 @@ Mat4 Im3d::Transpose(const Mat4& _m)
 		_m(0, 3), _m(1, 3), _m(2, 3), _m(3, 3)
 		);
 }
+
+// \todo Translate/Rotate - should _m be pre or post multiplied?
 Mat4 Im3d::Translate(const Mat4& _m, const Vec3& _t)
 {
-	return _m * Mat4(
+	return Mat4(
 		1.0f, 0.0f, 0.0f, _t.x,
 		0.0f, 1.0f, 0.0f, _t.y,
 		0.0f, 0.0f, 1.0f, _t.z,
 		0.0f, 0.0f, 0.0f, 1.0f
-		);
+		) * _m;
 }
 Mat4 Im3d::Rotate(const Mat4& _m, const Vec3& _axis, float _rads)
 {
 	float c  = cosf(_rads);
 	float rc = 1.0f - c;
 	float s  = sinf(_rads);
-	return _m * Mat4(
+	return Mat4(
 		_axis.x * _axis.x + (1.0f - _axis.x * _axis.x) * c, _axis.x * _axis.y * rc - _axis.z * s,                _axis.x * _axis.z * rc + _axis.y * s,                0.0f,
 		_axis.x * _axis.y * rc + _axis.z * s,               _axis.y * _axis.y + (1.0f - _axis.y * _axis.y) * c,  _axis.y * _axis.z * rc - _axis.x * s,                0.0f,
 		_axis.x * _axis.z * rc - _axis.y * s,               _axis.y * _axis.z * rc + _axis.x * s,                _axis.z * _axis.z + (1.0f - _axis.z * _axis.z) * c,  0.0f,
 		0.0f,                                               0.0f,                                                0.0f,                                                1.0f
-		);
+		) * _m;
+}
+Mat3 Im3d::Rotate(const Mat3& _m, const Vec3& _axis, float _rads)
+{
+	float c  = cosf(_rads);
+	float rc = 1.0f - c;
+	float s  = sinf(_rads);
+	return Mat3(
+		_axis.x * _axis.x + (1.0f - _axis.x * _axis.x) * c, _axis.x * _axis.y * rc - _axis.z * s,                _axis.x * _axis.z * rc + _axis.y * s,
+		_axis.x * _axis.y * rc + _axis.z * s,               _axis.y * _axis.y + (1.0f - _axis.y * _axis.y) * c,  _axis.y * _axis.z * rc - _axis.x * s,
+		_axis.x * _axis.z * rc - _axis.y * s,               _axis.y * _axis.z * rc + _axis.x * s,                _axis.z * _axis.z + (1.0f - _axis.z * _axis.z) * c
+		) * _m;
 }
 Vec3 Im3d::ToEulerXYZ(const Mat3& _m)
 {
@@ -285,10 +298,10 @@ Vec3 Im3d::ToEulerXYZ(const Mat3& _m)
 		ret.x = atan2f(_m(2, 1) * c, _m(2, 2) * c);
 		ret.z = atan2f(_m(1, 0) * c, _m(0, 0) * c);
 	} else {
-		IM3D_ASSERT(false);
+	ImGui::Text("GIMBAL LOCK");
 	 // \todo bug here? this results in a degenerate matrix
 		ret.z = 0.0f;
-		if (!(_m(3, 1) > -1.0f)) {
+		if (!(_m(2, 0) > -1.0f)) {
 			ret.x = ret.z + atan2f(_m(0, 1), _m(0, 2));
 			ret.y = kHalfPi;
 		} else {
@@ -771,14 +784,14 @@ bool Im3d::GizmoPosition(const char* _id, Vec3* _position_)
 			Id planeId = MakeId("xzplane");
 			Vec3 planeNormal = Vec3(0.0f, 1.0f, 0.0f);
 			Vec3 planeOrigin = drawAt + Vec3(planeOffset, 0.0f, planeOffset);
-			float alignedAlpha = fabs(Dot(planeNormal, Normalize(ctx.getAppData().m_viewOrigin - planeOrigin)));
-			alignedAlpha = Remap(alignedAlpha, 0.1f, 0.2f);
-			if (alignedAlpha > 0.0f || ctx.m_idHot == planeId) {
+			float aligned = fabs(Dot(planeNormal, Normalize(ctx.getAppData().m_viewOrigin - planeOrigin)));
+			aligned = Remap(aligned, 0.1f, 0.2f);
+			if (aligned > 0.0f || ctx.m_idHot == planeId) {
 				ret |= ctx.gizmoPlanePosition(planeId, planeOrigin, _position_, planeNormal, Color_GizmoHighlight, planeSize); 
 				if (ctx.m_idHot == planeId) {
 					colorX = colorZ = Color_GizmoHighlight;
 				}
-				ctx.pushAlpha(ctx.getAlpha() * alignedAlpha);
+				ctx.pushAlpha(ctx.getAlpha() * aligned);
 					ctx.pushAlpha(ctx.m_idHot == planeId ? 0.7f : 0.1f * ctx.getAlpha());
 						DrawQuadFilled(
 							planeOrigin + Vec3(-1.0f,  0.0f,  1.0f) * planeSize,
@@ -800,14 +813,14 @@ bool Im3d::GizmoPosition(const char* _id, Vec3* _position_)
 			Id planeId = MakeId("xyplane");
 			Vec3 planeNormal = Vec3(0.0f, 0.0f, 1.0f);
 			Vec3 planeOrigin = drawAt + Vec3(planeOffset, planeOffset, 0.0f);
-			float alignedAlpha = fabs(Dot(planeNormal, Normalize(ctx.getAppData().m_viewOrigin - planeOrigin)));
-			alignedAlpha = Remap(alignedAlpha, 0.1f, 0.2f);
-			if (alignedAlpha > 0.0f || ctx.m_idHot == planeId) {
+			float aligned = fabs(Dot(planeNormal, Normalize(ctx.getAppData().m_viewOrigin - planeOrigin)));
+			aligned = Remap(aligned, 0.1f, 0.2f);
+			if (aligned > 0.0f || ctx.m_idHot == planeId) {
 				ret |= ctx.gizmoPlanePosition(planeId, planeOrigin, _position_, planeNormal, Color_GizmoHighlight, planeSize); 
 				if (ctx.m_idHot == planeId) {
 					colorX = colorY = Color_GizmoHighlight;
 				}
-				ctx.pushAlpha(ctx.getAlpha() * alignedAlpha);
+				ctx.pushAlpha(ctx.getAlpha() * aligned);
 					ctx.pushAlpha(ctx.m_idHot == planeId ? 0.7f : 0.1f * ctx.getAlpha());
 						DrawQuadFilled(
 							planeOrigin + Vec3(-1.0f,  1.0f,  0.0f) * planeSize,
@@ -829,14 +842,14 @@ bool Im3d::GizmoPosition(const char* _id, Vec3* _position_)
 			Id planeId = MakeId("yzplane");
 			Vec3 planeNormal = Vec3(1.0f, 0.0f, 0.0f);
 			Vec3 planeOrigin = drawAt + Vec3(0.0f, planeOffset, planeOffset);
-			float alignedAlpha = fabs(Dot(planeNormal, Normalize(ctx.getAppData().m_viewOrigin - planeOrigin)));
-			alignedAlpha = Remap(alignedAlpha, 0.1f, 0.2f);
-			if (alignedAlpha > 0.0f || ctx.m_idHot == planeId) {
+			float aligned = fabs(Dot(planeNormal, Normalize(ctx.getAppData().m_viewOrigin - planeOrigin)));
+			aligned = Remap(aligned, 0.1f, 0.2f);
+			if (aligned > 0.0f || ctx.m_idHot == planeId) {
 				ret |= ctx.gizmoPlanePosition(planeId, planeOrigin, _position_, planeNormal, Color_GizmoHighlight, planeSize); 
 				if (ctx.m_idHot == planeId) {
 					colorY = colorZ = Color_GizmoHighlight;
 				}
-				ctx.pushAlpha(ctx.getAlpha() * alignedAlpha);
+				ctx.pushAlpha(ctx.getAlpha() * aligned);
 					ctx.pushAlpha(ctx.m_idHot == planeId ? 0.7f : 0.1f * ctx.getAlpha());
 						DrawQuadFilled(
 							planeOrigin + Vec3(0.0f, -1.0f,  1.0f) * planeSize,
@@ -882,7 +895,6 @@ bool Im3d::GizmoPosition(const char* _id, Vec3* _position_)
 }
 bool Im3d::GizmoRotation(const char* _id, const Vec3& _origin, float* _mat3_)
 {
-// \todo need to store the orginal matrix in the context and apply the rotation to that
 	Mat3* m3 = (Mat3*)_mat3_;
 	Vec3 euler = ToEulerXYZ(*m3);
 	bool ret = false;
@@ -899,7 +911,7 @@ bool Im3d::GizmoRotation(const char* _id, const Vec3& _origin, float* _mat3_)
 		Id idYz = MakeId("yzplane");
 		Id idV  = MakeId("viewplane");
 		if (ctx.m_idActive != idXz && ctx.m_idActive != idYz && ctx.m_idActive != idV) {
-			if (ctx.gizmoAxisAngle(idXy, _origin, Vec3(0.0f, 0.0f, 1.0f), &euler.z, Color_Blue,  worldHeight, worldSize)) {
+			if (ctx.gizmoAxisAngle(idXy, _origin, Vec3(0.0f, 0.0f, 1.0f), &euler.z, Color_Blue,  worldHeight * 0.8f, worldSize)) {
 				euler.z -= ctx.m_gizmoStateFloat;
 				float c = cosf(euler.z);
 				float s = sinf(euler.z);
@@ -913,7 +925,7 @@ bool Im3d::GizmoRotation(const char* _id, const Vec3& _origin, float* _mat3_)
 			}
 		}
 		if (ctx.m_idActive != idXy && ctx.m_idActive != idYz && ctx.m_idActive != idV) {
-			if (ctx.gizmoAxisAngle(idXz, _origin, Vec3(0.0f, 1.0f, 0.0f), &euler.y, Color_Green, worldHeight, worldSize)) {
+			if (ctx.gizmoAxisAngle(idXz, _origin, Vec3(0.0f, 1.0f, 0.0f), &euler.y, Color_Green, worldHeight * 0.8f, worldSize)) {
 				euler.y -= ctx.m_gizmoStateFloat;
 				float c = cosf(euler.y);
 				float s = sinf(euler.y);
@@ -927,7 +939,7 @@ bool Im3d::GizmoRotation(const char* _id, const Vec3& _origin, float* _mat3_)
 			}
 		}
 		if (ctx.m_idActive != idXy && ctx.m_idActive != idXz && ctx.m_idActive != idV) {
-			if (ctx.gizmoAxisAngle(idYz, _origin, Vec3(1.0f, 0.0f, 0.0f), &euler.x, Color_Red, worldHeight, worldSize)) {
+			if (ctx.gizmoAxisAngle(idYz, _origin, Vec3(1.0f, 0.0f, 0.0f), &euler.x, Color_Red, worldHeight * 0.8f, worldSize)) {
 				euler.x -= ctx.m_gizmoStateFloat;
 				float c = cosf(euler.x);
 				float s = sinf(euler.x);
@@ -938,14 +950,16 @@ bool Im3d::GizmoRotation(const char* _id, const Vec3& _origin, float* _mat3_)
 					);			
 				*m3 = mx * storedRotation;
 				ret = true;
-				}
+			}
 		}
-		// \todo efficient conversion from an arbitrary axis-angle to XYZ rotation
-		//if (ctx.m_idActive != idXy && ctx.m_idActive != idXz && ctx.m_idActive != idYz) {
-		//	Vec3 planeNormal = Normalize(_origin - ctx.getAppData().m_viewOrigin);
-		//	float v = 0.0f;
-		//	ret |= ctx.gizmoAxisAngle(idV, _origin, planeNormal, &v, Color_White, worldHeight * 1.2f, worldSize);
-		//}
+		if (ctx.m_idActive != idXy && ctx.m_idActive != idXz && ctx.m_idActive != idYz) {
+			Vec3 planeNormal = Normalize(_origin - ctx.getAppData().m_viewOrigin);
+			float v = 0.0f;
+			if (ctx.gizmoAxisAngle(idV, _origin, planeNormal, &v, Color_White, worldHeight, worldSize)) {
+				*m3 = Rotate(storedRotation, planeNormal, v);
+				ret = true;
+			}
+		}
 
 		if (ctx.m_idActive != currentId) {
 		 // active id changed, store rotation matrix
@@ -1088,7 +1102,7 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 	// \todo optim: force alpha/matrix stack bottom to be 1/identity, then skip the transform if the stack size == 1
 	VertexData vd(m_matrixStack.back() * _position, _size, _color);
 	vd.m_color.setA(vd.m_color.getA() * m_alphaStack.back());
-	
+
 	switch (m_primMode) {
 	case PrimitiveMode_Points:
 		m_vertexData[DrawPrimitive_Points][m_primList].push_back(vd);
@@ -1397,14 +1411,14 @@ bool Context::gizmoAxisPosition(Id _id, const Vec3& _drawAt, Vec3* _out_, const 
 		makeHot(_id, depth, intersects);
 	}
 
-	float alignedAlpha = 1.0f - fabs(Dot(_axis, Normalize(m_appData.m_viewOrigin - _drawAt)));
-	alignedAlpha = getAlpha() * Remap(alignedAlpha, 0.05f, 0.1f);
+	float aligned = 1.0f - fabs(Dot(_axis, Normalize(m_appData.m_viewOrigin - _drawAt)));
+	aligned = getAlpha() * Remap(aligned, 0.05f, 0.1f);
 	if (m_idHot == _id) {
-		alignedAlpha = 1.0f;
+		aligned = 1.0f;
 	}
 
 	pushColor(color);
-	pushAlpha(alignedAlpha);
+	pushAlpha(aligned);
 	pushSize(m_gizmoSizePixels);
 		DrawArrow(axisCapsule.m_start, axisCapsule.m_end, _worldSize * 4.0f);
 	popSize();
@@ -1456,14 +1470,18 @@ bool Context::gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, flo
 	Vec3& storedVec = m_gizmoStateVec3;
 	float& storedAngle = m_gizmoStateFloat;
 
- // \note using the plane produces an intersection blind spot at grazing angles
+ // \note using the plane produces an intersection blind spot at grazing angles, hence expand the ring size by 1-aligned
+ // additionally this causes unintuitive behavior when the ray doesn't intersect the plane during interaction
 	Ray ray(m_appData.m_cursorRayOrigin, m_appData.m_cursorRayDirection);
 	Plane plane(_axis, _drawAt);
 	float tr;
 	bool intersects = Intersect(ray, plane, tr);
 	Vec3 intersection = ray.m_origin + ray.m_direction * tr;
+	
+	Vec3 viewDir = Normalize(m_appData.m_viewOrigin - _drawAt);
+	float aligned = fabs(Dot(_axis, viewDir));
 	float dist = Length(intersection - _drawAt);
-	intersects &= fabs(dist - _worldRadius) < _worldSize;
+	intersects &= fabs(dist - _worldRadius) < (_worldSize + _worldSize * (1.0f - aligned) * 2.0f);
 	bool ret = false;
 	
 	Color color = _color;
@@ -1472,19 +1490,22 @@ bool Context::gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, flo
 		if (isKeyDown(Action_Select)) {
 			Vec3 v = Normalize(intersection - _drawAt);
 			float sign = SignOf(Dot(Cross(storedVec, v), plane.m_normal));
-			ImGui::Text("%.3f + %.3f", storedAngle, acosf(Dot(v, storedVec)) * sign);
 			*_out_ = storedAngle + acosf(Dot(v, storedVec)) * sign;
 			ret = true;
-
 			begin(PrimitiveMode_Lines);
 				vertex(_drawAt, m_gizmoSizePixels * 0.5f, Color_GizmoHighlight);
 				vertex(_drawAt + storedVec * _worldRadius, m_gizmoSizePixels * 0.5f, Color_GizmoHighlight);
-				vertex(_drawAt, m_gizmoSizePixels * 0.5f, Color_GizmoHighlight);
-				vertex(_drawAt + v * _worldRadius, m_gizmoSizePixels * 0.5f, Color_GizmoHighlight);
-
 				vertex(_drawAt - _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
 				vertex(_drawAt + _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
 			end();
+			begin(PrimitiveMode_Points);
+				vertex(_drawAt, m_gizmoSizePixels * 2.0f, Color_GizmoHighlight);
+			end();
+			pushColor(Color_GizmoHighlight);
+			pushSize(m_gizmoSizePixels);
+				DrawArrow(_drawAt, _drawAt + v * _worldRadius, _worldSize * 4.0f);
+			popColor();
+			popSize();
 		} else {
 			m_idActive = Id_Invalid;
 		}
@@ -1506,17 +1527,15 @@ bool Context::gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, flo
 	 	float depth = Length2(intersection - m_appData.m_viewOrigin);
 		makeHot(_id, depth, intersects);
 	}
-	Vec3 viewDir = Normalize(m_appData.m_viewOrigin - _drawAt);
-	float alignedAlpha = fabs(Dot(_axis, viewDir));
-	alignedAlpha = Max(Remap(alignedAlpha, 0.9f, 1.0f), 0.1f);
-	if (m_idHot == _id) {
-		alignedAlpha = 1.0f;
+	aligned = Max(Remap(aligned, 0.9f, 1.0f), 0.1f);
+	if (m_idActive == _id) {
+		aligned = 1.0f;
 	}
 	pushColor(color);
 	pushSize(m_gizmoSizePixels);
 		pushMatrix(getMatrix() * LookAt(_drawAt, _drawAt + _axis));
 		begin(Context::PrimitiveMode_LineLoop);
-			const int _detail = 32; // \todo dynamically select detail based on worldRadius
+			const int _detail = 128; // \todo dynamically select detail based on worldRadius/worldSize
 			for (int i = 0; i < _detail; ++i) {
 				float rad = kTwoPi * ((float)i / (float)_detail);
 				vertex(Vec3(cosf(rad) * _worldRadius, sinf(rad) * _worldRadius, 0.0f));
@@ -1525,7 +1544,7 @@ bool Context::gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, flo
 				VertexData& vd = m_vertexData[DrawPrimitive_Lines][m_primList].back();
 				Vec3 v = vd.m_positionSize;
 				float d = Dot(Normalize(v - _drawAt), viewDir); 
-				d = Max(Remap(d, 0.1f, 0.2f), alignedAlpha);
+				d = Max(Remap(d, 0.1f, 0.2f), aligned);
 				vd.m_color.setA(vd.m_color.getA() * d);
 			}
 		end();
@@ -1537,7 +1556,7 @@ bool Context::gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, flo
 
 bool Context::makeHot(Id _id, float _depth, bool _intersects)
 {
-	if (m_idActive == Id_Invalid && _depth < m_hotDepth && _intersects) {
+	if (m_idActive == Id_Invalid &&	_depth < m_hotDepth && _intersects && !isKeyDown(Action_Select)) {
 		m_idHot = _id;
 		m_hotDepth = _depth;
 		return true;
