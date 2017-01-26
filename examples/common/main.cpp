@@ -47,20 +47,6 @@ int main(int, char**)
 
 				ImGui::TreePop();
 			}
-			if (ImGui::TreeNode("LineLoop")) {
-				Im3d::PushDrawState();
-					Im3d::SetColor(Im3d::Color_Red);
-					Im3d::SetSize(8.0f);
-					Im3d::BeginLineLoop();
-						Im3d::Vertex(0.0f, 0.0f, 0.0f);
-						Im3d::Vertex(0.0f, 2.0f, 0.0f);
-						Im3d::Vertex(2.0f, 2.0f, 0.0f);
-						Im3d::Vertex(4.0f, 2.0f, 0.0f);
-					Im3d::End();
-				Im3d::PopDrawState();
-
-				ImGui::TreePop();
-			}
 
 			if (ImGui::TreeNode("Gizmos")) {
 				ImGui::SliderFloat("Gizmo Size", &ctx.m_gizmoHeightPixels, 0.0f, 256.0f);
@@ -71,6 +57,7 @@ int main(int, char**)
 				static Im3d::Mat4 m(1.0f);
 				Im3d::PushDrawState();
 					Im3d::PushMatrix();
+						Im3d::SetAlpha(0.5f);
 						Im3d::SetSize(2.0f);
 						Im3d::SetMatrix(m);
 						Im3d::DrawXyzAxes();

@@ -3,7 +3,7 @@
 #define im3d_h
 
 #include "im3d_config.h"
-
+#include <vector>
 #define IM3D_VERSION "0.5"
 
 #ifndef IM3D_ASSERT
@@ -334,7 +334,7 @@ public:
 	T*       data()                               { return m_data; }
 	const T* data() const                         { return m_data; }
 
-	void     push_back(const T& _v)               { if (m_size == m_capacity) { reserve(m_capacity + m_capacity / 2); } m_data[m_size++] = _v; }
+	void     push_back(T _v)                      { if (m_size == m_capacity) { reserve(m_capacity + m_capacity / 2); } m_data[m_size++] = _v;}
 	void     pop_back()                           { IM3D_ASSERT(m_size > 0); --m_size; }
 
 	T*       begin()                              { return m_data; }
