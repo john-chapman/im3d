@@ -104,8 +104,8 @@ Id    MakeId(const char* _str);
 // Manipulate translation/rotation/scale via a gizmo. Return true if the gizmo was used (if it modified its output).
 bool  Gizmo(const char* _id, float* _mat4_);
 bool  GizmoTranslation(const char* _id, Vec3* _translation_);
-bool  GizmoRotation(const char* _id, const Vec3& _origin, float* _mat3_);
-bool  GizmoScale(const char* _id, const Vec3& _origin, float* _vec3_);
+bool  GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_);
+bool  GizmoScale(const char* _id, const Vec3& _drawAt, float* _vec3_);
 
 struct Vec2
 {
@@ -362,26 +362,27 @@ public:
 	friend void swap(Vector<T>& _a_, Vector<T>& _b_);
 };
 
+enum PrimitiveMode
+{
+	PrimitiveMode_None,
+	PrimitiveMode_Points,
+	PrimitiveMode_Lines,
+	PrimitiveMode_LineStrip,
+	PrimitiveMode_LineLoop,
+	PrimitiveMode_Triangles,
+	PrimitiveMode_TriangleStrip
+};
+enum GizmoMode
+{
+	GizmoMode_Translation,
+	GizmoMode_Rotation,
+	GizmoMode_Scale
+};
+
 // Context stores all relevant state - main interface affects the context currently bound via SetCurrentContext().
 class Context
 {
 public:
-	enum PrimitiveMode
-	{
-		PrimitiveMode_None,
-		PrimitiveMode_Points,
-		PrimitiveMode_Lines,
-		PrimitiveMode_LineStrip,
-		PrimitiveMode_LineLoop,
-		PrimitiveMode_Triangles,
-		PrimitiveMode_TriangleStrip
-	};
-	enum GizmoMode
-	{
-		GizmoMode_Translation,
-		GizmoMode_Rotation,
-		GizmoMode_Scale
-	};
 	void        begin(PrimitiveMode _mode);
 	void        end();
 	void        vertex(const Vec3& _position, float _size, Color _color);
@@ -431,9 +432,12 @@ public:
 
 	// Convert pixels -> world space size based on distance between _position and view origin.
 	float pixelsToWorldSize(const Vec3& _position, float _pixels);
-	bool  gizmoAxisTranlation(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _axis, Color _color, float _worldHeight, float _worldSize);
+	bool  gizmoAxisTranslation(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _axis, Color _color, float _worldHeight, float _worldSize);
 	bool  gizmoPlaneTranslation(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _normal, Color _color, float _worldSize);
+	bool  gizmoAxisScale(Id _id, const Vec3& _drawAt, float* _out_, const Vec3& _axis, Color _color, float _worldHeight, float _worldSize);
 	bool  gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, float* _out_, Color _color, float _worldRadius, float _worldSize);
+	GizmoMode getGizmoMode() const             { return m_gizmoMode;  }
+	void      setGizmoMode(GizmoMode _mode)    { m_gizmoMode = _mode; }
 //private:
  // state stacks
 	Vector<Color>      m_colorStack;
@@ -493,12 +497,12 @@ inline AppData& GetAppData()                                                 { r
 inline void     NewFrame()                                                   { GetContext().reset();               }
 inline void     Draw()                                                       { GetContext().draw();                }
 
-inline void  BeginPoints()                                                   { GetContext().begin(Context::PrimitiveMode_Points);        }
-inline void  BeginLines()                                                    { GetContext().begin(Context::PrimitiveMode_Lines);         }
-inline void  BeginLineLoop()                                                 { GetContext().begin(Context::PrimitiveMode_LineLoop);      }
-inline void  BeginLineStrip()                                                { GetContext().begin(Context::PrimitiveMode_LineStrip);     }
-inline void  BeginTriangles()                                                { GetContext().begin(Context::PrimitiveMode_Triangles);     }
-inline void  BeginTriangleStrip()                                            { GetContext().begin(Context::PrimitiveMode_TriangleStrip); }
+inline void  BeginPoints()                                                   { GetContext().begin(PrimitiveMode_Points);        }
+inline void  BeginLines()                                                    { GetContext().begin(PrimitiveMode_Lines);         }
+inline void  BeginLineLoop()                                                 { GetContext().begin(PrimitiveMode_LineLoop);      }
+inline void  BeginLineStrip()                                                { GetContext().begin(PrimitiveMode_LineStrip);     }
+inline void  BeginTriangles()                                                { GetContext().begin(PrimitiveMode_Triangles);     }
+inline void  BeginTriangleStrip()                                            { GetContext().begin(PrimitiveMode_TriangleStrip); }
 inline void  End()                                                           { GetContext().end(); }
 
 inline void  Vertex(const Vec3& _position)                                   { GetContext().vertex(_position, GetContext().getSize(), GetContext().getColor()); }

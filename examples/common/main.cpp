@@ -35,8 +35,7 @@ int main(int, char**)
 			if (ImGui::TreeNode("Intersection")) {
 				Im3d::PushDrawState();
 					Im3d::Ray ray(ad.m_cursorRayOrigin, ad.m_cursorRayDirection);
-					float tr, tl;
-
+					float tr;
 					Im3d::Plane plane(Im3d::Vec3(0.0f, 1.0f, 0.0f), 0.0f);
 					if (Im3d::Intersect(ray, plane, tr)) {
 						Im3d::BeginPoints();
@@ -49,6 +48,14 @@ int main(int, char**)
 			}
 
 			if (ImGui::TreeNode("Gizmos")) {
+				int gizmoMode = (int)Im3d::GetContext().getGizmoMode();
+				ImGui::RadioButton("Translate (Ctrl+T)", &gizmoMode, Im3d::GizmoMode_Translation); 
+				ImGui::SameLine();
+				ImGui::RadioButton("Rotate (Ctrl+R)", &gizmoMode, Im3d::GizmoMode_Rotation);
+				ImGui::SameLine();
+				ImGui::RadioButton("Scale (Ctrl+S)", &gizmoMode, Im3d::GizmoMode_Scale);
+				Im3d::GetContext().setGizmoMode((Im3d::GizmoMode)gizmoMode);
+				
 				ImGui::SliderFloat("Gizmo Size", &ctx.m_gizmoHeightPixels, 0.0f, 256.0f);
 				ImGui::SliderFloat("Gizmo Thickness", &ctx.m_gizmoSizePixels, 0.0f, 32.0f);
 				ImGui::Text("Hot ID:    0x%x", ctx.m_idHot);

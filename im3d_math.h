@@ -120,6 +120,7 @@ inline Vec4 operator*(const Mat3& _m, const Vec4& _v)
 		);
 }
 Mat3 Rotation(const Vec3& _axis, float _rads); // _axis must be unit length
+Mat3 Scale(const Vec3& _s);
 Vec3 ToEulerXYZ(const Mat3& _m);
 Mat3 FromEulerXYZ(Vec3& _xyz);
 
