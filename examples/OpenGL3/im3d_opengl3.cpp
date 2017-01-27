@@ -1,7 +1,7 @@
 #include "im3d_example.h"
 
-static GLuint g_vaIm3d;           // vertex array object
-static GLuint g_vbIm3d;           // vertex buffer
+static GLuint g_vaIm3d; // vertex array object
+static GLuint g_vbIm3d; // vertex buffer
 static GLuint g_shIm3dPoints;
 static GLuint g_shIm3dLines;
 static GLuint g_shIm3dTriangles;
@@ -9,7 +9,7 @@ static GLuint g_shIm3dTriangles;
 using namespace Im3d;
 
 // The draw callback is where Im3d draw lists are rendered by the application. Im3d::Draw can potentially
-// call this function multiple times per primtive type, if sorting is enabled.
+// call this function multiple times per primtive type.
 // The example below shows the simplest possible draw callback. Variations on this are possible, for example
 // using a depth buffer. See the shader source file for more details.
 // For VR, the simplest option is to call Im3d::Draw() once per eye with the appropriate framebuffer bound,
@@ -80,17 +80,21 @@ void Im3d_Update()
 	ad.m_cursorRayDirection = g_Example->m_camWorld * Normalize(Vec4(cursorPos.x * ad.m_tanHalfFov * aspect, cursorPos.y * ad.m_tanHalfFov, -1.0f, 0.0f));
 
  // Fill the key state array; using GetAsyncKeyState here but this could equally well be done via the window proc.
- // All key states have an equivalent 'Action_' enum which may be more intuitive to use for VR 
- // (e.g. Mouse_Down == Action_Select).
-	ad.m_keyDown[Im3d::Mouse_Left] = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+ // All key states have an equivalent (and more descriptive) 'Action_' enum.
+	ad.m_keyDown[Im3d::Mouse_Left/*Im3d::Action_Select*/] = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+
+ // The following key states control which gizmo to use for the generic Gizmo() function. Here using the left ctrl
+ // key as an additional predicate.
 	bool ctrlDown = (GetAsyncKeyState(VK_LCONTROL) & 0x8000) != 0;
-	ad.m_keyDown[Im3d::Key_T]      = ctrlDown && (GetAsyncKeyState(0x54) & 0x8000) != 0;
-	ad.m_keyDown[Im3d::Key_R]      = ctrlDown && (GetAsyncKeyState(0x52) & 0x8000) != 0;
-	ad.m_keyDown[Im3d::Key_S]      = ctrlDown && (GetAsyncKeyState(0x53) & 0x8000) != 0;
+	ad.m_keyDown[Im3d::Key_T/*Action_GizmoTranslation*/] = ctrlDown && (GetAsyncKeyState(0x54) & 0x8000) != 0;
+	ad.m_keyDown[Im3d::Key_R/*Action_GizmoRotation*/]    = ctrlDown && (GetAsyncKeyState(0x52) & 0x8000) != 0;
+	ad.m_keyDown[Im3d::Key_S/*Action_GizmoScale*/]       = ctrlDown && (GetAsyncKeyState(0x53) & 0x8000) != 0;
 
 	Im3d::NewFrame();
 }
 
+// Resource init/shutdown will be app specific. In general you'll need one shader for each of the 3
+// draw primitive types (points, lines, triangles), plus some number of vertex buffers.
 bool Im3d_Init()
 {
 	{

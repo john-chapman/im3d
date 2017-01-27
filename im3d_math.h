@@ -119,6 +119,9 @@ inline Vec4 operator*(const Mat3& _m, const Vec4& _v)
 		_v.w
 		);
 }
+Mat3 Rotation(const Vec3& _axis, float _rads); // _axis must be unit length
+Vec3 ToEulerXYZ(const Mat3& _m);
+Mat3 FromEulerXYZ(Vec3& _xyz);
 
 // Mat4
 inline Mat4 operator*(const Mat4& _lhs, const Mat4& _rhs)
@@ -159,23 +162,18 @@ inline Vec4 operator*(const Mat4& _m, const Vec4& _v)
 		_m(3, 0) * _v.x + _m(3, 1) * _v.y + _m(3, 2) * _v.z + _m(3, 3) * _v.w
 		);
 }
-
-// defined in im3d.cpp
 Mat4 Inverse(const Mat4& _m);
 Mat4 Transpose(const Mat4& _m);
-Mat4 Translate(const Mat4& _m, const Vec3& _t);
-Mat4 Rotate(const Mat4& _m, const Vec3& _axis, float _rads); // _axis must be unit length
-Mat3 Rotate(const Mat3& _m, const Vec3& _axis, float _rads);
-Vec3 ToEulerXYZ(const Mat3& _m);
-Mat3 FromEulerXYZ(Vec3& _xyz);
+Mat4 Translation(const Vec3& _t);
 Mat4 AlignZ(const Vec3& _axis, const Vec3& _up = Vec3(0.0f, 1.0f, 0.0f)); // generate an orthonormal bases with +z as _axis, which must be unit length
 Mat4 LookAt(const Vec3& _from, const Vec3& _to, const Vec3& _up = Vec3(0.0f, 1.0f, 0.0f)); // align _z with (_to - _from), set _from as translation
+
 
 // Extends to infinity from m_origin in ±m_direciton.
 struct Line
 {
 	Vec3 m_origin;
-	Vec3 m_direction; //< Must be unit length.
+	Vec3 m_direction; // unit length
 
 	Line() {}
 	Line(const Vec3& _origin, const Vec3& _direction);
@@ -185,7 +183,7 @@ struct Line
 struct Ray
 {
 	Vec3 m_origin;
-	Vec3 m_direction; //< Must be unit length.
+	Vec3 m_direction; // unit length
 
 	Ray() {}
 	Ray(const Vec3& _origin, const Vec3& _direction);
@@ -243,6 +241,9 @@ void  Nearest(const Ray& _ray, const Line& _line, float& tr_, float& tl_);
 Vec3  Nearest(const Ray& _ray, const LineSegment& _segment, float& tr_);
 float Distance2(const Ray& _ray, const LineSegment& _segment);
 
+extern const float Pi;
+extern const float TwoPi;
+extern const float HalfPi;
 
 } // namespace Im3d
 

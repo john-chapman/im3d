@@ -95,15 +95,17 @@ void  SetMatrix(const Mat4& _mat4);
 void  SetIdentity();
 void  MulMatrix(const Mat4& _mat4);
 void  Translate(float _x, float _y, float _z);
+void  Rotate(const Vec3& _axis, float _angle);
 void  Scale(float _x, float _y, float _z);
 
 // Generate an Id from a null-terminated string.
 Id    MakeId(const char* _str);
 
-// Manipulate position/orientation/scale via a gizmo. Return true if the gizmo was used (if it modified its output).
+// Manipulate translation/rotation/scale via a gizmo. Return true if the gizmo was used (if it modified its output).
 bool  Gizmo(const char* _id, float* _mat4_);
-bool  GizmoPosition(const char* _id, Vec3* _position_);
+bool  GizmoTranslation(const char* _id, Vec3* _translation_);
 bool  GizmoRotation(const char* _id, const Vec3& _origin, float* _mat3_);
+bool  GizmoScale(const char* _id, const Vec3& _origin, float* _vec3_);
 
 struct Vec2
 {
@@ -205,7 +207,9 @@ struct Mat4
 	Vec4 getRow(int _i) const;
 	void setCol(int _i, const Vec4& _v);
 	void setRow(int _i, const Vec4& _v);
-	void insert(const Mat3& _m); // insert upper 3x3
+	
+	void setRotationScale(const Mat3& _m); // insert upper 3x3
+	void setTranslation(const Vec3& _v);   // insert col 3
 	
 	float operator()(int _row, int _col) const
 	{
@@ -297,10 +301,10 @@ enum Key
 	Key_Count,
 
  // the following maps keys -> 'action' states which may be more intuitive, especially for VR
-	Action_Select            = Mouse_Left,
-	Action_TransformPosition = Key_T,
-	Action_TransformRotation = Key_R,
-	Action_TransformScale    = Key_S
+	Action_Select           = Mouse_Left,
+	Action_GizmoTranslation = Key_T,
+	Action_GizmoRotation    = Key_R,
+	Action_GizmoScale       = Key_S
 };
 struct AppData
 {
@@ -372,11 +376,11 @@ public:
 		PrimitiveMode_Triangles,
 		PrimitiveMode_TriangleStrip
 	};
-	enum TransformMode
+	enum GizmoMode
 	{
-		TransformMode_Position,
-		TransformMode_Rotation,
-		TransformMode_Scale
+		GizmoMode_Translation,
+		GizmoMode_Rotation,
+		GizmoMode_Scale
 	};
 	void        begin(PrimitiveMode _mode);
 	void        end();
@@ -427,8 +431,8 @@ public:
 
 	// Convert pixels -> world space size based on distance between _position and view origin.
 	float pixelsToWorldSize(const Vec3& _position, float _pixels);
-	bool  gizmoAxisPosition(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _axis, Color _color, float _worldHeight, float _worldSize);
-	bool  gizmoPlanePosition(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _normal, Color _color, float _worldSize);
+	bool  gizmoAxisTranlation(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _axis, Color _color, float _worldHeight, float _worldSize);
+	bool  gizmoPlaneTranslation(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _normal, Color _color, float _worldSize);
 	bool  gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, float* _out_, Color _color, float _worldRadius, float _worldSize);
 //private:
  // state stacks
@@ -452,7 +456,7 @@ public:
 	U32                m_vertCountThisPrim;        // # calls to vertex() since the last call to begin().
 
  // gizmo state
-	TransformMode      m_transformMode;
+	GizmoMode          m_gizmoMode;                // Global mode selection for gizmos.
 	Id                 m_idActive;                 // Currently active gizmo. If set, this is the same as m_idHot.
 	Id                 m_idHot;
 	float              m_hotDepth;                 // Depth of the current hot gizmo, for handling occlusion.

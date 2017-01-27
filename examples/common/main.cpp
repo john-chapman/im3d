@@ -82,9 +82,9 @@ int main(int, char**)
 					Im3d::SetAlpha(1.0f);
 					for (int i = 0; i < s_primCount / 2; ++i) {
 						Im3d::PushMatrix();
-							Im3d::Mat4 wm(0.9f);
-							wm = Im3d::Rotate(wm, Im3d::Normalize(Im3d::RandVec3(-1.0f, 1.0f)), Im3d::RandFloat(0.0f, 6.0f));
-							wm = Im3d::Translate(wm, Im3d::RandVec3(-10.0f, 10.0f));
+							Im3d::Mat4 wm(1.0f);
+							wm.setRotationScale(Im3d::Rotation(Im3d::Normalize(Im3d::RandVec3(-1.0f, 1.0f)), Im3d::RandFloat(0.0f, 6.0f)));
+							wm.setTranslation(Im3d::RandVec3(-10.0f, 10.0f));
 							Im3d::MulMatrix(wm);
 							Im3d::BeginTriangles();
 								Im3d::Vertex(-1.0f,  0.0f, -1.0f, Im3d::Color_Red);
@@ -99,8 +99,8 @@ int main(int, char**)
 					for (int i = 0; i < s_primCount / 2; ++i) {
 						Im3d::PushMatrix();
 							Im3d::Mat4 wm(1.0f);
-							wm = Im3d::Rotate(wm, Im3d::Normalize(Im3d::RandVec3(-1.0f, 1.0f)), Im3d::RandFloat(0.0f, 6.0f));
-							wm = Im3d::Translate(wm, Im3d::RandVec3(-10.0f, 10.0f));
+							wm.setRotationScale(Im3d::Rotation(Im3d::Normalize(Im3d::RandVec3(-1.0f, 1.0f)), Im3d::RandFloat(0.0f, 6.0f)));
+							wm.setTranslation(Im3d::RandVec3(-10.0f, 10.0f));
 							Im3d::MulMatrix(wm);
 							Im3d::BeginLineLoop();
 								Im3d::Vertex(-1.0f,  0.0f, -1.0f, Im3d::Color_Magenta);

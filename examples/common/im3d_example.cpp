@@ -749,8 +749,8 @@ printf("msg.message = 0x%x\n", msg.message);
 			if (!ImGui::GetIO().WantCaptureMouse) {
 				if (GetAsyncKeyState(VK_RBUTTON) & 0x8000) {
 					Vec2 cursorDelta = (cursorPos - m_prevCursorPos) * m_deltaTime * kCamRotationMul;
-					m_camDir = Rotate(Mat4(1.0f), Vec3(0.0f, 1.0f, 0.0f), -cursorDelta.x) * m_camDir;
-					m_camDir = Rotate(Mat4(1.0f), m_camWorld.getCol(0), -cursorDelta.y) * m_camDir;
+					m_camDir = Rotation(Vec3(0.0f, 1.0f, 0.0f), -cursorDelta.x) * m_camDir;
+					m_camDir = Rotation(m_camWorld.getCol(0), -cursorDelta.y) * m_camDir;
 				}
 			}
 		}

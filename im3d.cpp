@@ -168,11 +168,17 @@ void Mat4::setRow(int _i, const Vec4& _v)
 	(*this)(_i, 2) = _v.z;
 	(*this)(_i, 3) = _v.w;
 }
-void Mat4::insert(const Mat3& _m)
+void Mat4::setRotationScale(const Mat3& _m)
 {
 	(*this)(0, 0) = _m(0, 0); (*this)(0, 1) = _m(0, 1); (*this)(0, 2) = _m(0, 2);
 	(*this)(1, 0) = _m(1, 0); (*this)(1, 1) = _m(1, 1); (*this)(1, 2) = _m(1, 2);
 	(*this)(2, 0) = _m(2, 0); (*this)(2, 1) = _m(2, 1); (*this)(2, 2) = _m(2, 2);
+}
+void Mat4::setTranslation(const Vec3& _v)
+{
+	(*this)(0, 3) = _v.x;
+	(*this)(1, 3) = _v.y;
+	(*this)(2, 3) = _v.z;
 }
 
 Color::Color(const Vec4& _rgba)
@@ -189,348 +195,6 @@ Color::Color(float _r, float _g, float _b, float _a)
 	v |= (U32)(_b * 255.0f) << 8;
 	v |= (U32)(_a * 255.0f);
 }
-
-Im3d::Id Im3d::MakeId(const char* _str)
-{
-	static const U32 kFnv1aPrime32 = 0x01000193u;
-
-	IM3D_ASSERT(_str);
-	U32 ret = (U32)GetContext().getId(); // top of Id stack
-	while (*_str) {
-		ret ^= (U32)*_str++;
-		ret *= kFnv1aPrime32;
-	}
-	return (Id)ret;
-}
-
-// declared in im3d_math.h
-static const float kPi     = 3.14159265359f;
-static const float kTwoPi  = 2.0f * kPi;
-static const float kHalfPi = 0.5f * kPi;
-
-static inline float Determinant(const Mat4& _m)
-{
-	return 
-		_m(0, 3) * _m(1, 2) * _m(2, 1) * _m(3, 0) - _m(0, 2) * _m(1, 3) * _m(2, 1) * _m(3, 0) - _m(0, 3) * _m(1, 1) * _m(2, 2) * _m(3, 0) + _m(0, 1) * _m(1, 3) * _m(2, 2) * _m(3, 0) +
-		_m(0, 2) * _m(1, 1) * _m(2, 3) * _m(3, 0) - _m(0, 1) * _m(1, 2) * _m(2, 3) * _m(3, 0) - _m(0, 3) * _m(1, 2) * _m(2, 0) * _m(3, 1) + _m(0, 2) * _m(1, 3) * _m(2, 0) * _m(3, 1) +
-		_m(0, 3) * _m(1, 0) * _m(2, 2) * _m(3, 1) - _m(0, 0) * _m(1, 3) * _m(2, 2) * _m(3, 1) - _m(0, 2) * _m(1, 0) * _m(2, 3) * _m(3, 1) + _m(0, 0) * _m(1, 2) * _m(2, 3) * _m(3, 1) +
-		_m(0, 3) * _m(1, 1) * _m(2, 0) * _m(3, 2) - _m(0, 1) * _m(1, 3) * _m(2, 0) * _m(3, 2) - _m(0, 3) * _m(1, 0) * _m(2, 1) * _m(3, 2) + _m(0, 0) * _m(1, 3) * _m(2, 1) * _m(3, 2) +
-		_m(0, 1) * _m(1, 0) * _m(2, 3) * _m(3, 2) - _m(0, 0) * _m(1, 1) * _m(2, 3) * _m(3, 2) - _m(0, 2) * _m(1, 1) * _m(2, 0) * _m(3, 3) + _m(0, 1) * _m(1, 2) * _m(2, 0) * _m(3, 3) +
-		_m(0, 2) * _m(1, 0) * _m(2, 1) * _m(3, 3) - _m(0, 0) * _m(1, 2) * _m(2, 1) * _m(3, 3) - _m(0, 1) * _m(1, 0) * _m(2, 2) * _m(3, 3) + _m(0, 0) * _m(1, 1) * _m(2, 2) * _m(3, 3)
-		;
-}
-Mat4 Im3d::Inverse(const Mat4& _m)
-{
-	Mat4 ret;
-	ret(0, 0) = _m(1, 2) * _m(2, 3) * _m(3, 1) - _m(1, 3) * _m(2, 2) * _m(3, 1) + _m(1, 3) * _m(2, 1) * _m(3, 2) - _m(1, 1) * _m(2, 3) * _m(3, 2) - _m(1, 2) * _m(2, 1) * _m(3, 3) + _m(1, 1) * _m(2, 2) * _m(3, 3);
-	ret(0, 1) = _m(0, 3) * _m(2, 2) * _m(3, 1) - _m(0, 2) * _m(2, 3) * _m(3, 1) - _m(0, 3) * _m(2, 1) * _m(3, 2) + _m(0, 1) * _m(2, 3) * _m(3, 2) + _m(0, 2) * _m(2, 1) * _m(3, 3) - _m(0, 1) * _m(2, 2) * _m(3, 3);
-	ret(0, 2) = _m(0, 2) * _m(1, 3) * _m(3, 1) - _m(0, 3) * _m(1, 2) * _m(3, 1) + _m(0, 3) * _m(1, 1) * _m(3, 2) - _m(0, 1) * _m(1, 3) * _m(3, 2) - _m(0, 2) * _m(1, 1) * _m(3, 3) + _m(0, 1) * _m(1, 2) * _m(3, 3);
-	ret(0, 3) = _m(0, 3) * _m(1, 2) * _m(2, 1) - _m(0, 2) * _m(1, 3) * _m(2, 1) - _m(0, 3) * _m(1, 1) * _m(2, 2) + _m(0, 1) * _m(1, 3) * _m(2, 2) + _m(0, 2) * _m(1, 1) * _m(2, 3) - _m(0, 1) * _m(1, 2) * _m(2, 3);
-	ret(1, 0) = _m(1, 3) * _m(2, 2) * _m(3, 0) - _m(1, 2) * _m(2, 3) * _m(3, 0) - _m(1, 3) * _m(2, 0) * _m(3, 2) + _m(1, 0) * _m(2, 3) * _m(3, 2) + _m(1, 2) * _m(2, 0) * _m(3, 3) - _m(1, 0) * _m(2, 2) * _m(3, 3);
-	ret(1, 1) = _m(0, 2) * _m(2, 3) * _m(3, 0) - _m(0, 3) * _m(2, 2) * _m(3, 0) + _m(0, 3) * _m(2, 0) * _m(3, 2) - _m(0, 0) * _m(2, 3) * _m(3, 2) - _m(0, 2) * _m(2, 0) * _m(3, 3) + _m(0, 0) * _m(2, 2) * _m(3, 3);
-	ret(1, 2) = _m(0, 3) * _m(1, 2) * _m(3, 0) - _m(0, 2) * _m(1, 3) * _m(3, 0) - _m(0, 3) * _m(1, 0) * _m(3, 2) + _m(0, 0) * _m(1, 3) * _m(3, 2) + _m(0, 2) * _m(1, 0) * _m(3, 3) - _m(0, 0) * _m(1, 2) * _m(3, 3);
-	ret(1, 3) = _m(0, 2) * _m(1, 3) * _m(2, 0) - _m(0, 3) * _m(1, 2) * _m(2, 0) + _m(0, 3) * _m(1, 0) * _m(2, 2) - _m(0, 0) * _m(1, 3) * _m(2, 2) - _m(0, 2) * _m(1, 0) * _m(2, 3) + _m(0, 0) * _m(1, 2) * _m(2, 3);
-	ret(2, 0) = _m(1, 1) * _m(2, 3) * _m(3, 0) - _m(1, 3) * _m(2, 1) * _m(3, 0) + _m(1, 3) * _m(2, 0) * _m(3, 1) - _m(1, 0) * _m(2, 3) * _m(3, 1) - _m(1, 1) * _m(2, 0) * _m(3, 3) + _m(1, 0) * _m(2, 1) * _m(3, 3);
-	ret(2, 1) = _m(0, 3) * _m(2, 1) * _m(3, 0) - _m(0, 1) * _m(2, 3) * _m(3, 0) - _m(0, 3) * _m(2, 0) * _m(3, 1) + _m(0, 0) * _m(2, 3) * _m(3, 1) + _m(0, 1) * _m(2, 0) * _m(3, 3) - _m(0, 0) * _m(2, 1) * _m(3, 3);
-	ret(2, 2) = _m(0, 1) * _m(1, 3) * _m(3, 0) - _m(0, 3) * _m(1, 1) * _m(3, 0) + _m(0, 3) * _m(1, 0) * _m(3, 1) - _m(0, 0) * _m(1, 3) * _m(3, 1) - _m(0, 1) * _m(1, 0) * _m(3, 3) + _m(0, 0) * _m(1, 1) * _m(3, 3);
-	ret(2, 3) = _m(0, 3) * _m(1, 1) * _m(2, 0) - _m(0, 1) * _m(1, 3) * _m(2, 0) - _m(0, 3) * _m(1, 0) * _m(2, 1) + _m(0, 0) * _m(1, 3) * _m(2, 1) + _m(0, 1) * _m(1, 0) * _m(2, 3) - _m(0, 0) * _m(1, 1) * _m(2, 3);
-	ret(3, 0) = _m(1, 2) * _m(2, 1) * _m(3, 0) - _m(1, 1) * _m(2, 2) * _m(3, 0) - _m(1, 2) * _m(2, 0) * _m(3, 1) + _m(1, 0) * _m(2, 2) * _m(3, 1) + _m(1, 1) * _m(2, 0) * _m(3, 2) - _m(1, 0) * _m(2, 1) * _m(3, 2);
-	ret(3, 1) = _m(0, 1) * _m(2, 2) * _m(3, 0) - _m(0, 2) * _m(2, 1) * _m(3, 0) + _m(0, 2) * _m(2, 0) * _m(3, 1) - _m(0, 0) * _m(2, 2) * _m(3, 1) - _m(0, 1) * _m(2, 0) * _m(3, 2) + _m(0, 0) * _m(2, 1) * _m(3, 2);
-	ret(3, 2) = _m(0, 2) * _m(1, 1) * _m(3, 0) - _m(0, 1) * _m(1, 2) * _m(3, 0) - _m(0, 2) * _m(1, 0) * _m(3, 1) + _m(0, 0) * _m(1, 2) * _m(3, 1) + _m(0, 1) * _m(1, 0) * _m(3, 2) - _m(0, 0) * _m(1, 1) * _m(3, 2);
-	ret(3, 3) = _m(0, 1) * _m(1, 2) * _m(2, 0) - _m(0, 2) * _m(1, 1) * _m(2, 0) + _m(0, 2) * _m(1, 0) * _m(2, 1) - _m(0, 0) * _m(1, 2) * _m(2, 1) - _m(0, 1) * _m(1, 0) * _m(2, 2) + _m(0, 0) * _m(1, 1) * _m(2, 2);
-
-	float det = 1.0f / Determinant(_m);
-	for (int i = 0; i < 16; ++i) {
-		ret[i] *= det;
-	}
-	return ret;
-}
-Mat4 Im3d::Transpose(const Mat4& _m)
-{
-	return Mat4(
-		_m(0, 0), _m(1, 0), _m(2, 0), _m(3, 0),
-		_m(0, 1), _m(1, 1), _m(2, 1), _m(3, 1),
-		_m(0, 2), _m(1, 2), _m(2, 2), _m(3, 2),
-		_m(0, 3), _m(1, 3), _m(2, 3), _m(3, 3)
-		);
-}
-
-// \todo Translate/Rotate - should _m be pre or post multiplied?
-Mat4 Im3d::Translate(const Mat4& _m, const Vec3& _t)
-{
-	return Mat4(
-		1.0f, 0.0f, 0.0f, _t.x,
-		0.0f, 1.0f, 0.0f, _t.y,
-		0.0f, 0.0f, 1.0f, _t.z,
-		0.0f, 0.0f, 0.0f, 1.0f
-		) * _m;
-}
-Mat4 Im3d::Rotate(const Mat4& _m, const Vec3& _axis, float _rads)
-{
-	float c  = cosf(_rads);
-	float rc = 1.0f - c;
-	float s  = sinf(_rads);
-	return Mat4(
-		_axis.x * _axis.x + (1.0f - _axis.x * _axis.x) * c, _axis.x * _axis.y * rc - _axis.z * s,                _axis.x * _axis.z * rc + _axis.y * s,                0.0f,
-		_axis.x * _axis.y * rc + _axis.z * s,               _axis.y * _axis.y + (1.0f - _axis.y * _axis.y) * c,  _axis.y * _axis.z * rc - _axis.x * s,                0.0f,
-		_axis.x * _axis.z * rc - _axis.y * s,               _axis.y * _axis.z * rc + _axis.x * s,                _axis.z * _axis.z + (1.0f - _axis.z * _axis.z) * c,  0.0f,
-		0.0f,                                               0.0f,                                                0.0f,                                                1.0f
-		) * _m;
-}
-Mat3 Im3d::Rotate(const Mat3& _m, const Vec3& _axis, float _rads)
-{
-	float c  = cosf(_rads);
-	float rc = 1.0f - c;
-	float s  = sinf(_rads);
-	return Mat3(
-		_axis.x * _axis.x + (1.0f - _axis.x * _axis.x) * c, _axis.x * _axis.y * rc - _axis.z * s,                _axis.x * _axis.z * rc + _axis.y * s,
-		_axis.x * _axis.y * rc + _axis.z * s,               _axis.y * _axis.y + (1.0f - _axis.y * _axis.y) * c,  _axis.y * _axis.z * rc - _axis.x * s,
-		_axis.x * _axis.z * rc - _axis.y * s,               _axis.y * _axis.z * rc + _axis.x * s,                _axis.z * _axis.z + (1.0f - _axis.z * _axis.z) * c
-		) * _m;
-}
-Vec3 Im3d::ToEulerXYZ(const Mat3& _m)
-{
- // http://www.staff.city.ac.uk/~sbbh653/publications/euler.pdf
-	Vec3 ret;
-	if_likely (fabs(_m(2, 0)) < 1.0f) {
-		ret.y = -asinf(_m(2, 0));
-		float c = 1.0f / cosf(ret.y);
-		ret.x = atan2f(_m(2, 1) * c, _m(2, 2) * c);
-		ret.z = atan2f(_m(1, 0) * c, _m(0, 0) * c);
-	} else {
-	ImGui::Text("GIMBAL LOCK");
-	 // \todo bug here? this results in a degenerate matrix
-		ret.z = 0.0f;
-		if (!(_m(2, 0) > -1.0f)) {
-			ret.x = ret.z + atan2f(_m(0, 1), _m(0, 2));
-			ret.y = kHalfPi;
-		} else {
-			ret.x = -ret.z + atan2f(-_m(0, 1), -_m(0, 2));			
-			ret.y = -kHalfPi;
-		}
-	}
-	return ret;
-
-	//return Vec3(
-	//	atan2f(_m(2, 1), _m(2, 2)),
-	//	atan2f(-_m(2, 0), sqrtf(_m(2, 1) * _m(2, 1) + _m(2, 2) * _m(2, 2))),
-	//	atan2f(_m(1, 0), _m(0, 0))
-	//	);
-}
-Mat3 Im3d::FromEulerXYZ(Vec3& _euler)
-{
-	float c, s;
-	c = cosf(_euler.x);
-	s = sinf(_euler.x);
-	Mat3 mx(
-		1.0f,  0.0f,  0.0f,
-		0.0f,     c,    -s,
-		0.0f,     s,     c
-		);
-	c = cosf(_euler.y);
-	s = sinf(_euler.y);
-	Mat3 my(
-		   c,  0.0f,     s,
-		0.0f,  1.0f,  0.0f,
-		  -s,  0.0f,     c
-		);
-	c = cosf(_euler.z);
-	s = sinf(_euler.z);
-	Mat3 mz(
-		   c,    -s,  0.0f,
-		   s,     c,  0.0f,
-		0.0f,  0.0f,  1.0f
-		);
-
- // \todo conflate matrix multiplications?
-	return mz * my * mx;
-}
-Mat4 Im3d::AlignZ(const Vec3& _axis, const Vec3& _up)
-{
-	Vec3 x, y;
-	y = _up - _axis * Dot(_up, _axis);
-	float ylen = Length(y);
-	if_unlikely (!(ylen > FLT_EPSILON)) {
-		Vec3 k = _up + Vec3(FLT_EPSILON);
-		y = k - _axis * Dot(k, _axis);
-		ylen = Length(y);
-	}
-	y = y / ylen;
-	x = Cross(y, _axis);
-
-	return Mat4(
-		x.x,    y.x,    _axis.x,    0.0f,
-		x.y,    y.y,    _axis.y,    0.0f,
-		x.z,    y.z,    _axis.z,    0.0f,
-		0.0f,   0.0f,      0.0f,    1.0f
-		);
-}
-Mat4 Im3d::LookAt(const Vec3& _from, const Vec3& _to, const Vec3& _up)
-{
-	Mat4 ret = AlignZ(Normalize(_to - _from), _up);
-	ret.setCol(3, Vec4(_from, 1.0f)); // inject translation
-	return ret;
-}
-
-Line::Line(const Vec3& _origin, const Vec3& _direction) 
-	: m_origin(_origin)
-	, m_direction(_direction)
-{
-}
-Ray::Ray(const Vec3& _origin, const Vec3& _direction)
-	: m_origin(_origin)
-	, m_direction(_direction)
-{
-}
-LineSegment::LineSegment(const Vec3& _start, const Vec3& _end)
-	: m_start(_start)
-	, m_end(_end)
-{
-}
-Sphere::Sphere(const Vec3& _origin, float _radius)
-	: m_origin(_origin)
-	, m_radius(_radius)
-{
-}
-Plane::Plane(const Vec3& _normal, float _offset)
-	: m_normal(_normal)
-	, m_offset(_offset)
-{
-}
-Plane::Plane(const Vec3& _normal, const Vec3& _origin)
-	: m_normal(_normal)
-	, m_offset(Dot(_normal, _origin))
-{
-}
-Capsule::Capsule(const Vec3& _start, const Vec3& _end, float _radius)
-	: m_start(_start)
-	, m_end(_end)
-	, m_radius(_radius)
-{
-}
-
-bool Im3d::Intersects(const Ray& _ray, const Plane& _plane)
-{
-	float x = Dot(_plane.m_normal, _ray.m_direction);
-	return x <= 0.0f;
-}
-bool Im3d::Intersect(const Ray& _ray, const Plane& _plane, float& t0_)
-{
-	t0_ = Dot(_plane.m_normal, (_plane.m_normal * _plane.m_offset) - _ray.m_origin) / Dot(_plane.m_normal, _ray.m_direction);
-	return t0_ >= 0.0f;
-}
-bool Im3d::Intersects(const Ray& _r, const Sphere& _s)
-{
-	Vec3 p = _s.m_origin - _r.m_origin;
-	float p2 = Length2(p);
-	float q = Dot(p, _r.m_direction);
-	float r2 = _s.m_radius * _s.m_radius;
-	if (q < 0.0f && p2 > r2) {
-		return false;
-	}
-	return p2 - (q * q) <= r2;
-}
-bool Im3d::Intersect(const Ray& _r, const Sphere& _s, float& t0_, float& t1_)
-{
-	Vec3 p = _s.m_origin - _r.m_origin; 
-	float q = Dot(p, _r.m_direction); 
-	if (q < 0.0f) {
-		return false;
-	}
-	float p2 = Length2(p) - q * q; 
-	float r2 = _s.m_radius * _s.m_radius;
-	if (p2 > r2) {
-		return false;
-	}
-	float s = sqrt(r2 - p2); 
-	t0_ = Max(q - s, 0.0f);
-	t1_ = q + s;
-	 
-	return true;
-}
-bool Im3d::Intersects(const Ray& _ray, const Capsule& _capsule)
-{
-	return Distance2(_ray, LineSegment(_capsule.m_start, _capsule.m_end)) < _capsule.m_radius * _capsule.m_radius;
-}
-bool Im3d::Intersect(const Ray& _ray, const Capsule& _capsule, float& t0_, float& t1_)
-{
-	IM3D_ASSERT(false); // \todo implement
-	return false;
-}
-void Im3d::Nearest(const Line& _line0, const Line& _line1, float& t0_, float& t1_)
-{
-	Vec3 p = _line0.m_origin - _line1.m_origin;
-	float q = Dot(_line0.m_direction, _line1.m_direction);
-	float s = Dot(_line1.m_direction, p);
-
-	float d = 1.0f - q * q;
-	if (d < FLT_EPSILON) { // lines are parallel
-		t0_ = 0.0f;
-		t1_ = s;
-	} else {
-		float r = Dot(_line0.m_direction, p);
-		t0_ = (q * s - r) / d;
-		t1_ = (s - q * r) / d;
-	}
-}
-void Im3d::Nearest(const Ray& _ray, const Line& _line, float& tr_, float& tl_)
-{
-	Nearest(Line(_ray.m_origin, _ray.m_direction), _line, tr_, tl_);
-	tr_ = Max(tr_, 0.0f);
-}
-Vec3 Im3d::Nearest(const Ray& _ray, const LineSegment& _segment, float& tr_)
-{
-	Vec3 ldir = _segment.m_end - _segment.m_start;
-	Vec3 p = _segment.m_start - _ray.m_origin;
-	float q = Length2(ldir);
-	float r = Dot(ldir, _ray.m_direction);
-	float s = Dot(ldir, p);
-	float t = Dot(_ray.m_direction, p);
-
-	float sn, sd, tn, td;
-	float denom = q - r * r;
-	if (denom < FLT_EPSILON) {
-		sd = td = 1.0f;
-		sn = 0.0f;
-		tn = t;
-	} else {
-		sd = td = denom;
-		sn = r * t - s;
-		tn = q * t - r * s;
-		if (sn < 0.0f) {
-		    sn = 0.0f;
-		    tn = t;
-		    td = 1.0f;
-		} else if (sn > sd) {
-			sn = sd;
-			tn = t + r;
-			td = 1.0f;
-		}
-	}
-
-	float ts;
-	if (tn < 0.0f) {
-		tr_ = 0.0f;
-		if (r >= 0.0f) {
-		    ts = 0.0f;
-		} else if (s <= q) {
-		    ts = 1.0f;
-		} else {
-		    ts = -s / q;
-		}
-	} else {
-		tr_ = tn / td;
-		ts = sn / sd;
-	}
-	return _segment.m_start + ldir * ts;
-}
-float Im3d::Distance2(const Ray& _ray, const LineSegment& _segment)
-{
-	float tr;
-	Vec3 p = Nearest(_ray, _segment, tr);
-	return Length2(_ray.m_origin + _ray.m_direction * tr - p);
-}
-
 
 void Im3d::DrawXyzAxes()
 {
@@ -587,7 +251,7 @@ void Im3d::DrawCircle(const Vec3& _origin, const Vec3& _normal, float _radius, i
  	ctx.pushMatrix(ctx.getMatrix() * LookAt(_origin, _origin + _normal));
 	ctx.begin(Context::PrimitiveMode_LineLoop);
 		for (int i = 0; i < _detail; ++i) {
-			float rad = kTwoPi * ((float)i / (float)_detail);
+			float rad = TwoPi * ((float)i / (float)_detail);
 			ctx.vertex(Vec3(cosf(rad) * _radius, sinf(rad) * _radius, 0.0f));
 		}
 	ctx.end();
@@ -599,21 +263,21 @@ void Im3d::DrawSphere(const Vec3& _origin, float _radius, int _detail)
  // xy circle
 	ctx.begin(Context::PrimitiveMode_LineLoop);
 		for (int i = 0; i < _detail; ++i) {
-			float rad = kTwoPi * ((float)i / (float)_detail);
+			float rad = TwoPi * ((float)i / (float)_detail);
 			ctx.vertex(Vec3(cosf(rad) * _radius + _origin.x, sinf(rad) * _radius + _origin.y, 0.0f + _origin.z));
 		}
 	ctx.end();
  // xz circle
 	ctx.begin(Context::PrimitiveMode_LineLoop);
 		for (int i = 0; i < _detail; ++i) {
-			float rad = kTwoPi * ((float)i / (float)_detail);
+			float rad = TwoPi * ((float)i / (float)_detail);
 			ctx.vertex(Vec3(cosf(rad) * _radius + _origin.x, 0.0f + _origin.y, sinf(rad) * _radius + _origin.z));
 		}
 	ctx.end();
  // yz circle
 	ctx.begin(Context::PrimitiveMode_LineLoop);
 		for (int i = 0; i < _detail; ++i) {
-			float rad = kTwoPi * ((float)i / (float)_detail);
+			float rad = TwoPi * ((float)i / (float)_detail);
 			ctx.vertex(Vec3(0.0f + _origin.x, cosf(rad) * _radius + _origin.y, sinf(rad) * _radius + _origin.z));
 		}
 	ctx.end();
@@ -652,17 +316,17 @@ void Im3d::DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, int
 	ctx.pushMatrix(ctx.getMatrix() * LookAt(org, _end));
 		ctx.begin(Context::PrimitiveMode_LineLoop);
 			for (int i = 0; i <= _detail; ++i) {
-				float rad = kTwoPi * ((float)i / (float)_detail) - kHalfPi;
+				float rad = TwoPi * ((float)i / (float)_detail) - HalfPi;
 				ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
 			}
 			for (int i = 0; i <= _detail; ++i) {
-				float rad = kTwoPi * ((float)i / (float)_detail) - kHalfPi;
+				float rad = TwoPi * ((float)i / (float)_detail) - HalfPi;
 				ctx.vertex(Vec3(0.0f, 0.0f, ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
 			}
 		ctx.end();
 		ctx.begin(Context::PrimitiveMode_Lines);
 			for (int i = 0; i <= _detail; ++i) {
-				float rad = kTwoPi * ((float)i / (float)_detail) - kHalfPi;
+				float rad = TwoPi * ((float)i / (float)_detail) - HalfPi;
 				ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
 				ctx.vertex(Vec3(0.0f, 0.0f,  ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
 			}
@@ -679,30 +343,30 @@ void Im3d::DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int 
 	 // yz silhoette + cap bases
 		ctx.begin(Context::PrimitiveMode_LineLoop);
 			for (int i = 0; i <= detail2; ++i) {
-				float rad = kTwoPi * ((float)i / (float)detail2) - kHalfPi;
+				float rad = TwoPi * ((float)i / (float)detail2) - HalfPi;
 				ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
 			}
 			for (int i = 0; i < _detail; ++i) {
-				float rad = kPi * ((float)i / (float)_detail) + kPi;
+				float rad = Pi * ((float)i / (float)_detail) + Pi;
 				ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(0.0f, cosf(rad), sinf(rad)) * _radius);
 			}
 			for (int i = 0; i < _detail; ++i) {
-				float rad = kPi * ((float)i / (float)_detail);
+				float rad = Pi * ((float)i / (float)_detail);
 				ctx.vertex(Vec3(0.0f, 0.0f, ln) + Vec3(0.0f, cosf(rad), sinf(rad)) * _radius);
 			}
 			for (int i = 0; i <= detail2; ++i) {
-				float rad = kTwoPi * ((float)i / (float)detail2) - kHalfPi;
+				float rad = TwoPi * ((float)i / (float)detail2) - HalfPi;
 				ctx.vertex(Vec3(0.0f, 0.0f, ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
 			}
 		ctx.end();
 	 // xz silhoette
 		ctx.begin(Context::PrimitiveMode_LineLoop);
 			for (int i = 0; i < _detail; ++i) {
-				float rad = kPi * ((float)i / (float)_detail) + kPi;
+				float rad = Pi * ((float)i / (float)_detail) + Pi;
 				ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(cosf(rad), 0.0f, sinf(rad)) * _radius);
 			}
 			for (int i = 0; i < _detail; ++i) {
-				float rad = kPi * ((float)i / (float)_detail);
+				float rad = Pi * ((float)i / (float)_detail);
 				ctx.vertex(Vec3(0.0f, 0.0f, ln) + Vec3(cosf(rad), 0.0f, sinf(rad)) * _radius);
 			}
 		ctx.end();
@@ -723,38 +387,50 @@ void Im3d::DrawArrow(const Vec3& _start, const Vec3& _end, float _headLength)
 }
 
 
+Im3d::Id Im3d::MakeId(const char* _str)
+{
+	static const U32 kFnv1aPrime32 = 0x01000193u;
+	IM3D_ASSERT(_str);
+	U32 ret = (U32)GetContext().getId(); // top of Id stack
+	while (*_str) {
+		ret ^= (U32)*_str++;
+		ret *= kFnv1aPrime32;
+	}
+	return (Id)ret;
+}
+
 bool Im3d::Gizmo(const char* _id, float* _mat4_)
 {
  	Mat4* m4 = (Mat4*)_mat4_;
 
 	Context& ctx = GetContext();
-	if (ctx.wasKeyPressed(Action_TransformPosition)) {
-		ctx.m_transformMode = Context::TransformMode_Position;
-	} else if (ctx.wasKeyPressed(Action_TransformRotation)) {
-		ctx.m_transformMode = Context::TransformMode_Rotation;
-	} else if (ctx.wasKeyPressed(Action_TransformScale)) {
-		ctx.m_transformMode = Context::TransformMode_Scale;
+	if (ctx.wasKeyPressed(Action_GizmoTranslation)) {
+		ctx.m_gizmoMode = Context::GizmoMode_Translation;
+	} else if (ctx.wasKeyPressed(Action_GizmoRotation)) {
+		ctx.m_gizmoMode = Context::GizmoMode_Rotation;
+	} else if (ctx.wasKeyPressed(Action_GizmoScale)) {
+		ctx.m_gizmoMode = Context::GizmoMode_Scale;
 	}
 
-	switch (ctx.m_transformMode) {
-	case Context::TransformMode_Position: {
+	switch (ctx.m_gizmoMode) {
+	case Context::GizmoMode_Translation: {
 		Vec3 pos = m4->getCol(3);
-		if (GizmoPosition(_id, &pos)) {
+		if (GizmoTranslation(_id, &pos)) {
 			m4->setCol(3, Vec4(pos, 1.0f));
 			return true;
 		}
 		break;
 	}
-	case Context::TransformMode_Rotation: {
+	case Context::GizmoMode_Rotation: {
 		Mat3 m3(*m4);
 		if (GizmoRotation(_id, m4->getCol(3), m3)) {
-			m4->insert(m3);
+			m4->setRotationScale(m3);
 			return true;
 		}
 		break;
 	}
 		break;
-	case Context::TransformMode_Scale:
+	case Context::GizmoMode_Scale:
 		break;
 	default:
 		break;
@@ -763,9 +439,9 @@ bool Im3d::Gizmo(const char* _id, float* _mat4_)
 	return false;
 }
 
-bool Im3d::GizmoPosition(const char* _id, Vec3* _position_)
+bool Im3d::GizmoTranslation(const char* _id, Vec3* _translation_)
 {
-	Vec3 drawAt = *_position_; // copy to prevent lag in the sub-gizmos 
+	Vec3 drawAt = *_translation_; // copy to prevent lag in the sub-gizmos 
 	bool ret = false;
 	Context& ctx = GetContext();
 	ctx.pushId(MakeId(_id));
@@ -787,7 +463,7 @@ bool Im3d::GizmoPosition(const char* _id, Vec3* _position_)
 			float aligned = fabs(Dot(planeNormal, Normalize(ctx.getAppData().m_viewOrigin - planeOrigin)));
 			aligned = Remap(aligned, 0.1f, 0.2f);
 			if (aligned > 0.0f || ctx.m_idHot == planeId) {
-				ret |= ctx.gizmoPlanePosition(planeId, planeOrigin, _position_, planeNormal, Color_GizmoHighlight, planeSize); 
+				ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, _translation_, planeNormal, Color_GizmoHighlight, planeSize); 
 				if (ctx.m_idHot == planeId) {
 					colorX = colorZ = Color_GizmoHighlight;
 				}
@@ -816,7 +492,7 @@ bool Im3d::GizmoPosition(const char* _id, Vec3* _position_)
 			float aligned = fabs(Dot(planeNormal, Normalize(ctx.getAppData().m_viewOrigin - planeOrigin)));
 			aligned = Remap(aligned, 0.1f, 0.2f);
 			if (aligned > 0.0f || ctx.m_idHot == planeId) {
-				ret |= ctx.gizmoPlanePosition(planeId, planeOrigin, _position_, planeNormal, Color_GizmoHighlight, planeSize); 
+				ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, _translation_, planeNormal, Color_GizmoHighlight, planeSize); 
 				if (ctx.m_idHot == planeId) {
 					colorX = colorY = Color_GizmoHighlight;
 				}
@@ -845,7 +521,7 @@ bool Im3d::GizmoPosition(const char* _id, Vec3* _position_)
 			float aligned = fabs(Dot(planeNormal, Normalize(ctx.getAppData().m_viewOrigin - planeOrigin)));
 			aligned = Remap(aligned, 0.1f, 0.2f);
 			if (aligned > 0.0f || ctx.m_idHot == planeId) {
-				ret |= ctx.gizmoPlanePosition(planeId, planeOrigin, _position_, planeNormal, Color_GizmoHighlight, planeSize); 
+				ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, _translation_, planeNormal, Color_GizmoHighlight, planeSize); 
 				if (ctx.m_idHot == planeId) {
 					colorY = colorZ = Color_GizmoHighlight;
 				}
@@ -871,7 +547,7 @@ bool Im3d::GizmoPosition(const char* _id, Vec3* _position_)
 			Id planeId = MakeId("viewplane");
 			Vec3 planeNormal = Normalize(drawAt - ctx.getAppData().m_viewOrigin);
 			Vec3 planeOrigin = drawAt;
-			ret |= ctx.gizmoPlanePosition(planeId, planeOrigin, _position_, planeNormal, Color_GizmoHighlight, planeSize * 0.5f); 
+			ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, _translation_, planeNormal, Color_GizmoHighlight, planeSize * 0.5f); 
 			if (ctx.m_idActive == planeId || ctx.m_idHot == planeId) {
 				colorX = colorY = colorZ = Color_GizmoHighlight;
 			}
@@ -884,9 +560,9 @@ bool Im3d::GizmoPosition(const char* _id, Vec3* _position_)
 		}
 
 		ctx.setEnableSorting(true);
-		ret |= ctx.gizmoAxisPosition(MakeId("xaxis"), drawAt, _position_, Vec3(1.0f, 0.0f, 0.0f), colorX, worldHeight, worldSize);
-		ret |= ctx.gizmoAxisPosition(MakeId("yaxis"), drawAt, _position_, Vec3(0.0f, 1.0f, 0.0f), colorY, worldHeight, worldSize);
-		ret |= ctx.gizmoAxisPosition(MakeId("zaxis"), drawAt, _position_, Vec3(0.0f, 0.0f, 1.0f), colorZ, worldHeight, worldSize);
+		ret |= ctx.gizmoAxisTranlation(MakeId("xaxis"), drawAt, _translation_, Vec3(1.0f, 0.0f, 0.0f), colorX, worldHeight, worldSize);
+		ret |= ctx.gizmoAxisTranlation(MakeId("yaxis"), drawAt, _translation_, Vec3(0.0f, 1.0f, 0.0f), colorY, worldHeight, worldSize);
+		ret |= ctx.gizmoAxisTranlation(MakeId("zaxis"), drawAt, _translation_, Vec3(0.0f, 0.0f, 1.0f), colorZ, worldHeight, worldSize);
 	ctx.popColor();
 	ctx.popEnableSorting();
 	ctx.popId();
@@ -956,7 +632,7 @@ bool Im3d::GizmoRotation(const char* _id, const Vec3& _origin, float* _mat3_)
 			Vec3 planeNormal = Normalize(_origin - ctx.getAppData().m_viewOrigin);
 			float v = 0.0f;
 			if (ctx.gizmoAxisAngle(idV, _origin, planeNormal, &v, Color_White, worldHeight, worldSize)) {
-				*m3 = Rotate(storedRotation, planeNormal, v);
+				*m3 = Rotation(planeNormal, v) * storedRotation;
 				ret = true;
 			}
 		}
@@ -1039,8 +715,8 @@ template class Vector<DrawList>;
 
 *******************************************************************************/
 
-static Context s_DefaultContext;
-Context* Im3d::internal::g_CurrentContext = &s_DefaultContext;
+static Context g_DefaultContext;
+Context* Im3d::internal::g_CurrentContext = &g_DefaultContext;
 
 void Context::begin(PrimitiveMode _mode)
 {
@@ -1220,7 +896,7 @@ Context::Context()
 	m_firstVertThisPrim = 0;
 	m_vertCountThisPrim = 0;
 
-	m_transformMode = TransformMode_Position;
+	m_gizmoMode = GizmoMode_Translation;
 	m_idHot = Id_Invalid;
 	m_idActive = Id_Invalid;
 	m_hotDepth = FLT_MAX;
@@ -1360,7 +1036,7 @@ float Context::pixelsToWorldSize(const Vec3& _position, float _pixels)
 	return m_appData.m_tanHalfFov * 2.0f * d * (_pixels / m_appData.m_viewportSize.y);
 }
 
-bool Context::gizmoAxisPosition(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _axis, Color _color, float _worldHeight, float _worldSize)
+bool Context::gizmoAxisTranlation(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _axis, Color _color, float _worldHeight, float _worldSize)
 {
 	Vec3& storedPosition = m_gizmoStateVec3;
 
@@ -1427,7 +1103,7 @@ bool Context::gizmoAxisPosition(Id _id, const Vec3& _drawAt, Vec3* _out_, const 
 	return ret;
 }
 
-bool Context::gizmoPlanePosition(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _normal, Color _color, float _worldSize)
+bool Context::gizmoPlaneTranslation(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _normal, Color _color, float _worldSize)
 {
 	Vec3& storedPosition = m_gizmoStateVec3;
 	Ray ray(m_appData.m_cursorRayOrigin, m_appData.m_cursorRayDirection);
@@ -1537,7 +1213,7 @@ bool Context::gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, flo
 		begin(Context::PrimitiveMode_LineLoop);
 			const int _detail = 128; // \todo dynamically select detail based on worldRadius/worldSize
 			for (int i = 0; i < _detail; ++i) {
-				float rad = kTwoPi * ((float)i / (float)_detail);
+				float rad = TwoPi * ((float)i / (float)_detail);
 				vertex(Vec3(cosf(rad) * _worldRadius, sinf(rad) * _worldRadius, 0.0f));
 
 			 // post-modify the alpha for parts of the ring occluded by the sphere
@@ -1568,4 +1244,306 @@ void Context::makeCold()
 {
 	m_idActive = m_idHot = Id_Invalid;
 	m_hotDepth = FLT_MAX;
+}
+
+
+
+/******************************************************************************
+
+                                 im3d_math
+
+******************************************************************************/
+const float Im3d::Pi     = 3.14159265359f;
+const float Im3d::TwoPi  = 2.0f * Pi;
+const float Im3d::HalfPi = 0.5f * Pi;
+
+// Mat3
+Mat3 Im3d::Rotation(const Vec3& _axis, float _rads)
+{
+	float c  = cosf(_rads);
+	float rc = 1.0f - c;
+	float s  = sinf(_rads);
+	return Mat3(
+		_axis.x * _axis.x + (1.0f - _axis.x * _axis.x) * c, _axis.x * _axis.y * rc - _axis.z * s,                _axis.x * _axis.z * rc + _axis.y * s,
+		_axis.x * _axis.y * rc + _axis.z * s,               _axis.y * _axis.y + (1.0f - _axis.y * _axis.y) * c,  _axis.y * _axis.z * rc - _axis.x * s,
+		_axis.x * _axis.z * rc - _axis.y * s,               _axis.y * _axis.z * rc + _axis.x * s,                _axis.z * _axis.z + (1.0f - _axis.z * _axis.z) * c
+		);
+}
+Vec3 Im3d::ToEulerXYZ(const Mat3& _m)
+{
+ // http://www.staff.city.ac.uk/~sbbh653/publications/euler.pdf
+	Vec3 ret;
+	if_likely (fabs(_m(2, 0)) < 1.0f) {
+		ret.y = -asinf(_m(2, 0));
+		float c = 1.0f / cosf(ret.y);
+		ret.x = atan2f(_m(2, 1) * c, _m(2, 2) * c);
+		ret.z = atan2f(_m(1, 0) * c, _m(0, 0) * c);
+	} else {
+		ret.z = 0.0f;
+		if (!(_m(2, 0) > -1.0f)) {
+			ret.x = ret.z + atan2f(_m(0, 1), _m(0, 2));
+			ret.y = HalfPi;
+		} else {
+			ret.x = -ret.z + atan2f(-_m(0, 1), -_m(0, 2));			
+			ret.y = -HalfPi;
+		}
+	}
+	return ret;
+}
+Mat3 Im3d::FromEulerXYZ(Vec3& _euler)
+{
+	float cx = cosf(_euler.x);
+	float sx = sinf(_euler.x);
+	float cy = cosf(_euler.y);
+	float sy = cosf(_euler.y);
+	float cz = cosf(_euler.z);
+	float sz = cosf(_euler.z);
+	return Mat3(
+		cy * cz, sz * sy * cz - cx * sz, cx * sy * cz + sx * sz,
+		cy * sz, sx * sy * sz + cx * cz, cx * sy * sz - sx * cz,
+		    -sz,                sx * cy,                cx * cy		
+		);
+}
+
+// Mat4
+static inline float Determinant(const Mat4& _m)
+{
+	return 
+		_m(0, 3) * _m(1, 2) * _m(2, 1) * _m(3, 0) - _m(0, 2) * _m(1, 3) * _m(2, 1) * _m(3, 0) - _m(0, 3) * _m(1, 1) * _m(2, 2) * _m(3, 0) + _m(0, 1) * _m(1, 3) * _m(2, 2) * _m(3, 0) +
+		_m(0, 2) * _m(1, 1) * _m(2, 3) * _m(3, 0) - _m(0, 1) * _m(1, 2) * _m(2, 3) * _m(3, 0) - _m(0, 3) * _m(1, 2) * _m(2, 0) * _m(3, 1) + _m(0, 2) * _m(1, 3) * _m(2, 0) * _m(3, 1) +
+		_m(0, 3) * _m(1, 0) * _m(2, 2) * _m(3, 1) - _m(0, 0) * _m(1, 3) * _m(2, 2) * _m(3, 1) - _m(0, 2) * _m(1, 0) * _m(2, 3) * _m(3, 1) + _m(0, 0) * _m(1, 2) * _m(2, 3) * _m(3, 1) +
+		_m(0, 3) * _m(1, 1) * _m(2, 0) * _m(3, 2) - _m(0, 1) * _m(1, 3) * _m(2, 0) * _m(3, 2) - _m(0, 3) * _m(1, 0) * _m(2, 1) * _m(3, 2) + _m(0, 0) * _m(1, 3) * _m(2, 1) * _m(3, 2) +
+		_m(0, 1) * _m(1, 0) * _m(2, 3) * _m(3, 2) - _m(0, 0) * _m(1, 1) * _m(2, 3) * _m(3, 2) - _m(0, 2) * _m(1, 1) * _m(2, 0) * _m(3, 3) + _m(0, 1) * _m(1, 2) * _m(2, 0) * _m(3, 3) +
+		_m(0, 2) * _m(1, 0) * _m(2, 1) * _m(3, 3) - _m(0, 0) * _m(1, 2) * _m(2, 1) * _m(3, 3) - _m(0, 1) * _m(1, 0) * _m(2, 2) * _m(3, 3) + _m(0, 0) * _m(1, 1) * _m(2, 2) * _m(3, 3)
+		;
+}
+Mat4 Im3d::Inverse(const Mat4& _m)
+{
+	Mat4 ret;
+	ret(0, 0) = _m(1, 2) * _m(2, 3) * _m(3, 1) - _m(1, 3) * _m(2, 2) * _m(3, 1) + _m(1, 3) * _m(2, 1) * _m(3, 2) - _m(1, 1) * _m(2, 3) * _m(3, 2) - _m(1, 2) * _m(2, 1) * _m(3, 3) + _m(1, 1) * _m(2, 2) * _m(3, 3);
+	ret(0, 1) = _m(0, 3) * _m(2, 2) * _m(3, 1) - _m(0, 2) * _m(2, 3) * _m(3, 1) - _m(0, 3) * _m(2, 1) * _m(3, 2) + _m(0, 1) * _m(2, 3) * _m(3, 2) + _m(0, 2) * _m(2, 1) * _m(3, 3) - _m(0, 1) * _m(2, 2) * _m(3, 3);
+	ret(0, 2) = _m(0, 2) * _m(1, 3) * _m(3, 1) - _m(0, 3) * _m(1, 2) * _m(3, 1) + _m(0, 3) * _m(1, 1) * _m(3, 2) - _m(0, 1) * _m(1, 3) * _m(3, 2) - _m(0, 2) * _m(1, 1) * _m(3, 3) + _m(0, 1) * _m(1, 2) * _m(3, 3);
+	ret(0, 3) = _m(0, 3) * _m(1, 2) * _m(2, 1) - _m(0, 2) * _m(1, 3) * _m(2, 1) - _m(0, 3) * _m(1, 1) * _m(2, 2) + _m(0, 1) * _m(1, 3) * _m(2, 2) + _m(0, 2) * _m(1, 1) * _m(2, 3) - _m(0, 1) * _m(1, 2) * _m(2, 3);
+	ret(1, 0) = _m(1, 3) * _m(2, 2) * _m(3, 0) - _m(1, 2) * _m(2, 3) * _m(3, 0) - _m(1, 3) * _m(2, 0) * _m(3, 2) + _m(1, 0) * _m(2, 3) * _m(3, 2) + _m(1, 2) * _m(2, 0) * _m(3, 3) - _m(1, 0) * _m(2, 2) * _m(3, 3);
+	ret(1, 1) = _m(0, 2) * _m(2, 3) * _m(3, 0) - _m(0, 3) * _m(2, 2) * _m(3, 0) + _m(0, 3) * _m(2, 0) * _m(3, 2) - _m(0, 0) * _m(2, 3) * _m(3, 2) - _m(0, 2) * _m(2, 0) * _m(3, 3) + _m(0, 0) * _m(2, 2) * _m(3, 3);
+	ret(1, 2) = _m(0, 3) * _m(1, 2) * _m(3, 0) - _m(0, 2) * _m(1, 3) * _m(3, 0) - _m(0, 3) * _m(1, 0) * _m(3, 2) + _m(0, 0) * _m(1, 3) * _m(3, 2) + _m(0, 2) * _m(1, 0) * _m(3, 3) - _m(0, 0) * _m(1, 2) * _m(3, 3);
+	ret(1, 3) = _m(0, 2) * _m(1, 3) * _m(2, 0) - _m(0, 3) * _m(1, 2) * _m(2, 0) + _m(0, 3) * _m(1, 0) * _m(2, 2) - _m(0, 0) * _m(1, 3) * _m(2, 2) - _m(0, 2) * _m(1, 0) * _m(2, 3) + _m(0, 0) * _m(1, 2) * _m(2, 3);
+	ret(2, 0) = _m(1, 1) * _m(2, 3) * _m(3, 0) - _m(1, 3) * _m(2, 1) * _m(3, 0) + _m(1, 3) * _m(2, 0) * _m(3, 1) - _m(1, 0) * _m(2, 3) * _m(3, 1) - _m(1, 1) * _m(2, 0) * _m(3, 3) + _m(1, 0) * _m(2, 1) * _m(3, 3);
+	ret(2, 1) = _m(0, 3) * _m(2, 1) * _m(3, 0) - _m(0, 1) * _m(2, 3) * _m(3, 0) - _m(0, 3) * _m(2, 0) * _m(3, 1) + _m(0, 0) * _m(2, 3) * _m(3, 1) + _m(0, 1) * _m(2, 0) * _m(3, 3) - _m(0, 0) * _m(2, 1) * _m(3, 3);
+	ret(2, 2) = _m(0, 1) * _m(1, 3) * _m(3, 0) - _m(0, 3) * _m(1, 1) * _m(3, 0) + _m(0, 3) * _m(1, 0) * _m(3, 1) - _m(0, 0) * _m(1, 3) * _m(3, 1) - _m(0, 1) * _m(1, 0) * _m(3, 3) + _m(0, 0) * _m(1, 1) * _m(3, 3);
+	ret(2, 3) = _m(0, 3) * _m(1, 1) * _m(2, 0) - _m(0, 1) * _m(1, 3) * _m(2, 0) - _m(0, 3) * _m(1, 0) * _m(2, 1) + _m(0, 0) * _m(1, 3) * _m(2, 1) + _m(0, 1) * _m(1, 0) * _m(2, 3) - _m(0, 0) * _m(1, 1) * _m(2, 3);
+	ret(3, 0) = _m(1, 2) * _m(2, 1) * _m(3, 0) - _m(1, 1) * _m(2, 2) * _m(3, 0) - _m(1, 2) * _m(2, 0) * _m(3, 1) + _m(1, 0) * _m(2, 2) * _m(3, 1) + _m(1, 1) * _m(2, 0) * _m(3, 2) - _m(1, 0) * _m(2, 1) * _m(3, 2);
+	ret(3, 1) = _m(0, 1) * _m(2, 2) * _m(3, 0) - _m(0, 2) * _m(2, 1) * _m(3, 0) + _m(0, 2) * _m(2, 0) * _m(3, 1) - _m(0, 0) * _m(2, 2) * _m(3, 1) - _m(0, 1) * _m(2, 0) * _m(3, 2) + _m(0, 0) * _m(2, 1) * _m(3, 2);
+	ret(3, 2) = _m(0, 2) * _m(1, 1) * _m(3, 0) - _m(0, 1) * _m(1, 2) * _m(3, 0) - _m(0, 2) * _m(1, 0) * _m(3, 1) + _m(0, 0) * _m(1, 2) * _m(3, 1) + _m(0, 1) * _m(1, 0) * _m(3, 2) - _m(0, 0) * _m(1, 1) * _m(3, 2);
+	ret(3, 3) = _m(0, 1) * _m(1, 2) * _m(2, 0) - _m(0, 2) * _m(1, 1) * _m(2, 0) + _m(0, 2) * _m(1, 0) * _m(2, 1) - _m(0, 0) * _m(1, 2) * _m(2, 1) - _m(0, 1) * _m(1, 0) * _m(2, 2) + _m(0, 0) * _m(1, 1) * _m(2, 2);
+
+	float det = 1.0f / Determinant(_m);
+	for (int i = 0; i < 16; ++i) {
+		ret[i] *= det;
+	}
+	return ret;
+}
+Mat4 Im3d::Transpose(const Mat4& _m)
+{
+	return Mat4(
+		_m(0, 0), _m(1, 0), _m(2, 0), _m(3, 0),
+		_m(0, 1), _m(1, 1), _m(2, 1), _m(3, 1),
+		_m(0, 2), _m(1, 2), _m(2, 2), _m(3, 2),
+		_m(0, 3), _m(1, 3), _m(2, 3), _m(3, 3)
+		);
+}
+Mat4 Im3d::Translation(const Vec3& _t)
+{
+	return Mat4(
+		1.0f, 0.0f, 0.0f, _t.x,
+		0.0f, 1.0f, 0.0f, _t.y,
+		0.0f, 0.0f, 1.0f, _t.z,
+		0.0f, 0.0f, 0.0f, 1.0f
+		);
+}
+Mat4 Im3d::AlignZ(const Vec3& _axis, const Vec3& _up)
+{
+	Vec3 x, y;
+	y = _up - _axis * Dot(_up, _axis);
+	float ylen = Length(y);
+	if_unlikely (!(ylen > FLT_EPSILON)) {
+		Vec3 k = _up + Vec3(FLT_EPSILON);
+		y = k - _axis * Dot(k, _axis);
+		ylen = Length(y);
+	}
+	y = y / ylen;
+	x = Cross(y, _axis);
+
+	return Mat4(
+		x.x,    y.x,    _axis.x,    0.0f,
+		x.y,    y.y,    _axis.y,    0.0f,
+		x.z,    y.z,    _axis.z,    0.0f,
+		0.0f,   0.0f,      0.0f,    1.0f
+		);
+}
+Mat4 Im3d::LookAt(const Vec3& _from, const Vec3& _to, const Vec3& _up)
+{
+	Mat4 ret = AlignZ(Normalize(_to - _from), _up);
+	ret.setCol(3, Vec4(_from, 1.0f)); // inject translation
+	return ret;
+}
+
+// Geometry
+Line::Line(const Vec3& _origin, const Vec3& _direction) 
+	: m_origin(_origin)
+	, m_direction(_direction)
+{
+}
+Ray::Ray(const Vec3& _origin, const Vec3& _direction)
+	: m_origin(_origin)
+	, m_direction(_direction)
+{
+}
+LineSegment::LineSegment(const Vec3& _start, const Vec3& _end)
+	: m_start(_start)
+	, m_end(_end)
+{
+}
+Sphere::Sphere(const Vec3& _origin, float _radius)
+	: m_origin(_origin)
+	, m_radius(_radius)
+{
+}
+Plane::Plane(const Vec3& _normal, float _offset)
+	: m_normal(_normal)
+	, m_offset(_offset)
+{
+}
+Plane::Plane(const Vec3& _normal, const Vec3& _origin)
+	: m_normal(_normal)
+	, m_offset(Dot(_normal, _origin))
+{
+}
+Capsule::Capsule(const Vec3& _start, const Vec3& _end, float _radius)
+	: m_start(_start)
+	, m_end(_end)
+	, m_radius(_radius)
+{
+}
+
+bool Im3d::Intersects(const Ray& _ray, const Plane& _plane)
+{
+	float x = Dot(_plane.m_normal, _ray.m_direction);
+	return x <= 0.0f;
+}
+bool Im3d::Intersect(const Ray& _ray, const Plane& _plane, float& t0_)
+{
+	t0_ = Dot(_plane.m_normal, (_plane.m_normal * _plane.m_offset) - _ray.m_origin) / Dot(_plane.m_normal, _ray.m_direction);
+	return t0_ >= 0.0f;
+}
+bool Im3d::Intersects(const Ray& _r, const Sphere& _s)
+{
+	Vec3 p = _s.m_origin - _r.m_origin;
+	float p2 = Length2(p);
+	float q = Dot(p, _r.m_direction);
+	float r2 = _s.m_radius * _s.m_radius;
+	if (q < 0.0f && p2 > r2) {
+		return false;
+	}
+	return p2 - (q * q) <= r2;
+}
+bool Im3d::Intersect(const Ray& _r, const Sphere& _s, float& t0_, float& t1_)
+{
+	Vec3 p = _s.m_origin - _r.m_origin; 
+	float q = Dot(p, _r.m_direction); 
+	if (q < 0.0f) {
+		return false;
+	}
+	float p2 = Length2(p) - q * q; 
+	float r2 = _s.m_radius * _s.m_radius;
+	if (p2 > r2) {
+		return false;
+	}
+	float s = sqrt(r2 - p2); 
+	t0_ = Max(q - s, 0.0f);
+	t1_ = q + s;
+	 
+	return true;
+}
+bool Im3d::Intersects(const Ray& _ray, const Capsule& _capsule)
+{
+	return Distance2(_ray, LineSegment(_capsule.m_start, _capsule.m_end)) < _capsule.m_radius * _capsule.m_radius;
+}
+bool Im3d::Intersect(const Ray& _ray, const Capsule& _capsule, float& t0_, float& t1_)
+{
+	IM3D_ASSERT(false); // \todo implement
+	return false;
+}
+void Im3d::Nearest(const Line& _line0, const Line& _line1, float& t0_, float& t1_)
+{
+	Vec3 p = _line0.m_origin - _line1.m_origin;
+	float q = Dot(_line0.m_direction, _line1.m_direction);
+	float s = Dot(_line1.m_direction, p);
+
+	float d = 1.0f - q * q;
+	if (d < FLT_EPSILON) { // lines are parallel
+		t0_ = 0.0f;
+		t1_ = s;
+	} else {
+		float r = Dot(_line0.m_direction, p);
+		t0_ = (q * s - r) / d;
+		t1_ = (s - q * r) / d;
+	}
+}
+void Im3d::Nearest(const Ray& _ray, const Line& _line, float& tr_, float& tl_)
+{
+	Nearest(Line(_ray.m_origin, _ray.m_direction), _line, tr_, tl_);
+	tr_ = Max(tr_, 0.0f);
+}
+Vec3 Im3d::Nearest(const Ray& _ray, const LineSegment& _segment, float& tr_)
+{
+	Vec3 ldir = _segment.m_end - _segment.m_start;
+	Vec3 p = _segment.m_start - _ray.m_origin;
+	float q = Length2(ldir);
+	float r = Dot(ldir, _ray.m_direction);
+	float s = Dot(ldir, p);
+	float t = Dot(_ray.m_direction, p);
+
+	float sn, sd, tn, td;
+	float denom = q - r * r;
+	if (denom < FLT_EPSILON) {
+		sd = td = 1.0f;
+		sn = 0.0f;
+		tn = t;
+	} else {
+		sd = td = denom;
+		sn = r * t - s;
+		tn = q * t - r * s;
+		if (sn < 0.0f) {
+		    sn = 0.0f;
+		    tn = t;
+		    td = 1.0f;
+		} else if (sn > sd) {
+			sn = sd;
+			tn = t + r;
+			td = 1.0f;
+		}
+	}
+
+	float ts;
+	if (tn < 0.0f) {
+		tr_ = 0.0f;
+		if (r >= 0.0f) {
+		    ts = 0.0f;
+		} else if (s <= q) {
+		    ts = 1.0f;
+		} else {
+		    ts = -s / q;
+		}
+	} else {
+		tr_ = tn / td;
+		ts = sn / sd;
+	}
+	return _segment.m_start + ldir * ts;
+}
+float Im3d::Distance2(const Ray& _ray, const LineSegment& _segment)
+{
+	float tr;
+	Vec3 p = Nearest(_ray, _segment, tr);
+	return Length2(_ray.m_origin + _ray.m_direction * tr - p);
 }
