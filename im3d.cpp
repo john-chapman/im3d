@@ -63,124 +63,6 @@ const Color Im3d::Color_Cyan    = Color(0.0f, 1.0f, 1.0f);
 
 static const Color Color_GizmoHighlight = Color(1.0f, 0.78f, 0.27f);
 
-void Im3d::MulMatrix(const Mat4& _mat4)
-{
-	Context& ctx = GetContext();
-	ctx.setMatrix(ctx.getMatrix() * _mat4);
-}
-
-Vec3::Vec3(const Vec4& _v)
-	: x(_v.x)
-	, y(_v.y)
-	, z(_v.z)
-{
-}
-
-Vec4::Vec4(Color _rgba)
-	: x(_rgba.getR())
-	, y(_rgba.getG())
-	, z(_rgba.getB())
-	, w(_rgba.getA())
-{
-}
-
-Mat3::Mat3(float _diagonal)
-{
-	(*this)(0, 0) = _diagonal; (*this)(0, 1) = 0.0f;      (*this)(0, 2) = 0.0f;
-	(*this)(1, 0) = 0.0f;      (*this)(1, 1) = _diagonal; (*this)(1, 2) = 0.0f;
-	(*this)(2, 0) = 0.0f;      (*this)(2, 1) = 0.0f;      (*this)(2, 2) = _diagonal;
-}
-Mat3::Mat3(
-	float m00, float m01, float m02,
-	float m10, float m11, float m12,
-	float m20, float m21, float m22
-	)
-{
-	(*this)(0, 0) = m00; (*this)(0, 1) = m01; (*this)(0, 2) = m02;
-	(*this)(1, 0) = m10; (*this)(1, 1) = m11; (*this)(1, 2) = m12;
-	(*this)(2, 0) = m20; (*this)(2, 1) = m21; (*this)(2, 2) = m22;
-}
-Mat3::Mat3(const Mat4& _mat4)
-{
-	(*this)(0, 0) = _mat4(0, 0); (*this)(0, 1) = _mat4(0, 1); (*this)(0, 2) = _mat4(0, 2);
-	(*this)(1, 0) = _mat4(1, 0); (*this)(1, 1) = _mat4(1, 1); (*this)(1, 2) = _mat4(1, 2);
-	(*this)(2, 0) = _mat4(2, 0); (*this)(2, 1) = _mat4(2, 1); (*this)(2, 2) = _mat4(2, 2);
-}
-Vec3 Mat3::getCol(int _i) const
-{
-	return Vec3((*this)(0, _i), (*this)(1, _i), (*this)(2, _i));
-}
-Vec3 Mat3::getRow(int _i) const
-{
-	return Vec3((*this)(_i, 0), (*this)(_i, 1), (*this)(_i, 2));
-}
-void Mat3::setCol(int _i, const Vec3& _v)
-{
-	(*this)(0, _i) = _v.x;
-	(*this)(1, _i) = _v.y;
-	(*this)(2, _i) = _v.z;
-}
-void Mat3::setRow(int _i, const Vec3& _v)
-{
-	(*this)(_i, 0) = _v.x;
-	(*this)(_i, 1) = _v.y;
-	(*this)(_i, 2) = _v.z;
-}	
-
-Mat4::Mat4(float _diagonal)
-{
-	(*this)(0, 0) = _diagonal; (*this)(0, 1) = 0.0f;      (*this)(0, 2) = 0.0f;      (*this)(0, 3) = 0.0f;
-	(*this)(1, 0) = 0.0f;      (*this)(1, 1) = _diagonal; (*this)(1, 2) = 0.0f;      (*this)(1, 3) = 0.0f;
-	(*this)(2, 0) = 0.0f;      (*this)(2, 1) = 0.0f;      (*this)(2, 2) = _diagonal; (*this)(2, 3) = 0.0f;
-	(*this)(3, 0) = 0.0f;      (*this)(3, 1) = 0.0f;      (*this)(3, 2) = 0.0f;      (*this)(3, 3) = _diagonal;
-}
-Mat4::Mat4(
-	float m00, float m01, float m02, float m03,
-	float m10, float m11, float m12, float m13,
-	float m20, float m21, float m22, float m23,
-	float m30, float m31, float m32, float m33
-	)
-{
-	(*this)(0, 0) = m00; (*this)(0, 1) = m01; (*this)(0, 2) = m02; (*this)(0, 3) = m03;
-	(*this)(1, 0) = m10; (*this)(1, 1) = m11; (*this)(1, 2) = m12; (*this)(1, 3) = m13;
-	(*this)(2, 0) = m20; (*this)(2, 1) = m21; (*this)(2, 2) = m22; (*this)(2, 3) = m23;
-	(*this)(3, 0) = m30; (*this)(3, 1) = m31; (*this)(3, 2) = m32; (*this)(3, 3) = m33;
-}
-Vec4 Mat4::getCol(int _i) const
-{
-	return Vec4((*this)(0, _i), (*this)(1, _i), (*this)(2, _i), (*this)(3, _i));
-}
-Vec4 Mat4::getRow(int _i) const
-{
-	return Vec4((*this)(_i, 0), (*this)(_i, 1), (*this)(_i, 2), (*this)(_i, 3));
-}
-void Mat4::setCol(int _i, const Vec4& _v)
-{
-	(*this)(0, _i) = _v.x;
-	(*this)(1, _i) = _v.y;
-	(*this)(2, _i) = _v.z;
-	(*this)(3, _i) = _v.w;
-}
-void Mat4::setRow(int _i, const Vec4& _v)
-{
-	(*this)(_i, 0) = _v.x;
-	(*this)(_i, 1) = _v.y;
-	(*this)(_i, 2) = _v.z;
-	(*this)(_i, 3) = _v.w;
-}
-void Mat4::setRotationScale(const Mat3& _m)
-{
-	(*this)(0, 0) = _m(0, 0); (*this)(0, 1) = _m(0, 1); (*this)(0, 2) = _m(0, 2);
-	(*this)(1, 0) = _m(1, 0); (*this)(1, 1) = _m(1, 1); (*this)(1, 2) = _m(1, 2);
-	(*this)(2, 0) = _m(2, 0); (*this)(2, 1) = _m(2, 1); (*this)(2, 2) = _m(2, 2);
-}
-void Mat4::setTranslation(const Vec3& _v)
-{
-	(*this)(0, 3) = _v.x;
-	(*this)(1, 3) = _v.y;
-	(*this)(2, 3) = _v.z;
-}
-
 Color::Color(const Vec4& _rgba)
 {
 	v  = (U32)(_rgba.x * 255.0f) << 24;
@@ -194,6 +76,12 @@ Color::Color(float _r, float _g, float _b, float _a)
 	v |= (U32)(_g * 255.0f) << 16;
 	v |= (U32)(_b * 255.0f) << 8;
 	v |= (U32)(_a * 255.0f);
+}
+
+void Im3d::MulMatrix(const Mat4& _mat4)
+{
+	Context& ctx = GetContext();
+	ctx.setMatrix(ctx.getMatrix() * _mat4);
 }
 
 void Im3d::DrawXyzAxes()
@@ -406,17 +294,20 @@ bool Im3d::Gizmo(const char* _id, float* _mat4_)
 	Context& ctx = GetContext();
 	if (ctx.wasKeyPressed(Action_GizmoTranslation)) {
 		ctx.m_gizmoMode = GizmoMode_Translation;
+		ctx.resetId();
 	} else if (ctx.wasKeyPressed(Action_GizmoRotation)) {
 		ctx.m_gizmoMode = GizmoMode_Rotation;
+		ctx.resetId();
 	} else if (ctx.wasKeyPressed(Action_GizmoScale)) {
 		ctx.m_gizmoMode = GizmoMode_Scale;
+		ctx.resetId();
 	}
 
 	switch (ctx.m_gizmoMode) {
 	case GizmoMode_Translation: {
-		Vec3 pos = m4->getCol(3);
-		if (GizmoTranslation(_id, &pos)) {
-			m4->setCol(3, Vec4(pos, 1.0f));
+		Vec3 translation = m4->getCol(3);
+		if (GizmoTranslation(_id, translation)) {
+			m4->setTranslation(translation);
 			return true;
 		}
 		break;
@@ -436,7 +327,7 @@ bool Im3d::Gizmo(const char* _id, float* _mat4_)
 			rmat.setCol(0, Normalize(rmat.getCol(0)));
 			rmat.setCol(1, Normalize(rmat.getCol(1)));
 			rmat.setCol(2, Normalize(rmat.getCol(2)));
-			m4->setRotationScale(Scale(scale) * rmat);
+			m4->setRotationScale(rmat * Scale(scale));
 			return true;
 		}
 		break;
@@ -448,9 +339,10 @@ bool Im3d::Gizmo(const char* _id, float* _mat4_)
 	return false;
 }
 
-bool Im3d::GizmoTranslation(const char* _id, Vec3* _translation_)
+bool Im3d::GizmoTranslation(const char* _id, float* _vec3_)
 {
-	Vec3 drawAt = *_translation_; // copy to prevent lag in the sub-gizmos 
+	Vec3 *v3 = (Vec3*)_vec3_;
+	Vec3 drawAt = *v3; // copy to prevent lag in the sub-gizmos 
 	bool ret = false;
 	Context& ctx = GetContext();
 	ctx.pushId(MakeId(_id));
@@ -472,7 +364,7 @@ bool Im3d::GizmoTranslation(const char* _id, Vec3* _translation_)
 			float aligned = fabs(Dot(planeNormal, Normalize(ctx.getAppData().m_viewOrigin - planeOrigin)));
 			aligned = Remap(aligned, 0.1f, 0.2f);
 			if (aligned > 0.0f || ctx.m_idHot == planeId) {
-				ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, _translation_, planeNormal, Color_GizmoHighlight, planeSize); 
+				ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, v3, planeNormal, Color_GizmoHighlight, planeSize); 
 				if (ctx.m_idHot == planeId) {
 					colorX = colorZ = Color_GizmoHighlight;
 				}
@@ -501,7 +393,7 @@ bool Im3d::GizmoTranslation(const char* _id, Vec3* _translation_)
 			float aligned = fabs(Dot(planeNormal, Normalize(ctx.getAppData().m_viewOrigin - planeOrigin)));
 			aligned = Remap(aligned, 0.1f, 0.2f);
 			if (aligned > 0.0f || ctx.m_idHot == planeId) {
-				ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, _translation_, planeNormal, Color_GizmoHighlight, planeSize); 
+				ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, v3, planeNormal, Color_GizmoHighlight, planeSize); 
 				if (ctx.m_idHot == planeId) {
 					colorX = colorY = Color_GizmoHighlight;
 				}
@@ -530,7 +422,7 @@ bool Im3d::GizmoTranslation(const char* _id, Vec3* _translation_)
 			float aligned = fabs(Dot(planeNormal, Normalize(ctx.getAppData().m_viewOrigin - planeOrigin)));
 			aligned = Remap(aligned, 0.1f, 0.2f);
 			if (aligned > 0.0f || ctx.m_idHot == planeId) {
-				ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, _translation_, planeNormal, Color_GizmoHighlight, planeSize); 
+				ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, v3, planeNormal, Color_GizmoHighlight, planeSize); 
 				if (ctx.m_idHot == planeId) {
 					colorY = colorZ = Color_GizmoHighlight;
 				}
@@ -556,7 +448,7 @@ bool Im3d::GizmoTranslation(const char* _id, Vec3* _translation_)
 			Id planeId = MakeId("viewplane");
 			Vec3 planeNormal = Normalize(drawAt - ctx.getAppData().m_viewOrigin);
 			Vec3 planeOrigin = drawAt;
-			ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, _translation_, planeNormal, Color_GizmoHighlight, planeSize * 0.5f); 
+			ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, v3, planeNormal, Color_GizmoHighlight, planeSize * 0.5f); 
 			if (ctx.m_idActive == planeId || ctx.m_idHot == planeId) {
 				colorX = colorY = colorZ = Color_GizmoHighlight;
 			}
@@ -569,9 +461,9 @@ bool Im3d::GizmoTranslation(const char* _id, Vec3* _translation_)
 		}
 
 		ctx.setEnableSorting(true);
-		ret |= ctx.gizmoAxisTranslation(MakeId("xaxis"), drawAt, _translation_, Vec3(1.0f, 0.0f, 0.0f), colorX, worldHeight, worldSize);
-		ret |= ctx.gizmoAxisTranslation(MakeId("yaxis"), drawAt, _translation_, Vec3(0.0f, 1.0f, 0.0f), colorY, worldHeight, worldSize);
-		ret |= ctx.gizmoAxisTranslation(MakeId("zaxis"), drawAt, _translation_, Vec3(0.0f, 0.0f, 1.0f), colorZ, worldHeight, worldSize);
+		ret |= ctx.gizmoAxisTranslation(MakeId("xaxis"), drawAt, v3, Vec3(1.0f, 0.0f, 0.0f), colorX, worldHeight, worldSize);
+		ret |= ctx.gizmoAxisTranslation(MakeId("yaxis"), drawAt, v3, Vec3(0.0f, 1.0f, 0.0f), colorY, worldHeight, worldSize);
+		ret |= ctx.gizmoAxisTranslation(MakeId("zaxis"), drawAt, v3, Vec3(0.0f, 0.0f, 1.0f), colorZ, worldHeight, worldSize);
 	ctx.popColor();
 	ctx.popEnableSorting();
 	ctx.popId();
@@ -1112,7 +1004,7 @@ bool Context::gizmoAxisTranslation(Id _id, const Vec3& _drawAt, Vec3* _out_, con
 				storedPosition = _axis * tl;
 			}
 		} else {
-			makeCold();
+			resetId();
 		}
 
 	} else {
@@ -1165,7 +1057,7 @@ bool Context::gizmoPlaneTranslation(Id _id, const Vec3& _drawAt, Vec3* _out_, co
 				storedPosition = *_out_ - intersection;
 			}
 		} else {
-			makeCold();
+			resetId();
 		}
 	} else {
 		float depth = Length2(_drawAt - m_appData.m_viewOrigin);
@@ -1196,15 +1088,19 @@ bool Context::gizmoAxisScale(Id _id, const Vec3& _drawAt, float* _out_, const Ve
 		if (isKeyDown(Action_Select)) {
 			float tr, tl;
 			Nearest(ray, axisLine, tr, tl);
-			Vec3 intersection = _drawAt + _axis * tl;
-			//float sign = SignOf(Dot(Cross(storedVec, v), plane.m_normal));
-			*_out_ = storedScale + Length(intersection - storedPosition) / _worldHeight;
+			Vec3 intersection = _axis * tl;
+			Vec3 delta = intersection - storedPosition;
+			float sign = SignOf(Dot(delta, _axis));
+			*_out_ = storedScale * (1.0f + Length(delta) * sign / _worldHeight);
 			ret = true;
-	
-			begin(PrimitiveMode_Lines);
-				vertex(_drawAt - _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
-				vertex(_drawAt + _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
-			end();
+
+			axisCapsule.m_end = intersection; // update the end point for drawing the axis
+			pushEnableSorting(false);
+				begin(PrimitiveMode_Lines);
+					vertex(_drawAt - _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
+					vertex(_drawAt + _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
+				end();
+			popEnableSorting();
 		} else {
 			m_idActive = Id_Invalid;
 		}
@@ -1217,13 +1113,12 @@ bool Context::gizmoAxisScale(Id _id, const Vec3& _drawAt, float* _out_, const Ve
 				m_idActive = _id;
 				float tr, tl;
 				Nearest(ray, axisLine, tr, tl);
-				storedPosition = _drawAt + _axis * tl;
+				storedPosition = _axis * tl;
 				storedScale = *_out_;
 			}
 		} else {
-			makeCold();
+			resetId();
 		}
-
 	} else {
 	 	float depth = Length2(axisCapsule.m_end - m_appData.m_viewOrigin);
 		bool intersects = Intersects(ray, axisCapsule);
@@ -1272,24 +1167,27 @@ bool Context::gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, flo
 	if (_id == m_idActive) {
 		color = Color_GizmoHighlight;
 		if (isKeyDown(Action_Select)) {
-			Vec3 v = Normalize(intersection - _drawAt);
-			float sign = SignOf(Dot(Cross(storedVec, v), plane.m_normal));
-			*_out_ = storedAngle + acosf(Dot(v, storedVec)) * sign;
+			Vec3 delta = Normalize(intersection - _drawAt);
+			float sign = SignOf(Dot(Cross(storedVec, delta), plane.m_normal));
+			*_out_ = storedAngle + acosf(Dot(delta, storedVec)) * sign;
 			ret = true;
-			begin(PrimitiveMode_Lines);
-				vertex(_drawAt, m_gizmoSizePixels * 0.5f, Color_GizmoHighlight);
-				vertex(_drawAt + storedVec * _worldRadius, m_gizmoSizePixels * 0.5f, Color_GizmoHighlight);
-				vertex(_drawAt - _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
-				vertex(_drawAt + _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
-			end();
-			begin(PrimitiveMode_Points);
-				vertex(_drawAt, m_gizmoSizePixels * 2.0f, Color_GizmoHighlight);
-			end();
-			pushColor(Color_GizmoHighlight);
-			pushSize(m_gizmoSizePixels);
-				DrawArrow(_drawAt, _drawAt + v * _worldRadius, _worldSize * 4.0f);
-			popColor();
-			popSize();
+
+			pushEnableSorting(false);
+				begin(PrimitiveMode_Lines);
+					vertex(_drawAt - _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
+					vertex(_drawAt + _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
+					vertex(_drawAt, m_gizmoSizePixels * 0.5f, Color_GizmoHighlight);
+					vertex(_drawAt + storedVec * _worldRadius, m_gizmoSizePixels * 0.5f, Color_GizmoHighlight);
+				end();
+				pushColor(Color_GizmoHighlight);
+					pushSize(m_gizmoSizePixels);
+						DrawArrow(_drawAt, _drawAt + delta * _worldRadius, _worldSize * 4.0f);
+					popSize();
+				popColor();
+				begin(PrimitiveMode_Points);
+					vertex(_drawAt, m_gizmoSizePixels * 2.0f, Color_GizmoHighlight);
+				end();
+			popEnableSorting();
 		} else {
 			m_idActive = Id_Invalid;
 		}
@@ -1304,7 +1202,7 @@ bool Context::gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, flo
 				storedAngle = *_out_;
 			}
 		} else {
-			makeCold();
+			resetId();
 		}
 
 	} else {
@@ -1316,24 +1214,24 @@ bool Context::gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, flo
 		aligned = 1.0f;
 	}
 	pushColor(color);
-	pushSize(m_gizmoSizePixels);
-		pushMatrix(getMatrix() * LookAt(_drawAt, _drawAt + _axis));
-		begin(PrimitiveMode_LineLoop);
-			const int _detail = 128; // \todo dynamically select detail based on worldRadius/worldSize
-			for (int i = 0; i < _detail; ++i) {
-				float rad = TwoPi * ((float)i / (float)_detail);
-				vertex(Vec3(cosf(rad) * _worldRadius, sinf(rad) * _worldRadius, 0.0f));
+		pushSize(m_gizmoSizePixels);
+			pushMatrix(getMatrix() * LookAt(_drawAt, _drawAt + _axis));
+				begin(PrimitiveMode_LineLoop);
+					const int _detail = 128; // \todo dynamically select detail based on worldRadius/worldSize
+					for (int i = 0; i < _detail; ++i) {
+						float rad = TwoPi * ((float)i / (float)_detail);
+						vertex(Vec3(cosf(rad) * _worldRadius, sinf(rad) * _worldRadius, 0.0f));
 
-			 // post-modify the alpha for parts of the ring occluded by the sphere
-				VertexData& vd = m_vertexData[DrawPrimitive_Lines][m_primList].back();
-				Vec3 v = vd.m_positionSize;
-				float d = Dot(Normalize(v - _drawAt), viewDir); 
-				d = Max(Remap(d, 0.1f, 0.2f), aligned);
-				vd.m_color.setA(vd.m_color.getA() * d);
-			}
-		end();
-		popMatrix();
-	popSize();
+					 // post-modify the alpha for parts of the ring occluded by the sphere
+						VertexData& vd = m_vertexData[DrawPrimitive_Lines][m_primList].back();
+						Vec3 v = vd.m_positionSize;
+						float d = Dot(Normalize(v - _drawAt), viewDir); 
+						d = Max(Remap(d, 0.1f, 0.2f), aligned);
+						vd.m_color.setA(vd.m_color.getA() * d);
+					}
+				end();
+			popMatrix();
+		popSize();
 	popColor();
 	return ret;
 }
@@ -1348,10 +1246,10 @@ bool Context::makeHot(Id _id, float _depth, bool _intersects)
 	return false;
 }
 
-void Context::makeCold()
+void Context::resetId()
 {
-	m_idActive = m_idHot = Id_Invalid;
-	m_hotDepth = FLT_MAX;
+	m_idActive = m_idHot = Id_Invalid; 
+	m_hotDepth = FLT_MAX; 
 }
 
 
@@ -1365,25 +1263,65 @@ const float Im3d::Pi     = 3.14159265359f;
 const float Im3d::TwoPi  = 2.0f * Pi;
 const float Im3d::HalfPi = 0.5f * Pi;
 
-// Mat3
-Mat3 Im3d::Rotation(const Vec3& _axis, float _rads)
+// Vec3
+Vec3::Vec3(const Vec4& _v)
+	: x(_v.x)
+	, y(_v.y)
+	, z(_v.z)
 {
-	float c  = cosf(_rads);
-	float rc = 1.0f - c;
-	float s  = sinf(_rads);
-	return Mat3(
-		_axis.x * _axis.x + (1.0f - _axis.x * _axis.x) * c, _axis.x * _axis.y * rc - _axis.z * s,                _axis.x * _axis.z * rc + _axis.y * s,
-		_axis.x * _axis.y * rc + _axis.z * s,               _axis.y * _axis.y + (1.0f - _axis.y * _axis.y) * c,  _axis.y * _axis.z * rc - _axis.x * s,
-		_axis.x * _axis.z * rc - _axis.y * s,               _axis.y * _axis.z * rc + _axis.x * s,                _axis.z * _axis.z + (1.0f - _axis.z * _axis.z) * c
-		);
 }
-Mat3 Im3d::Scale(const Vec3& _s)
+
+// Vec4
+Vec4::Vec4(Color _rgba)
+	: x(_rgba.getR())
+	, y(_rgba.getG())
+	, z(_rgba.getB())
+	, w(_rgba.getA())
 {
-	return Mat3(
-		_s.x,  0.0f,  0.0f,
-		0.0f,  _s.y,  0.0f,
-		0.0f,  0.0f,  _s.z
-		);
+}
+
+// Mat3
+Mat3::Mat3(float _diagonal)
+{
+	(*this)(0, 0) = _diagonal; (*this)(0, 1) = 0.0f;      (*this)(0, 2) = 0.0f;
+	(*this)(1, 0) = 0.0f;      (*this)(1, 1) = _diagonal; (*this)(1, 2) = 0.0f;
+	(*this)(2, 0) = 0.0f;      (*this)(2, 1) = 0.0f;      (*this)(2, 2) = _diagonal;
+}
+Mat3::Mat3(
+	float m00, float m01, float m02,
+	float m10, float m11, float m12,
+	float m20, float m21, float m22
+	)
+{
+	(*this)(0, 0) = m00; (*this)(0, 1) = m01; (*this)(0, 2) = m02;
+	(*this)(1, 0) = m10; (*this)(1, 1) = m11; (*this)(1, 2) = m12;
+	(*this)(2, 0) = m20; (*this)(2, 1) = m21; (*this)(2, 2) = m22;
+}
+Mat3::Mat3(const Mat4& _mat4)
+{
+	(*this)(0, 0) = _mat4(0, 0); (*this)(0, 1) = _mat4(0, 1); (*this)(0, 2) = _mat4(0, 2);
+	(*this)(1, 0) = _mat4(1, 0); (*this)(1, 1) = _mat4(1, 1); (*this)(1, 2) = _mat4(1, 2);
+	(*this)(2, 0) = _mat4(2, 0); (*this)(2, 1) = _mat4(2, 1); (*this)(2, 2) = _mat4(2, 2);
+}
+Vec3 Mat3::getCol(int _i) const
+{
+	return Vec3((*this)(0, _i), (*this)(1, _i), (*this)(2, _i));
+}
+Vec3 Mat3::getRow(int _i) const
+{
+	return Vec3((*this)(_i, 0), (*this)(_i, 1), (*this)(_i, 2));
+}
+void Mat3::setCol(int _i, const Vec3& _v)
+{
+	(*this)(0, _i) = _v.x;
+	(*this)(1, _i) = _v.y;
+	(*this)(2, _i) = _v.z;
+}
+void Mat3::setRow(int _i, const Vec3& _v)
+{
+	(*this)(_i, 0) = _v.x;
+	(*this)(_i, 1) = _v.y;
+	(*this)(_i, 2) = _v.z;
 }
 Vec3 Im3d::ToEulerXYZ(const Mat3& _m)
 {
@@ -1420,8 +1358,89 @@ Mat3 Im3d::FromEulerXYZ(Vec3& _euler)
 		    -sz,                sx * cy,                cx * cy		
 		);
 }
+Mat3 Im3d::Transpose(const Mat3& _m)
+{
+	return Mat3(
+		_m(0, 0), _m(1, 0), _m(2, 0),
+		_m(0, 1), _m(1, 1), _m(2, 1),
+		_m(0, 2), _m(1, 2), _m(2, 2)
+		);
+}
+Mat3 Im3d::Rotation(const Vec3& _axis, float _rads)
+{
+	float c  = cosf(_rads);
+	float rc = 1.0f - c;
+	float s  = sinf(_rads);
+	return Mat3(
+		_axis.x * _axis.x + (1.0f - _axis.x * _axis.x) * c, _axis.x * _axis.y * rc - _axis.z * s,                _axis.x * _axis.z * rc + _axis.y * s,
+		_axis.x * _axis.y * rc + _axis.z * s,               _axis.y * _axis.y + (1.0f - _axis.y * _axis.y) * c,  _axis.y * _axis.z * rc - _axis.x * s,
+		_axis.x * _axis.z * rc - _axis.y * s,               _axis.y * _axis.z * rc + _axis.x * s,                _axis.z * _axis.z + (1.0f - _axis.z * _axis.z) * c
+		);
+}
+Mat3 Im3d::Scale(const Vec3& _s)
+{
+	return Mat3(
+		_s.x,  0.0f,  0.0f,
+		0.0f,  _s.y,  0.0f,
+		0.0f,  0.0f,  _s.z
+		);
+}
+
 
 // Mat4
+Mat4::Mat4(float _diagonal)
+{
+	(*this)(0, 0) = _diagonal; (*this)(0, 1) = 0.0f;      (*this)(0, 2) = 0.0f;      (*this)(0, 3) = 0.0f;
+	(*this)(1, 0) = 0.0f;      (*this)(1, 1) = _diagonal; (*this)(1, 2) = 0.0f;      (*this)(1, 3) = 0.0f;
+	(*this)(2, 0) = 0.0f;      (*this)(2, 1) = 0.0f;      (*this)(2, 2) = _diagonal; (*this)(2, 3) = 0.0f;
+	(*this)(3, 0) = 0.0f;      (*this)(3, 1) = 0.0f;      (*this)(3, 2) = 0.0f;      (*this)(3, 3) = _diagonal;
+}
+Mat4::Mat4(
+	float m00, float m01, float m02, float m03,
+	float m10, float m11, float m12, float m13,
+	float m20, float m21, float m22, float m23,
+	float m30, float m31, float m32, float m33
+	)
+{
+	(*this)(0, 0) = m00; (*this)(0, 1) = m01; (*this)(0, 2) = m02; (*this)(0, 3) = m03;
+	(*this)(1, 0) = m10; (*this)(1, 1) = m11; (*this)(1, 2) = m12; (*this)(1, 3) = m13;
+	(*this)(2, 0) = m20; (*this)(2, 1) = m21; (*this)(2, 2) = m22; (*this)(2, 3) = m23;
+	(*this)(3, 0) = m30; (*this)(3, 1) = m31; (*this)(3, 2) = m32; (*this)(3, 3) = m33;
+}
+Vec4 Mat4::getCol(int _i) const
+{
+	return Vec4((*this)(0, _i), (*this)(1, _i), (*this)(2, _i), (*this)(3, _i));
+}
+Vec4 Mat4::getRow(int _i) const
+{
+	return Vec4((*this)(_i, 0), (*this)(_i, 1), (*this)(_i, 2), (*this)(_i, 3));
+}
+void Mat4::setCol(int _i, const Vec4& _v)
+{
+	(*this)(0, _i) = _v.x;
+	(*this)(1, _i) = _v.y;
+	(*this)(2, _i) = _v.z;
+	(*this)(3, _i) = _v.w;
+}
+void Mat4::setRow(int _i, const Vec4& _v)
+{
+	(*this)(_i, 0) = _v.x;
+	(*this)(_i, 1) = _v.y;
+	(*this)(_i, 2) = _v.z;
+	(*this)(_i, 3) = _v.w;
+}
+void Mat4::setRotationScale(const Mat3& _m)
+{
+	(*this)(0, 0) = _m(0, 0); (*this)(0, 1) = _m(0, 1); (*this)(0, 2) = _m(0, 2);
+	(*this)(1, 0) = _m(1, 0); (*this)(1, 1) = _m(1, 1); (*this)(1, 2) = _m(1, 2);
+	(*this)(2, 0) = _m(2, 0); (*this)(2, 1) = _m(2, 1); (*this)(2, 2) = _m(2, 2);
+}
+void Mat4::setTranslation(const Vec3& _v)
+{
+	(*this)(0, 3) = _v.x;
+	(*this)(1, 3) = _v.y;
+	(*this)(2, 3) = _v.z;
+}
 static inline float Determinant(const Mat4& _m)
 {
 	return 

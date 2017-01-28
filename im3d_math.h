@@ -99,7 +99,7 @@ inline Mat3 operator*(const Mat3& _lhs, const Mat3& _rhs)
 	ret(1, 2) = _lhs(1, 0) * _rhs(0, 2) + _lhs(1, 1) * _rhs(1, 2) + _lhs(1, 2) * _rhs(2, 2);
 	ret(2, 0) = _lhs(2, 0) * _rhs(0, 0) + _lhs(2, 1) * _rhs(1, 0) + _lhs(2, 2) * _rhs(2, 0);
 	ret(2, 1) = _lhs(2, 0) * _rhs(0, 1) + _lhs(2, 1) * _rhs(1, 1) + _lhs(2, 2) * _rhs(2, 1);
-	ret(2, 2) = _lhs(2, 0) * _rhs(0, 2) + _lhs(2, 1) * _rhs(1, 2) + _lhs(2, 2) * _rhs(2, 2);	
+	ret(2, 2) = _lhs(2, 0) * _rhs(0, 2) + _lhs(2, 1) * _rhs(1, 2) + _lhs(2, 2) * _rhs(2, 2);
 	return ret;
 }
 inline Vec3 operator*(const Mat3& _m, const Vec3& _v)
@@ -119,10 +119,11 @@ inline Vec4 operator*(const Mat3& _m, const Vec4& _v)
 		_v.w
 		);
 }
-Mat3 Rotation(const Vec3& _axis, float _rads); // _axis must be unit length
-Mat3 Scale(const Vec3& _s);
+Mat3 Transpose(const Mat3& _m);
 Vec3 ToEulerXYZ(const Mat3& _m);
 Mat3 FromEulerXYZ(Vec3& _xyz);
+Mat3 Rotation(const Vec3& _axis, float _rads); // _axis must be unit length
+Mat3 Scale(const Vec3& _s);
 
 // Mat4
 inline Mat4 operator*(const Mat4& _lhs, const Mat4& _rhs)

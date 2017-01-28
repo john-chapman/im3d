@@ -3,7 +3,7 @@
 #define im3d_h
 
 #include "im3d_config.h"
-#include <vector>
+
 #define IM3D_VERSION "0.5"
 
 #ifndef IM3D_ASSERT
@@ -103,7 +103,7 @@ Id    MakeId(const char* _str);
 
 // Manipulate translation/rotation/scale via a gizmo. Return true if the gizmo was used (if it modified its output).
 bool  Gizmo(const char* _id, float* _mat4_);
-bool  GizmoTranslation(const char* _id, Vec3* _translation_);
+bool  GizmoTranslation(const char* _id, float* _vec3_);
 bool  GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_);
 bool  GizmoScale(const char* _id, const Vec3& _drawAt, float* _vec3_);
 
@@ -483,8 +483,7 @@ public:
 	void sort();
 
 	bool makeHot(Id _id, float _depth, bool _intersects);
-	void makeCold();
-	
+	void resetId();
 };
 
 namespace internal {

@@ -56,6 +56,12 @@ int main(int, char**)
 				ImGui::RadioButton("Scale (Ctrl+S)", &gizmoMode, Im3d::GizmoMode_Scale);
 				Im3d::GetContext().setGizmoMode((Im3d::GizmoMode)gizmoMode);
 				
+				static bool separate = false;
+				static Im3d::Vec3 translation(0.0f);
+				static Im3d::Mat3 rotation(1.0f);
+				static Im3d::Vec3 scale(1.0f);
+				ImGui::Checkbox("Separate Transforms", &separate);
+				
 				ImGui::SliderFloat("Gizmo Size", &ctx.m_gizmoHeightPixels, 0.0f, 256.0f);
 				ImGui::SliderFloat("Gizmo Thickness", &ctx.m_gizmoSizePixels, 0.0f, 32.0f);
 				ImGui::Text("Hot ID:    0x%x", ctx.m_idHot);
@@ -73,11 +79,32 @@ int main(int, char**)
 						Im3d::DrawAlignedBox(Im3d::Vec3(-0.5f), Im3d::Vec3(0.5f));
 					Im3d::PopMatrix();
 				Im3d::PopDrawState();
-				Im3d::Gizmo("GizmoTest", m); // transform after drawing the object to avoid 1 frame lag
+				if (separate) {
+					bool changed = false;
+					switch (Im3d::GetContext().getGizmoMode()) {
+					case Im3d::GizmoMode_Translation:
+						changed = Im3d::GizmoTranslation("GizmoTestTranslation", translation);
+						break;
+					case Im3d::GizmoMode_Rotation:
+						changed = Im3d::GizmoRotation("GizmoTestRotation", translation, rotation);
+						break;
+					case Im3d::GizmoMode_Scale:
+						changed = Im3d::GizmoScale("GizmoTestScale", translation, scale); 
+						break;
+					default:
+						break;
+					};
+					if (changed) {
+						m = Im3d::Mat4(1.0f);
+						m.setRotationScale(rotation * Im3d::Scale(scale));
+						m.setTranslation(translation);
+					}
+				} else {
+					Im3d::Gizmo("GizmoTest", m); // transform after drawing the object to avoid 1 frame lag
+				}
 				
 				ImGui::TreePop();
 			}
-
 			if (ImGui::TreeNode("Sorting")) {
 				static bool s_enableSorting = true;
 				static int  s_primCount = 1000;

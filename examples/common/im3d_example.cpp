@@ -668,7 +668,7 @@ bool Example::init(int _width, int _height, const char* _title)
 		goto Example_init_fail;
 	}
 
-	m_camPos = Vec3(0.0f, 5.0f, 5.0f);
+	m_camPos = Vec3(0.0f, 2.0f, 3.0f);
 	m_camDir = Normalize(Vec3(0.0f, -0.5f, -1.0f));
 	m_camFovDeg = 50.0f;
 	
@@ -704,7 +704,6 @@ bool Example::update()
 		while (PeekMessage(&msg, g_Example->m_hwnd, 0, 0, PM_REMOVE) && msg.message != WM_QUIT) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
-printf("msg.message = 0x%x\n", msg.message);
 		}
 		ret = msg.message != WM_QUIT;
 	#endif
