@@ -277,9 +277,9 @@ struct VertexData
 
 enum DrawPrimitiveType
 {
-	DrawPrimitive_Points,
-	DrawPrimitive_Lines,
 	DrawPrimitive_Triangles,
+	DrawPrimitive_Lines,
+	DrawPrimitive_Points,
 
 	DrawPrimitive_Count
 };
