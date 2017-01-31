@@ -97,12 +97,12 @@
 
 namespace Im3d {
 
-void        Assert(const char* _e, const char* _file, int _line, const char* _msg, ...);
+void  Assert(const char* _e, const char* _file, int _line, const char* _msg, ...);
 
-void        RandSeed(int _seed);
-int         RandInt(int _min, int _max);
-float       RandFloat(float _min, float _max);
-Im3d::Vec3  RandVec3(float _min, float _max);
+void  RandSeed(int _seed);
+int   RandInt(int _min, int _max);
+float RandFloat(float _min, float _max);
+Vec3  RandVec3(float _min, float _max);
 
 struct Example
 {
