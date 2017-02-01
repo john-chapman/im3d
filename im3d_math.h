@@ -247,6 +247,9 @@ extern const float Pi;
 extern const float TwoPi;
 extern const float HalfPi;
 
+inline float Radians(float _degrees) { return _degrees * Pi / 180.0f; }
+inline float Degrees(float _radians) { return _radians * 180.0f / Pi; }
+
 } // namespace Im3d
 
 #endif // im3d_math_h
