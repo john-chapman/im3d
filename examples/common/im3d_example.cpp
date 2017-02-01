@@ -9,6 +9,10 @@ using namespace Im3d;
 
 #ifdef IM3D_COMPILER_MSVC
 	#pragma warning(disable: 4996) // vsnprintf
+
+	#pragma warning(disable: 4311) // typecast
+	#pragma warning(disable: 4302) //    "
+	#pragma warning(disable: 4312) //    "
 #endif
 
 /******************************************************************************/
@@ -387,6 +391,31 @@ using namespace Im3d;
 		}
 		return true;
 	}
+
+	void Im3d::DrawNdcQuad()
+	{
+		static GLuint vbQuad;
+		static GLuint vaQuad;
+		if (vbQuad == 0) {
+			float quadv[8] = {
+				-1.0f, -1.0f,
+				 1.0f, -1.0f,
+				-1.0f,  1.0f,
+				 1.0f,  1.0f,
+				};
+			glAssert(glCreateBuffers(1, &vbQuad));
+			glAssert(glCreateVertexArrays(1, &vaQuad));	
+			glAssert(glBindVertexArray(vaQuad));
+			glAssert(glBindBuffer(GL_ARRAY_BUFFER, vbQuad));
+			glAssert(glEnableVertexAttribArray(0));
+			glAssert(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vec2), (GLvoid*)0));
+			glAssert(glBufferData(GL_ARRAY_BUFFER, sizeof(quadv), (GLvoid*)quadv, GL_STATIC_DRAW));
+			glAssert(glBindVertexArray(0));	
+		}
+		glAssert(glBindVertexArray(vaQuad));
+		glAssert(glDrawArrays(GL_TRIANGLE_STRIP, 0, 4));
+		glAssert(glBindVertexArray(0));
+	}
 	
 	const char* Im3d::GetGlEnumString(GLenum _enum)
 	{
@@ -466,11 +495,11 @@ Vec3 Im3d::RandVec3(float _min, float _max)
 
 /******************************************************************************/
 #if defined(IM3D_OPENGL)
-	static GLuint s_vaImGui; // vertex array object
-	static GLuint s_vbImGui; // vertex buffer
-	static GLuint s_ibImGui; // index buffer
-	static GLuint s_shImGui;
-	static GLuint s_txImGui;
+	static GLuint g_vaImGui; // vertex array object
+	static GLuint g_vbImGui; // vertex buffer
+	static GLuint g_ibImGui; // index buffer
+	static GLuint g_shImGui; // shader
+	static GLuint g_txImGui; // font texture
 
 	static void ImGui_Draw(ImDrawData* _drawData)
 	{
@@ -499,22 +528,22 @@ Vec3 Im3d::RandVec3(float _min, float _max)
 			0.0f,                  0.0f,                  -1.0f,  0.0f,
 			0.0f,                  0.0f,                   0.0f,  1.0f
 			);
-		glAssert(glUseProgram(s_shImGui));
+		glAssert(glUseProgram(g_shImGui));
 	
 		bool transpose = false;
 		#ifdef IM3D_MATRIX_ROW_MAJOR
 			transpose = true;
 		#endif
-		glAssert(glUniformMatrix4fv(glGetUniformLocation(s_shImGui, "uProjMatrix"), 1, transpose, (const GLfloat*)ortho));
-		glAssert(glBindVertexArray(s_vaImGui));
+		glAssert(glUniformMatrix4fv(glGetUniformLocation(g_shImGui, "uProjMatrix"), 1, transpose, (const GLfloat*)ortho));
+		glAssert(glBindVertexArray(g_vaImGui));
 	
 		for (int i = 0; i < _drawData->CmdListsCount; ++i) {
 			const ImDrawList* drawList = _drawData->CmdLists[i];
 			const ImDrawIdx* indexOffset = 0;
 	
-			glAssert(glBindBuffer(GL_ARRAY_BUFFER, s_vbImGui));
+			glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_vbImGui));
 			glAssert(glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)drawList->VtxBuffer.size() * sizeof(ImDrawVert), (GLvoid*)&drawList->VtxBuffer.front(), GL_STREAM_DRAW));
-			glAssert(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_ibImGui));
+			glAssert(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_ibImGui));
 			glAssert(glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)drawList->IdxBuffer.Size * sizeof(ImDrawIdx), (const GLvoid*)drawList->IdxBuffer.Data, GL_STREAM_DRAW));
 	
 			for (const ImDrawCmd* pcmd = drawList->CmdBuffer.begin(); pcmd != drawList->CmdBuffer.end(); ++pcmd) {
@@ -539,10 +568,10 @@ Vec3 Im3d::RandVec3(float _min, float _max)
 		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "imgui.glsl", "VERTEX_SHADER\0");
 		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "imgui.glsl", "FRAGMENT_SHADER\0");
 		if (vs && fs) {
-			glAssert(s_shImGui = glCreateProgram());
-			glAssert(glAttachShader(s_shImGui, vs));
-			glAssert(glAttachShader(s_shImGui, fs));
-			bool ret = LinkShaderProgram(s_shImGui);
+			glAssert(g_shImGui = glCreateProgram());
+			glAssert(glAttachShader(g_shImGui, vs));
+			glAssert(glAttachShader(g_shImGui, fs));
+			bool ret = LinkShaderProgram(g_shImGui);
 			glAssert(glDeleteShader(vs));
 			glAssert(glDeleteShader(fs));
 			if (!ret) {
@@ -551,15 +580,15 @@ Vec3 Im3d::RandVec3(float _min, float _max)
 		} else {
 			return false;
 		}
-		glAssert(glUseProgram(s_shImGui));
-		glAssert(glUniform1i(glGetUniformLocation(s_shImGui, "txTexture"), 0));
+		glAssert(glUseProgram(g_shImGui));
+		glAssert(glUniform1i(glGetUniformLocation(g_shImGui, "txTexture"), 0));
 		glAssert(glUseProgram(0));
 
-		glAssert(glCreateBuffers(1, &s_vbImGui));
-		glAssert(glCreateBuffers(1, &s_ibImGui));
-		glAssert(glCreateVertexArrays(1, &s_vaImGui));	
-		glAssert(glBindVertexArray(s_vaImGui));
-		glAssert(glBindBuffer(GL_ARRAY_BUFFER, s_vbImGui));
+		glAssert(glCreateBuffers(1, &g_vbImGui));
+		glAssert(glCreateBuffers(1, &g_ibImGui));
+		glAssert(glCreateVertexArrays(1, &g_vaImGui));	
+		glAssert(glBindVertexArray(g_vaImGui));
+		glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_vbImGui));
 		glAssert(glEnableVertexAttribArray(0));
 		glAssert(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*)offsetof(ImDrawVert, pos)));
 		glAssert(glEnableVertexAttribArray(1));
@@ -572,12 +601,12 @@ Vec3 Im3d::RandVec3(float _min, float _max)
 		int txX, txY;
 		ImGuiIO& io = ImGui::GetIO();
 		io.Fonts->GetTexDataAsAlpha8(&txbuf, &txX, &txY);
-		glAssert(glGenTextures(1, &s_txImGui));
-		glAssert(glBindTexture(GL_TEXTURE_2D, s_txImGui));
-		glAssert(glTextureParameteri(s_txImGui, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-		glAssert(glTextureParameteri(s_txImGui, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+		glAssert(glGenTextures(1, &g_txImGui));
+		glAssert(glBindTexture(GL_TEXTURE_2D, g_txImGui));
+		glAssert(glTextureParameteri(g_txImGui, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+		glAssert(glTextureParameteri(g_txImGui, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
 		glAssert(glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, txX, txY, 0, GL_RED, GL_UNSIGNED_BYTE, (const GLvoid*)txbuf));
-		io.Fonts->TexID = (void*)s_txImGui;
+		io.Fonts->TexID = (void*)g_txImGui;
 	
 		io.RenderDrawListsFn = &ImGui_Draw;
 
@@ -587,11 +616,11 @@ Vec3 Im3d::RandVec3(float _min, float _max)
 
 	static void ImGui_Shutdown()
 	{
-		glAssert(glDeleteVertexArrays(1, &s_vaImGui));
-		glAssert(glDeleteBuffers(1, &s_vbImGui));
-		glAssert(glDeleteBuffers(1, &s_ibImGui));		
-		glAssert(glDeleteProgram(s_shImGui));
-		glAssert(glDeleteTextures(1, &s_txImGui));
+		glAssert(glDeleteVertexArrays(1, &g_vaImGui));
+		glAssert(glDeleteBuffers(1, &g_vbImGui));
+		glAssert(glDeleteBuffers(1, &g_ibImGui));		
+		glAssert(glDeleteProgram(g_shImGui));
+		glAssert(glDeleteTextures(1, &g_txImGui));
 	}
 #endif
 
@@ -756,7 +785,7 @@ bool Example::update()
 		m_prevCursorPos = cursorPos;
 	#endif
 
-	m_camFovRad = m_camFovDeg * (3.1415926f / 180.0f);
+	m_camFovRad = Im3d::Radians(m_camFovDeg);
 	float n = 0.1f;
 	float f = 10000.0f;
 	float a = (float)m_width / (float)m_height;

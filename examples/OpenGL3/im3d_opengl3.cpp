@@ -130,8 +130,6 @@ bool Im3d_Init()
 			if (!ret) {
 				return false;
 			}
-			glAssert(glDeleteShader(vs));
-			glAssert(glDeleteShader(fs));
 		} else {
 			return false;
 		}

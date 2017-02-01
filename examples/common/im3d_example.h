@@ -54,6 +54,10 @@
 		GLuint LoadCompileShader(GLenum _stage, const char* _path, const char* _defines = 0);
 		// Return false on failure (prints log info to stderr).
 		bool LinkShaderProgram(GLuint _handle);
+
+		// Draw a quad in NDC [-1,1].
+		void DrawNdcQuad();
+
 		
 		const char* GetGlEnumString(GLenum _enum);
 		const char* GlGetString(GLenum _name);
