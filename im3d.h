@@ -105,7 +105,7 @@ Id    MakeId(const char* _str);
 bool  Gizmo(const char* _id, float* _mat4_);
 bool  GizmoTranslation(const char* _id, float* _vec3_);
 bool  GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_);
-bool  GizmoScale(const char* _id, const Vec3& _drawAt, float* _vec3_);
+bool  GizmoScaleLocal(const char* _id, float* _vec3_);
 
 struct Vec2
 {
@@ -157,6 +157,7 @@ struct Mat3
 		float m10, float m11, float m12,
 		float m20, float m21, float m22
 		);
+	Mat3(const Vec3& _colX, const Vec3& _colY, const Vec3& _colZ);
 	Mat3(const Mat4& _mat4); // extract upper 3x3
 	operator float*()                                                        { return m; }
 	operator const float*() const                                            { return m; }
@@ -198,8 +199,9 @@ struct Mat4
 		float m00, float m01, float m02, float m03,
 		float m10, float m11, float m12, float m13,
 		float m20, float m21, float m22, float m23,
-		float m30, float m31, float m32, float m33
+		float m30 = 0.0f, float m31 = 0.0f, float m32 = 0.0f, float m33 = 1.0f
 		);
+	Mat4(const Mat3& _mat3);
 	operator float*()                                                        { return m; }
 	operator const float*() const                                            { return m; }
 

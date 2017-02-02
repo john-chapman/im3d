@@ -525,8 +525,7 @@ Vec3 Im3d::RandVec3(float _min, float _max)
 		Mat4 ortho = Mat4(
 			2.0f/io.DisplaySize.x, 0.0f,                   0.0f, -1.0f,
 			0.0f,                  2.0f/-io.DisplaySize.y, 0.0f,  1.0f,
-			0.0f,                  0.0f,                  -1.0f,  0.0f,
-			0.0f,                  0.0f,                   0.0f,  1.0f
+			0.0f,                  0.0f,                  -1.0f,  0.0f
 			);
 		glAssert(glUseProgram(g_shImGui));
 	

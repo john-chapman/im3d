@@ -322,14 +322,17 @@ bool Im3d::Gizmo(const char* _id, float* _mat4_)
 	}
 	case GizmoMode_Scale: {
 		Vec3 scale(Length(m4->getCol(0)), Length(m4->getCol(1)), Length(m4->getCol(2)));
-		if (GizmoScale(_id, m4->getCol(3), scale)) {
+		ctx.pushMatrix(*m4);
+		if (GizmoScaleLocal(_id, scale)) {
 			Mat3 rmat(*m4);
-			rmat.setCol(0, Normalize(rmat.getCol(0)));
-			rmat.setCol(1, Normalize(rmat.getCol(1)));
-			rmat.setCol(2, Normalize(rmat.getCol(2)));
-			m4->setRotationScale(rmat * Scale(scale));
+			rmat.setCol(0, Normalize(rmat.getCol(0)) * scale.x);
+			rmat.setCol(1, Normalize(rmat.getCol(1)) * scale.y);
+			rmat.setCol(2, Normalize(rmat.getCol(2)) * scale.z);
+			m4->setRotationScale(rmat);
+			ctx.popMatrix();
 			return true;
 		}
+		ctx.popMatrix();
 		break;
 	}
 	default:
@@ -547,7 +550,7 @@ bool Im3d::GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_)
 	ctx.popId();
 	return ret;
 }
-bool Im3d::GizmoScale(const char* _id, const Vec3& _drawAt, float* _vec3_)
+bool Im3d::GizmoScaleLocal(const char* _id, float* _vec3_)
 {
 	Vec3* v3 = (Vec3*)_vec3_;
 	bool ret = false;
@@ -555,17 +558,23 @@ bool Im3d::GizmoScale(const char* _id, const Vec3& _drawAt, float* _vec3_)
 	ctx.pushId(MakeId(_id));
 	ctx.pushEnableSorting(false);
 	ctx.pushColor(Color_GizmoHighlight);
-		float worldHeight = ctx.pixelsToWorldSize(_drawAt, ctx.m_gizmoHeightPixels);
-		float worldSize = ctx.pixelsToWorldSize(_drawAt, ctx.m_gizmoSizePixels);
 		
 		Color colorX = Color_Red;
 		Color colorY = Color_Green;
 		Color colorZ = Color_Blue;
-	
+		Vec3  axisX  = Normalize(ctx.getMatrix().getCol(0));
+		Vec3  axisY  = Normalize(ctx.getMatrix().getCol(1));
+		Vec3  axisZ  = Normalize(ctx.getMatrix().getCol(2));
+		Vec3  drawAt = ctx.getMatrix().getCol(3);
+		//ctx.pushMatrix(Mat4(Mat3(axisX, axisY, axisZ)));
+		float worldHeight = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoHeightPixels);
+		float worldSize = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoSizePixels);
+		
 		ctx.setEnableSorting(true);
-		ret |= ctx.gizmoAxisScale(MakeId("xaxis"), _drawAt, &v3->x, Vec3(1.0f, 0.0f, 0.0f), colorX, worldHeight, worldSize);
-		ret |= ctx.gizmoAxisScale(MakeId("yaxis"), _drawAt, &v3->y, Vec3(0.0f, 1.0f, 0.0f), colorY, worldHeight, worldSize);
-		ret |= ctx.gizmoAxisScale(MakeId("zaxis"), _drawAt, &v3->z, Vec3(0.0f, 0.0f, 1.0f), colorZ, worldHeight, worldSize);
+		ret |= ctx.gizmoAxisScale(MakeId("axisX"), drawAt, &v3->x, axisX, colorX, worldHeight, worldSize);
+		ret |= ctx.gizmoAxisScale(MakeId("axisY"), drawAt, &v3->y, axisY, colorY, worldHeight, worldSize);
+		ret |= ctx.gizmoAxisScale(MakeId("axisZ"), drawAt, &v3->z, axisZ, colorZ, worldHeight, worldSize);
+		//ctx.popMatrix();
 	ctx.popColor();
 	ctx.popEnableSorting();
 	ctx.popId();
@@ -1094,7 +1103,7 @@ bool Context::gizmoAxisScale(Id _id, const Vec3& _drawAt, float* _out_, const Ve
 			*_out_ = storedScale * (1.0f + Length(delta) * sign / _worldHeight);
 			ret = true;
 
-			axisCapsule.m_end = intersection; // update the end point for drawing the axis
+			axisCapsule.m_end = axisCapsule.m_start + intersection; // update the end point for drawing the axis
 			pushEnableSorting(false);
 				begin(PrimitiveMode_Lines);
 					vertex(_drawAt - _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
@@ -1297,6 +1306,12 @@ Mat3::Mat3(
 	(*this)(1, 0) = m10; (*this)(1, 1) = m11; (*this)(1, 2) = m12;
 	(*this)(2, 0) = m20; (*this)(2, 1) = m21; (*this)(2, 2) = m22;
 }
+Mat3::Mat3(const Vec3& _colX, const Vec3& _colY, const Vec3& _colZ)
+{
+	(*this)(0, 0) = _colX.x; (*this)(0, 1) = _colY.x; (*this)(0, 2) = _colZ.x;
+	(*this)(1, 0) = _colX.y; (*this)(1, 1) = _colY.y; (*this)(1, 2) = _colZ.y;
+	(*this)(2, 0) = _colX.z; (*this)(2, 1) = _colY.z; (*this)(2, 2) = _colZ.z;
+}
 Mat3::Mat3(const Mat4& _mat4)
 {
 	(*this)(0, 0) = _mat4(0, 0); (*this)(0, 1) = _mat4(0, 1); (*this)(0, 2) = _mat4(0, 2);
@@ -1407,6 +1422,13 @@ Mat4::Mat4(
 	(*this)(2, 0) = m20; (*this)(2, 1) = m21; (*this)(2, 2) = m22; (*this)(2, 3) = m23;
 	(*this)(3, 0) = m30; (*this)(3, 1) = m31; (*this)(3, 2) = m32; (*this)(3, 3) = m33;
 }
+Mat4::Mat4(const Mat3& _mat3)
+{
+	(*this)(0, 0) = _mat3(0, 0); (*this)(0, 1) = _mat3(0, 1); (*this)(0, 2) = _mat3(0, 2); (*this)(0, 3) = 0.0f;
+	(*this)(1, 0) = _mat3(1, 0); (*this)(1, 1) = _mat3(1, 1); (*this)(1, 2) = _mat3(1, 2); (*this)(1, 3) = 0.0f;
+	(*this)(2, 0) = _mat3(2, 0); (*this)(2, 1) = _mat3(2, 1); (*this)(2, 2) = _mat3(2, 2); (*this)(2, 3) = 0.0f;
+	(*this)(3, 0) =        0.0f; (*this)(3, 1) =        0.0f; (*this)(3, 2) =        0.0f; (*this)(3, 3) = 1.0f;
+}
 Vec4 Mat4::getCol(int _i) const
 {
 	return Vec4((*this)(0, _i), (*this)(1, _i), (*this)(2, _i), (*this)(3, _i));
@@ -1512,8 +1534,7 @@ Mat4 Im3d::AlignZ(const Vec3& _axis, const Vec3& _up)
 	return Mat4(
 		x.x,    y.x,    _axis.x,    0.0f,
 		x.y,    y.y,    _axis.y,    0.0f,
-		x.z,    y.z,    _axis.z,    0.0f,
-		0.0f,   0.0f,      0.0f,    1.0f
+		x.z,    y.z,    _axis.z,    0.0f
 		);
 }
 Mat4 Im3d::LookAt(const Vec3& _from, const Vec3& _to, const Vec3& _up)

@@ -89,7 +89,7 @@ int main(int, char**)
 						changed = Im3d::GizmoRotation("GizmoTestRotation", translation, rotation);
 						break;
 					case Im3d::GizmoMode_Scale:
-						changed = Im3d::GizmoScale("GizmoTestScale", translation, scale); 
+						changed = Im3d::GizmoScaleLocal("GizmoTestScale", scale); 
 						break;
 					default:
 						break;
