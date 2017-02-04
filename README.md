@@ -16,7 +16,7 @@ Im3d::PopDrawState();
 ```
 _A key point to note is that there is no view-projection matrix here - the requirement for VR support precludes this. Instead, all vertices are specified in world space and the view-projection transform is applied at draw time (in the shader)._
 
-Similarly, the UI system follows the immediate mode paradigm in that no UI state is retained. For example, you can create gizmos from any place in the code:
+Similarly, the UI system follows the immediate mode paradigm in that no UI state is retained; you can create gizmos from any place in the code:
 
 ```
 vec3 translation;

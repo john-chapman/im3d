@@ -2,40 +2,13 @@
 #ifndef im3d_math_h
 #define im3d_math_h
 
+// im3d_math.h is optional - include only if you want to use the Im3d math types
+
 #include "im3d.h"
 
 #include <cmath>
 
 namespace Im3d {
-
-template <typename T>
-inline T Max(T _a, T _b)                                   { return _a < _b ? _b : _a; }
-template <typename T>
-inline T Min(T _a, T _b)                                   { return _a < _b ? _a : _b; }
-template <typename T>
-inline T Clamp(T _a, T _min, T _max)                       { return Max(Min(_a, _max), _min); }
-template <typename T> 
-inline T SignOf(T _a)                                      { return (T)((T(0) < _a) - (_a < T(0))); }
-// Remap _x in [_start,_end] to [0,1].
-inline float Remap(float _x, float _start, float _end)     { return Clamp(_x * (1.0f / (_end - _start)) + (-_start / (_end - _start)), 0.0f, 1.0f); }
-
-template <typename T>
-int Count();
-	template <> inline int Count<Vec2>() { return 2; }
-	template <> inline int Count<Vec3>() { return 3; }
-	template <> inline int Count<Vec4>() { return 4; }
-	template <> inline int Count<Mat4>() { return 16; }
-
-template <typename T>
-inline bool AllLess(const T& _a, const T& _b)
-{
-	for (int i = 0, n = Count<T>(); i < n; ++i) {
-		if (_a[i] > _b[i]) {
-			return false;
-		}
-	}
-	return true;
-}
 
 // Vec2
 inline Vec2  operator+(const Vec2& _lhs, const Vec2& _rhs) { return Vec2(_lhs.x + _rhs.x, _lhs.y + _rhs.y); }
@@ -170,8 +143,6 @@ Mat4 Translation(const Vec3& _t);
 Mat4 AlignZ(const Vec3& _axis, const Vec3& _up = Vec3(0.0f, 1.0f, 0.0f)); // generate an orthonormal bases with +z as _axis, which must be unit length
 Mat4 LookAt(const Vec3& _from, const Vec3& _to, const Vec3& _up = Vec3(0.0f, 1.0f, 0.0f)); // align _z with (_to - _from), set _from as translation
 
-
-// Extends to infinity from m_origin in ±m_direciton.
 struct Line
 {
 	Vec3 m_origin;
@@ -180,8 +151,6 @@ struct Line
 	Line() {}
 	Line(const Vec3& _origin, const Vec3& _direction);
 };
-
-// Extends to infinity from m_origin in +m_direction (i.e. a line bounded at the origin).
 struct Ray
 {
 	Vec3 m_origin;
@@ -190,7 +159,6 @@ struct Ray
 	Ray() {}
 	Ray(const Vec3& _origin, const Vec3& _direction);
 };
-
 struct LineSegment
 {
 	Vec3 m_start;
@@ -199,7 +167,6 @@ struct LineSegment
 	LineSegment() {}
 	LineSegment(const Vec3& _start, const Vec3& _end);	
 };
-
 struct Sphere
 {
 	Vec3  m_origin;
@@ -208,7 +175,6 @@ struct Sphere
 	Sphere() {}
 	Sphere(const Vec3& _origin, float _radius);	
 };
-
 struct Plane
 {
 	Vec3  m_normal;
@@ -218,7 +184,6 @@ struct Plane
 	Plane(const Vec3& _normal, float _offset);
 	Plane(const Vec3& _normal, const Vec3& _origin);
 };
-
 struct Capsule
 {
 	Vec3  m_start;
@@ -229,7 +194,8 @@ struct Capsule
 	Capsule(const Vec3& _start, const Vec3& _end, float _radius);
 };
 
-// Ray-primitive intersections. Use Intersects() when you don't need t0_/t1_.
+
+// Ray-primitive intersections. Use Intersects() when you don't need t.
 bool  Intersects(const Ray& _ray, const Plane& _plane);
 bool  Intersect (const Ray& _ray, const Plane& _plane, float& t0_);
 bool  Intersects(const Ray& _ray, const Sphere& _sphere);
@@ -249,6 +215,35 @@ extern const float HalfPi;
 
 inline float Radians(float _degrees) { return _degrees * Pi / 180.0f; }
 inline float Degrees(float _radians) { return _radians * 180.0f / Pi; }
+
+template <typename T>
+inline T Max(T _a, T _b)                                   { return _a < _b ? _b : _a; }
+template <typename T>
+inline T Min(T _a, T _b)                                   { return _a < _b ? _a : _b; }
+template <typename T>
+inline T Clamp(T _a, T _min, T _max)                       { return Max(Min(_a, _max), _min); }
+template <typename T> 
+inline T SignOf(T _a)                                      { return (T)((T(0) < _a) - (_a < T(0))); }
+// Remap _x in [_start,_end] to [0,1].
+inline float Remap(float _x, float _start, float _end)     { return Clamp(_x * (1.0f / (_end - _start)) + (-_start / (_end - _start)), 0.0f, 1.0f); }
+
+template <typename T>
+int Count();
+	template <> inline int Count<Vec2>() { return 2; }
+	template <> inline int Count<Vec3>() { return 3; }
+	template <> inline int Count<Vec4>() { return 4; }
+	template <> inline int Count<Mat4>() { return 16; }
+
+template <typename T>
+inline bool AllLess(const T& _a, const T& _b)
+{
+	for (int i = 0, n = Count<T>(); i < n; ++i) {
+		if (_a[i] > _b[i]) {
+			return false;
+		}
+	}
+	return true;
+}
 
 } // namespace Im3d
 

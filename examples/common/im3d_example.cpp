@@ -859,6 +859,20 @@ bool Example::update()
 	m_camView  = Inverse(m_camWorld);
 	m_camViewProj = m_camProj * m_camView;
 
+	ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+	ImGui::Begin(
+		"Frame Info", 0, 
+		ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoSavedSettings |
+		ImGuiWindowFlags_AlwaysAutoResize
+		);
+		ImGui::Text("%.3f fps", 1.0f / m_deltaTime);
+		ImGui::Text("Triangles: %u ", Im3d::GetContext().getPrimitiveCount(Im3d::DrawPrimitive_Triangles));
+		ImGui::Text("Lines:     %u ", Im3d::GetContext().getPrimitiveCount(Im3d::DrawPrimitive_Lines));
+		ImGui::Text("Points:    %u ", Im3d::GetContext().getPrimitiveCount(Im3d::DrawPrimitive_Points));
+	ImGui::End();
 
 	Im3d_Update();
 	

@@ -112,7 +112,7 @@ void Im3d::DrawQuad(const Vec3& _a, const Vec3& _b, const Vec3& _c, const Vec3& 
 void Im3d::DrawQuad(const Vec3& _origin, const Vec3& _normal, const Vec2& _size)
 {
 	Context& ctx = GetContext();
-	ctx.pushMatrix(LookAt(_origin, _origin + _normal));
+	ctx.pushMatrix(LookAt(_origin, _origin + _normal, ctx.getAppData().m_worldUp));
 		DrawQuad(
 			Vec3(-_size.x,  _size.y, 0.0f),
 			Vec3( _size.x,  _size.y, 0.0f),
@@ -136,7 +136,7 @@ void Im3d::DrawQuadFilled(const Vec3& _a, const Vec3& _b, const Vec3& _c, const 
 void Im3d::DrawCircle(const Vec3& _origin, const Vec3& _normal, float _radius, int _detail)
 {
 	Context& ctx = GetContext();
- 	ctx.pushMatrix(ctx.getMatrix() * LookAt(_origin, _origin + _normal));
+ 	ctx.pushMatrix(ctx.getMatrix() * LookAt(_origin, _origin + _normal, ctx.getAppData().m_worldUp));
 	ctx.begin(PrimitiveMode_LineLoop);
 		for (int i = 0; i < _detail; ++i) {
 			float rad = TwoPi * ((float)i / (float)_detail);
@@ -201,7 +201,7 @@ void Im3d::DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, int
 	Context& ctx = GetContext();
 	Vec3 org  = _start + (_end - _start) * 0.5f;
 	float ln  = Length(_end - _start) * 0.5f;
-	ctx.pushMatrix(ctx.getMatrix() * LookAt(org, _end));
+	ctx.pushMatrix(ctx.getMatrix() * LookAt(org, _end, ctx.getAppData().m_worldUp));
 		ctx.begin(PrimitiveMode_LineLoop);
 			for (int i = 0; i <= _detail; ++i) {
 				float rad = TwoPi * ((float)i / (float)_detail) - HalfPi;
@@ -227,7 +227,7 @@ void Im3d::DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int 
 	Vec3 org = _start + (_end - _start) * 0.5f;
 	float ln = Length(_end - _start) * 0.5f;
 	int detail2 = _detail * 2; // force cap base detail to match ends
-	ctx.pushMatrix(ctx.getMatrix() * LookAt(org, _end));
+	ctx.pushMatrix(ctx.getMatrix() * LookAt(org, _end, ctx.getAppData().m_worldUp));
 	 // yz silhoette + cap bases
 		ctx.begin(PrimitiveMode_LineLoop);
 			for (int i = 0; i <= detail2; ++i) {
@@ -366,13 +366,13 @@ bool Im3d::GizmoTranslation(const char* _id, float* _vec3_)
 			Vec3 planeOrigin = drawAt + Vec3(planeOffset, 0.0f, planeOffset);
 			float aligned = fabs(Dot(planeNormal, Normalize(ctx.getAppData().m_viewOrigin - planeOrigin)));
 			aligned = Remap(aligned, 0.1f, 0.2f);
-			if (aligned > 0.0f || ctx.m_idHot == planeId) {
+			if (aligned > 0.0f || ctx.m_hotId == planeId) {
 				ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, v3, planeNormal, Color_GizmoHighlight, planeSize); 
-				if (ctx.m_idHot == planeId) {
+				if (ctx.m_hotId == planeId) {
 					colorX = colorZ = Color_GizmoHighlight;
 				}
 				ctx.pushAlpha(ctx.getAlpha() * aligned);
-					ctx.pushAlpha(ctx.m_idHot == planeId ? 0.7f : 0.1f * ctx.getAlpha());
+					ctx.pushAlpha(ctx.m_hotId == planeId ? 0.7f : 0.1f * ctx.getAlpha());
 						DrawQuadFilled(
 							planeOrigin + Vec3(-1.0f,  0.0f,  1.0f) * planeSize,
 							planeOrigin + Vec3( 1.0f,  0.0f,  1.0f) * planeSize,
@@ -395,13 +395,13 @@ bool Im3d::GizmoTranslation(const char* _id, float* _vec3_)
 			Vec3 planeOrigin = drawAt + Vec3(planeOffset, planeOffset, 0.0f);
 			float aligned = fabs(Dot(planeNormal, Normalize(ctx.getAppData().m_viewOrigin - planeOrigin)));
 			aligned = Remap(aligned, 0.1f, 0.2f);
-			if (aligned > 0.0f || ctx.m_idHot == planeId) {
+			if (aligned > 0.0f || ctx.m_hotId == planeId) {
 				ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, v3, planeNormal, Color_GizmoHighlight, planeSize); 
-				if (ctx.m_idHot == planeId) {
+				if (ctx.m_hotId == planeId) {
 					colorX = colorY = Color_GizmoHighlight;
 				}
 				ctx.pushAlpha(ctx.getAlpha() * aligned);
-					ctx.pushAlpha(ctx.m_idHot == planeId ? 0.7f : 0.1f * ctx.getAlpha());
+					ctx.pushAlpha(ctx.m_hotId == planeId ? 0.7f : 0.1f * ctx.getAlpha());
 						DrawQuadFilled(
 							planeOrigin + Vec3(-1.0f,  1.0f,  0.0f) * planeSize,
 							planeOrigin + Vec3( 1.0f,  1.0f,  0.0f) * planeSize,
@@ -424,13 +424,13 @@ bool Im3d::GizmoTranslation(const char* _id, float* _vec3_)
 			Vec3 planeOrigin = drawAt + Vec3(0.0f, planeOffset, planeOffset);
 			float aligned = fabs(Dot(planeNormal, Normalize(ctx.getAppData().m_viewOrigin - planeOrigin)));
 			aligned = Remap(aligned, 0.1f, 0.2f);
-			if (aligned > 0.0f || ctx.m_idHot == planeId) {
+			if (aligned > 0.0f || ctx.m_hotId == planeId) {
 				ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, v3, planeNormal, Color_GizmoHighlight, planeSize); 
-				if (ctx.m_idHot == planeId) {
+				if (ctx.m_hotId == planeId) {
 					colorY = colorZ = Color_GizmoHighlight;
 				}
 				ctx.pushAlpha(ctx.getAlpha() * aligned);
-					ctx.pushAlpha(ctx.m_idHot == planeId ? 0.7f : 0.1f * ctx.getAlpha());
+					ctx.pushAlpha(ctx.m_hotId == planeId ? 0.7f : 0.1f * ctx.getAlpha());
 						DrawQuadFilled(
 							planeOrigin + Vec3(0.0f, -1.0f,  1.0f) * planeSize,
 							planeOrigin + Vec3(0.0f,  1.0f,  1.0f) * planeSize,
@@ -452,12 +452,12 @@ bool Im3d::GizmoTranslation(const char* _id, float* _vec3_)
 			Vec3 planeNormal = Normalize(drawAt - ctx.getAppData().m_viewOrigin);
 			Vec3 planeOrigin = drawAt;
 			ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, v3, planeNormal, Color_GizmoHighlight, planeSize * 0.5f); 
-			if (ctx.m_idActive == planeId || ctx.m_idHot == planeId) {
+			if (ctx.m_activeId == planeId || ctx.m_hotId == planeId) {
 				colorX = colorY = colorZ = Color_GizmoHighlight;
 			}
-			ctx.pushAlpha(ctx.m_idHot == planeId ? 1.0f : ctx.getAlpha());
+			ctx.pushAlpha(ctx.m_hotId == planeId ? 1.0f : ctx.getAlpha());
 			ctx.begin(PrimitiveMode_Points);
-				ctx.vertex(planeOrigin, ctx.m_gizmoSizePixels * 2.0f, (ctx.m_idActive == planeId || ctx.m_idHot == planeId) ? Color_GizmoHighlight : Color_White);
+				ctx.vertex(planeOrigin, ctx.m_gizmoSizePixels * 2.0f, (ctx.m_activeId == planeId || ctx.m_hotId == planeId) ? Color_GizmoHighlight : Color_White);
 			ctx.end();
 			ctx.popAlpha();
 		}
@@ -477,7 +477,7 @@ bool Im3d::GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_)
 	Vec3 euler = ToEulerXYZ(*m3);
 	bool ret = false;
 	Context& ctx = Im3d::GetContext();
-	Id currentId = ctx.m_idActive;
+	Id currentId = ctx.m_activeId;
 	Mat3& storedRotation = ctx.m_gizmoStateMat3;
 	ctx.pushId(MakeId(_id));
 	ctx.pushEnableSorting(false);
@@ -488,7 +488,7 @@ bool Im3d::GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_)
 		Id idXz = MakeId("xzplane");
 		Id idYz = MakeId("yzplane");
 		Id idV  = MakeId("viewplane");
-		if (ctx.m_idActive != idXz && ctx.m_idActive != idYz && ctx.m_idActive != idV) {
+		if (ctx.m_activeId != idXz && ctx.m_activeId != idYz && ctx.m_activeId != idV) {
 			if (ctx.gizmoAxisAngle(idXy, _drawAt, Vec3(0.0f, 0.0f, 1.0f), &euler.z, Color_Blue,  worldHeight * 0.8f, worldSize)) {
 				euler.z -= ctx.m_gizmoStateFloat;
 				float c = cosf(euler.z);
@@ -502,7 +502,7 @@ bool Im3d::GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_)
 				ret = true;
 			}
 		}
-		if (ctx.m_idActive != idXy && ctx.m_idActive != idYz && ctx.m_idActive != idV) {
+		if (ctx.m_activeId != idXy && ctx.m_activeId != idYz && ctx.m_activeId != idV) {
 			if (ctx.gizmoAxisAngle(idXz, _drawAt, Vec3(0.0f, 1.0f, 0.0f), &euler.y, Color_Green, worldHeight * 0.8f, worldSize)) {
 				euler.y -= ctx.m_gizmoStateFloat;
 				float c = cosf(euler.y);
@@ -516,7 +516,7 @@ bool Im3d::GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_)
 				ret = true;
 			}
 		}
-		if (ctx.m_idActive != idXy && ctx.m_idActive != idXz && ctx.m_idActive != idV) {
+		if (ctx.m_activeId != idXy && ctx.m_activeId != idXz && ctx.m_activeId != idV) {
 			if (ctx.gizmoAxisAngle(idYz, _drawAt, Vec3(1.0f, 0.0f, 0.0f), &euler.x, Color_Red, worldHeight * 0.8f, worldSize)) {
 				euler.x -= ctx.m_gizmoStateFloat;
 				float c = cosf(euler.x);
@@ -530,7 +530,7 @@ bool Im3d::GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_)
 				ret = true;
 			}
 		}
-		if (ctx.m_idActive != idXy && ctx.m_idActive != idXz && ctx.m_idActive != idYz) {
+		if (ctx.m_activeId != idXy && ctx.m_activeId != idXz && ctx.m_activeId != idYz) {
 			Vec3 planeNormal = Normalize(_drawAt - ctx.getAppData().m_viewOrigin);
 			float v = 0.0f;
 			if (ctx.gizmoAxisAngle(idV, _drawAt, planeNormal, &v, Color_White, worldHeight, worldSize)) {
@@ -539,7 +539,7 @@ bool Im3d::GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_)
 			}
 		}
 
-		if (ctx.m_idActive != currentId) {
+		if (ctx.m_activeId != currentId) {
 		 // active id changed, store rotation matrix
 			storedRotation = *m3;
 		}
@@ -576,16 +576,16 @@ bool Im3d::GizmoScaleLocal(const char* _id, float* _vec3_)
 			Ray ray(appData.m_cursorRayOrigin, appData.m_cursorRayDirection);
 			float t0, t1;
 			bool intersects = Intersect(ray, handle, t0, t1);
-			/*if (uniformId == ctx.m_idActive) {
+			/*if (uniformId == ctx.m_activeId) {
 				if (ctx.isKeyDown(Action_Select)) {
 				} else {
-					ctx.m_idActive = Id_Invalid;
+					ctx.m_activeId = Id_Invalid;
 				}
 
-			} else if (uniformId == ctx.m_idHot) {
+			} else if (uniformId == ctx.m_hotId) {
 				if (intersects) {
 					if (ctx.isKeyDown(Action_Select)) {
-						m_idActive = _id;
+						m_activeId = _id;
 						storedVec = Normalize(intersection - _drawAt);
 						storedAngle = *_out_;
 					}
@@ -598,11 +598,11 @@ bool Im3d::GizmoScaleLocal(const char* _id, float* _vec3_)
 				makeHot(_id, depth, intersects);
 			}
 			*/
-			bool activeOrHot = ctx.m_idActive == uniformId || ctx.m_idHot == uniformId;
+			bool activeOrHot = ctx.m_activeId == uniformId || ctx.m_hotId == uniformId;
 			if (activeOrHot) {
 				colorX = colorY = colorZ = Color_GizmoHighlight;
 			}
-			ctx.pushAlpha(ctx.m_idHot == uniformId ? 1.0f : ctx.getAlpha());
+			ctx.pushAlpha(ctx.m_hotId == uniformId ? 1.0f : ctx.getAlpha());
 			ctx.begin(PrimitiveMode_Points);
 				ctx.vertex(drawAt, ctx.m_gizmoSizePixels * 2.0f, activeOrHot ? Color_GizmoHighlight : Color_White);
 			ctx.end();
@@ -870,8 +870,8 @@ Context::Context()
 	m_vertCountThisPrim = 0;
 
 	m_gizmoMode = GizmoMode_Translation;
-	m_idHot = Id_Invalid;
-	m_idActive = Id_Invalid;
+	m_hotId = Id_Invalid;
+	m_activeId = Id_Invalid;
 	m_hotDepth = FLT_MAX;
 	m_gizmoHeightPixels = 64.0f;
 	m_gizmoSizePixels = 5.0f;
@@ -933,24 +933,23 @@ void Context::sort()
 	Vec3 viewOrigin = m_appData.m_viewOrigin;
 
  // sort each primitive list internally
-	static const int kPrimCount[DrawPrimitive_Count] = { 3, 2, 1 }; // tris, lines, points
 	for (int i = 0 ; i < DrawPrimitive_Count; ++i) {
 		Vector<VertexData>& vd = m_vertexData[i][1];
 		if (!vd.empty()) {
-			sortData[i].reserve(vd.size() / kPrimCount[i]);
+			sortData[i].reserve(vd.size() / DrawPrimitiveSize[i]);
 			for (VertexData* v = vd.begin(); v != vd.end(); ) {
 				sortData[i].push_back(SortData(0.0f, v));
 				IM3D_ASSERT(v < vd.end());
-				for (int j = 0; j < kPrimCount[i]; ++j, ++v) {
+				for (int j = 0; j < DrawPrimitiveSize[i]; ++j, ++v) {
 				 // sort key is the primitive midpoint distance to view origin
 					sortData[i].back().m_key += Length2(Vec3(v->m_positionSize) - viewOrigin);
 				}
-				sortData[i].back().m_key /= (float)kPrimCount[i];
+				sortData[i].back().m_key /= (float)DrawPrimitiveSize[i];
 			}
 		 // qsort is not necessarily stable but it doesn't matter assuming the prims are pushed in
 		 //   roughly the same order each frame
 			qsort(sortData[i].data(), sortData[i].size(), sizeof(SortData), SortCmp);
-			Reorder(m_vertexData[i][1], sortData[i].data(), sortData[i].size(), kPrimCount[i]);
+			Reorder(m_vertexData[i][1], sortData[i].data(), sortData[i].size(), DrawPrimitiveSize[i]);
 		}
 	}
 
@@ -986,13 +985,13 @@ void Context::sort()
 			cprim = mxprim;
 			DrawList dl;
 			dl.m_primType = (DrawPrimitiveType)cprim;
-			dl.m_vertexData = m_vertexData[cprim][1].data() + (search[cprim] - sortData[cprim].data()) * kPrimCount[cprim];
+			dl.m_vertexData = m_vertexData[cprim][1].data() + (search[cprim] - sortData[cprim].data()) * DrawPrimitiveSize[cprim];
 			dl.m_vertexCount= 0;
 			m_sortedDrawLists.push_back(dl);
 		}
 
 	 // increment the vertex count for the current draw list
-		m_sortedDrawLists.back().m_vertexCount += kPrimCount[cprim];
+		m_sortedDrawLists.back().m_vertexCount += DrawPrimitiveSize[cprim];
 		++search[cprim];
 		if (search[cprim] == sortData[cprim].end()) {
 			search[cprim] = 0;
@@ -1024,7 +1023,7 @@ bool Context::gizmoAxisTranslation(Id _id, const Vec3& _drawAt, Vec3* _out_, con
 
 
 	Color color = _color;
-	if (_id == m_idActive) {
+	if (_id == m_activeId) {
 		color = Color_GizmoHighlight;
 		if (isKeyDown(Action_Select)) {
 			float tr, tl;
@@ -1037,15 +1036,15 @@ bool Context::gizmoAxisTranslation(Id _id, const Vec3& _drawAt, Vec3* _out_, con
 				vertex(_drawAt + _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
 			end();
 		} else {
-			m_idActive = Id_Invalid;
+			m_activeId = Id_Invalid;
 		}
 
-	} else if (_id == m_idHot) {
+	} else if (_id == m_hotId) {
 		color = Color_GizmoHighlight;
 
 		if (Intersects(ray, axisCapsule)) {
 			if (isKeyDown(Action_Select)) {
-				m_idActive = _id;
+				m_activeId = _id;
 				float tr, tl;
 				Nearest(ray, axisLine, tr, tl);
 				storedPosition = _axis * tl;
@@ -1062,7 +1061,7 @@ bool Context::gizmoAxisTranslation(Id _id, const Vec3& _drawAt, Vec3* _out_, con
 
 	float aligned = 1.0f - fabs(Dot(_axis, Normalize(m_appData.m_viewOrigin - _drawAt)));
 	aligned = getAlpha() * Remap(aligned, 0.05f, 0.1f);
-	if (m_idHot == _id) {
+	if (m_hotId == _id) {
 		aligned = 1.0f;
 	}
 
@@ -1090,17 +1089,17 @@ bool Context::gizmoPlaneTranslation(Id _id, const Vec3& _drawAt, Vec3* _out_, co
 	intersects &= AllLess(Abs(intersection - _drawAt), Vec3(_worldSize));	
 	bool ret = false;
 	
-	if (_id == m_idActive) {
+	if (_id == m_activeId) {
 		if (isKeyDown(Action_Select)) {
 			*_out_ = intersection + storedPosition;
 			ret = true;
 		} else {
-			m_idActive = Id_Invalid;
+			m_activeId = Id_Invalid;
 		}
-	} else if (_id == m_idHot) {
+	} else if (_id == m_hotId) {
 		if (intersects) {
 			if (isKeyDown(Action_Select)) {
-				m_idActive = _id;
+				m_activeId = _id;
 				storedPosition = *_out_ - intersection;
 			}
 		} else {
@@ -1130,7 +1129,7 @@ bool Context::gizmoAxisScale(Id _id, const Vec3& _drawAt, float* _out_, const Ve
 
 
 	Color color = _color;
-	if (_id == m_idActive) {
+	if (_id == m_activeId) {
 		color = Color_GizmoHighlight;
 		if (isKeyDown(Action_Select)) {
 			float tr, tl;
@@ -1149,15 +1148,15 @@ bool Context::gizmoAxisScale(Id _id, const Vec3& _drawAt, float* _out_, const Ve
 				end();
 			popEnableSorting();
 		} else {
-			m_idActive = Id_Invalid;
+			m_activeId = Id_Invalid;
 		}
 
-	} else if (_id == m_idHot) {
+	} else if (_id == m_hotId) {
 		color = Color_GizmoHighlight;
 
 		if (Intersects(ray, axisCapsule)) {
 			if (isKeyDown(Action_Select)) {
-				m_idActive = _id;
+				m_activeId = _id;
 				float tr, tl;
 				Nearest(ray, axisLine, tr, tl);
 				storedPosition = _axis * tl;
@@ -1174,7 +1173,7 @@ bool Context::gizmoAxisScale(Id _id, const Vec3& _drawAt, float* _out_, const Ve
 
 	float aligned = 1.0f - fabs(Dot(_axis, Normalize(m_appData.m_viewOrigin - _drawAt)));
 	aligned = getAlpha() * Remap(aligned, 0.05f, 0.1f);
-	if (m_idHot == _id) {
+	if (m_hotId == _id) {
 		aligned = 1.0f;
 	}
 	
@@ -1211,7 +1210,7 @@ bool Context::gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, flo
 	bool ret = false;
 	
 	Color color = _color;
-	if (_id == m_idActive) {
+	if (_id == m_activeId) {
 		color = Color_GizmoHighlight;
 		if (isKeyDown(Action_Select)) {
 			Vec3 delta = Normalize(intersection - _drawAt);
@@ -1236,15 +1235,15 @@ bool Context::gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, flo
 				end();
 			popEnableSorting();
 		} else {
-			m_idActive = Id_Invalid;
+			m_activeId = Id_Invalid;
 		}
 
-	} else if (_id == m_idHot) {
+	} else if (_id == m_hotId) {
 		color = Color_GizmoHighlight;
 
 		if (intersects) {
 			if (isKeyDown(Action_Select)) {
-				m_idActive = _id;
+				m_activeId = _id;
 				storedVec = Normalize(intersection - _drawAt);
 				storedAngle = *_out_;
 			}
@@ -1257,12 +1256,12 @@ bool Context::gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, flo
 		makeHot(_id, depth, intersects);
 	}
 	aligned = Max(Remap(aligned, 0.9f, 1.0f), 0.1f);
-	if (m_idActive == _id) {
+	if (m_activeId == _id) {
 		aligned = 1.0f;
 	}
 	pushColor(color);
 		pushSize(m_gizmoSizePixels);
-			pushMatrix(getMatrix() * LookAt(_drawAt, _drawAt + _axis));
+			pushMatrix(getMatrix() * LookAt(_drawAt, _drawAt + _axis, m_appData.m_worldUp));
 				begin(PrimitiveMode_LineLoop);
 					const int _detail = 128; // \todo dynamically select detail based on worldRadius/worldSize
 					for (int i = 0; i < _detail; ++i) {
@@ -1285,8 +1284,8 @@ bool Context::gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, flo
 
 bool Context::makeHot(Id _id, float _depth, bool _intersects)
 {
-	if (m_idActive == Id_Invalid &&	_depth < m_hotDepth && _intersects && !isKeyDown(Action_Select)) {
-		m_idHot = _id;
+	if (m_activeId == Id_Invalid &&	_depth < m_hotDepth && _intersects && !isKeyDown(Action_Select)) {
+		m_hotId = _id;
 		m_hotDepth = _depth;
 		return true;
 	}
@@ -1295,11 +1294,16 @@ bool Context::makeHot(Id _id, float _depth, bool _intersects)
 
 void Context::resetId()
 {
-	m_idActive = m_idHot = Id_Invalid; 
+	m_activeId = m_hotId = Id_Invalid; 
 	m_hotDepth = FLT_MAX; 
 }
 
-
+U32 Context::getPrimitiveCount(DrawPrimitiveType _type) const
+{
+	U32 ret = m_vertexData[_type][0].size() + m_vertexData[_type][1].size();
+	ret /= DrawPrimitiveSize[_type];
+	return ret;
+}
 
 /******************************************************************************
 

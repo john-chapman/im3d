@@ -78,6 +78,7 @@ void Im3d_Update()
 	ad.m_cursorRayOrigin = ad.m_viewOrigin;
 	float aspect = ad.m_viewportSize.x / ad.m_viewportSize.y;
 	ad.m_cursorRayDirection = g_Example->m_camWorld * Normalize(Vec4(cursorPos.x * ad.m_tanHalfFov * aspect, cursorPos.y * ad.m_tanHalfFov, -1.0f, 0.0f));
+	ad.m_worldUp = Vec3(0.0f, 1.0f, 0.0f); // used internally for generating orthonormal bases
 
  // Fill the key state array; using GetAsyncKeyState here but this could equally well be done via the window proc.
  // All key states have an equivalent (and more descriptive) 'Action_' enum.
