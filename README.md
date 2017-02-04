@@ -35,5 +35,3 @@ Im3d::GizmoScale("scale", &scale));
 
 
 For a general-purpose (2d) immediate mode UI I highly recommend [dear ImGui](https://github.com/ocornut/imgui).
-
-Writing gizmo behaviors. The following skeleton code shows how gizmo behaviors works in general:
