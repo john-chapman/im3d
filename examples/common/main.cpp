@@ -57,28 +57,28 @@ int main(int, char**)
 				Im3d::GetContext().setGizmoMode((Im3d::GizmoMode)gizmoMode);
 				
 				static bool separate = false;
-				static Im3d::Vec3 translation(0.0f);
+				static Im3d::Vec3 translation(0.0f, 2.0f, 0.0f);
 				static Im3d::Mat3 rotation(1.0f);
 				static Im3d::Vec3 scale(1.0f);
 				ImGui::Checkbox("Separate Transforms", &separate);
-				
+			
 				ImGui::SliderFloat("Gizmo Size", &ctx.m_gizmoHeightPixels, 0.0f, 256.0f);
 				ImGui::SliderFloat("Gizmo Thickness", &ctx.m_gizmoSizePixels, 0.0f, 32.0f);
 				ImGui::Text("Hot ID:    0x%x", ctx.m_idHot);
 				ImGui::Text("Active ID: 0x%x", ctx.m_idActive);
 				ImGui::Text("Hot Depth: %.3f", ctx.m_hotDepth == FLT_MAX ? -1.0f : ctx.m_hotDepth);
 				static Im3d::Mat4 m(1.0f);
-				Im3d::PushDrawState();
-					Im3d::PushMatrix();
-						Im3d::SetAlpha(0.5f);
-						Im3d::SetSize(2.0f);
-						Im3d::SetMatrix(m);
-						Im3d::DrawXyzAxes();
-						Im3d::SetColor(1.0f, 0.1f, 0.4f);
-						Im3d::SetSize(4.0f);
-						Im3d::DrawAlignedBox(Im3d::Vec3(-0.5f), Im3d::Vec3(0.5f));
-					Im3d::PopMatrix();
-				Im3d::PopDrawState();
+				//Im3d::PushDrawState();
+				//	Im3d::PushMatrix();
+				//		Im3d::SetAlpha(0.5f);
+				//		Im3d::SetSize(2.0f);
+				//		Im3d::SetMatrix(m);
+				//		Im3d::DrawXyzAxes();
+				//		Im3d::SetColor(1.0f, 0.1f, 0.4f);
+				//		Im3d::SetSize(4.0f);
+				//		Im3d::DrawAlignedBox(Im3d::Vec3(-0.5f), Im3d::Vec3(0.5f));
+				//	Im3d::PopMatrix();
+				//Im3d::PopDrawState();
 				if (separate) {
 					bool changed = false;
 					switch (Im3d::GetContext().getGizmoMode()) {
@@ -102,6 +102,8 @@ int main(int, char**)
 				} else {
 					Im3d::Gizmo("GizmoTest", m); // transform after drawing the object to avoid 1 frame lag
 				}
+
+				Im3d::DrawTeapot(m, example.m_camViewProj);
 				
 				ImGui::TreePop();
 			}

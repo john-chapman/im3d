@@ -54,10 +54,6 @@
 		GLuint LoadCompileShader(GLenum _stage, const char* _path, const char* _defines = 0);
 		// Return false on failure (prints log info to stderr).
 		bool LinkShaderProgram(GLuint _handle);
-
-		// Draw a quad in NDC [-1,1].
-		void DrawNdcQuad();
-
 		
 		const char* GetGlEnumString(GLenum _enum);
 		const char* GlGetString(GLenum _name);
@@ -107,6 +103,9 @@ void  RandSeed(int _seed);
 int   RandInt(int _min, int _max);
 float RandFloat(float _min, float _max);
 Vec3  RandVec3(float _min, float _max);
+
+void  DrawNdcQuad();
+void  DrawTeapot(const Mat4& _world, const Mat4& _viewProj);
 
 struct Example
 {

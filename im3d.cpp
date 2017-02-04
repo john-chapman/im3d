@@ -349,7 +349,7 @@ bool Im3d::GizmoTranslation(const char* _id, float* _vec3_)
 	bool ret = false;
 	Context& ctx = GetContext();
 	ctx.pushId(MakeId(_id));
-	ctx.pushEnableSorting(false);
+	ctx.pushEnableSorting(true);
 	ctx.pushColor(Color_GizmoHighlight);
 		float worldHeight = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoHeightPixels);
 		float worldSize = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoSizePixels);
@@ -455,15 +455,13 @@ bool Im3d::GizmoTranslation(const char* _id, float* _vec3_)
 			if (ctx.m_idActive == planeId || ctx.m_idHot == planeId) {
 				colorX = colorY = colorZ = Color_GizmoHighlight;
 			}
-			
 			ctx.pushAlpha(ctx.m_idHot == planeId ? 1.0f : ctx.getAlpha());
-				ctx.begin(PrimitiveMode_Points);
-					ctx.vertex(planeOrigin, ctx.m_gizmoSizePixels * 2.0f, (ctx.m_idActive == planeId || ctx.m_idHot == planeId) ? Color_GizmoHighlight : Color_White);
-				ctx.end();
+			ctx.begin(PrimitiveMode_Points);
+				ctx.vertex(planeOrigin, ctx.m_gizmoSizePixels * 2.0f, (ctx.m_idActive == planeId || ctx.m_idHot == planeId) ? Color_GizmoHighlight : Color_White);
+			ctx.end();
 			ctx.popAlpha();
 		}
 
-		ctx.setEnableSorting(true);
 		ret |= ctx.gizmoAxisTranslation(MakeId("xaxis"), drawAt, v3, Vec3(1.0f, 0.0f, 0.0f), colorX, worldHeight, worldSize);
 		ret |= ctx.gizmoAxisTranslation(MakeId("yaxis"), drawAt, v3, Vec3(0.0f, 1.0f, 0.0f), colorY, worldHeight, worldSize);
 		ret |= ctx.gizmoAxisTranslation(MakeId("zaxis"), drawAt, v3, Vec3(0.0f, 0.0f, 1.0f), colorZ, worldHeight, worldSize);
@@ -555,27 +553,67 @@ bool Im3d::GizmoScaleLocal(const char* _id, float* _vec3_)
 	Vec3* v3 = (Vec3*)_vec3_;
 	bool ret = false;
 	Context& ctx = GetContext();
+	AppData& appData = ctx.getAppData();
+		
+	const Mat4& localMatrix = ctx.getMatrix();
+	Vec3  axisX  = Normalize(localMatrix.getCol(0));
+	Vec3  axisY  = Normalize(localMatrix.getCol(1));
+	Vec3  axisZ  = Normalize(localMatrix.getCol(2));
+	Vec3  drawAt = localMatrix.getCol(3);
+	float worldHeight = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoHeightPixels);
+	float worldSize   = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoSizePixels);
+	Color colorX = Color_Red;
+	Color colorY = Color_Green;
+	Color colorZ = Color_Blue;
+
 	ctx.pushId(MakeId(_id));
 	ctx.pushEnableSorting(false);
-	ctx.pushColor(Color_GizmoHighlight);
-		
-		Color colorX = Color_Red;
-		Color colorY = Color_Green;
-		Color colorZ = Color_Blue;
-		Vec3  axisX  = Normalize(ctx.getMatrix().getCol(0));
-		Vec3  axisY  = Normalize(ctx.getMatrix().getCol(1));
-		Vec3  axisZ  = Normalize(ctx.getMatrix().getCol(2));
-		Vec3  drawAt = ctx.getMatrix().getCol(3);
-		//ctx.pushMatrix(Mat4(Mat3(axisX, axisY, axisZ)));
-		float worldHeight = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoHeightPixels);
-		float worldSize = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoSizePixels);
-		
+	ctx.pushMatrix(Mat4(1.0f)); // don't draw with the local transformation
+		{ // uniform scale
+			Id uniformId = MakeId("uniform");
+			
+			Sphere handle(drawAt, ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoSizePixels * 2.0f));
+			Ray ray(appData.m_cursorRayOrigin, appData.m_cursorRayDirection);
+			float t0, t1;
+			bool intersects = Intersect(ray, handle, t0, t1);
+			/*if (uniformId == ctx.m_idActive) {
+				if (ctx.isKeyDown(Action_Select)) {
+				} else {
+					ctx.m_idActive = Id_Invalid;
+				}
+
+			} else if (uniformId == ctx.m_idHot) {
+				if (intersects) {
+					if (ctx.isKeyDown(Action_Select)) {
+						m_idActive = _id;
+						storedVec = Normalize(intersection - _drawAt);
+						storedAngle = *_out_;
+					}
+				} else {
+					resetId();
+				}
+
+			} else {
+			 	float depth = Length2(intersection - m_appData.m_viewOrigin);
+				makeHot(_id, depth, intersects);
+			}
+			*/
+			bool activeOrHot = ctx.m_idActive == uniformId || ctx.m_idHot == uniformId;
+			if (activeOrHot) {
+				colorX = colorY = colorZ = Color_GizmoHighlight;
+			}
+			ctx.pushAlpha(ctx.m_idHot == uniformId ? 1.0f : ctx.getAlpha());
+			ctx.begin(PrimitiveMode_Points);
+				ctx.vertex(drawAt, ctx.m_gizmoSizePixels * 2.0f, activeOrHot ? Color_GizmoHighlight : Color_White);
+			ctx.end();
+			ctx.popAlpha();
+		}
+
 		ctx.setEnableSorting(true);
 		ret |= ctx.gizmoAxisScale(MakeId("axisX"), drawAt, &v3->x, axisX, colorX, worldHeight, worldSize);
 		ret |= ctx.gizmoAxisScale(MakeId("axisY"), drawAt, &v3->y, axisY, colorY, worldHeight, worldSize);
 		ret |= ctx.gizmoAxisScale(MakeId("axisZ"), drawAt, &v3->z, axisZ, colorZ, worldHeight, worldSize);
-		//ctx.popMatrix();
-	ctx.popColor();
+	ctx.popMatrix();
 	ctx.popEnableSorting();
 	ctx.popId();
 
@@ -895,7 +933,7 @@ void Context::sort()
 	Vec3 viewOrigin = m_appData.m_viewOrigin;
 
  // sort each primitive list internally
-	static const int kPrimCount[DrawPrimitive_Count] = { 1, 2, 3 };
+	static const int kPrimCount[DrawPrimitive_Count] = { 3, 2, 1 }; // tris, lines, points
 	for (int i = 0 ; i < DrawPrimitive_Count; ++i) {
 		Vector<VertexData>& vd = m_vertexData[i][1];
 		if (!vd.empty()) {
@@ -1005,7 +1043,7 @@ bool Context::gizmoAxisTranslation(Id _id, const Vec3& _drawAt, Vec3* _out_, con
 	} else if (_id == m_idHot) {
 		color = Color_GizmoHighlight;
 
-		if (m_idActive == Id_Invalid && Intersects(ray, axisCapsule)) {
+		if (Intersects(ray, axisCapsule)) {
 			if (isKeyDown(Action_Select)) {
 				m_idActive = _id;
 				float tr, tl;
@@ -1117,7 +1155,7 @@ bool Context::gizmoAxisScale(Id _id, const Vec3& _drawAt, float* _out_, const Ve
 	} else if (_id == m_idHot) {
 		color = Color_GizmoHighlight;
 
-		if (m_idActive == Id_Invalid && Intersects(ray, axisCapsule)) {
+		if (Intersects(ray, axisCapsule)) {
 			if (isKeyDown(Action_Select)) {
 				m_idActive = _id;
 				float tr, tl;
@@ -1204,7 +1242,7 @@ bool Context::gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, flo
 	} else if (_id == m_idHot) {
 		color = Color_GizmoHighlight;
 
-		if (m_idActive == Id_Invalid && intersects) {
+		if (intersects) {
 			if (isKeyDown(Action_Select)) {
 				m_idActive = _id;
 				storedVec = Normalize(intersection - _drawAt);
@@ -1615,7 +1653,7 @@ bool Im3d::Intersect(const Ray& _r, const Sphere& _s, float& t0_, float& t1_)
 	if (p2 > r2) {
 		return false;
 	}
-	float s = sqrt(r2 - p2); 
+	float s = sqrtf(r2 - p2); 
 	t0_ = Max(q - s, 0.0f);
 	t1_ = q + s;
 	 

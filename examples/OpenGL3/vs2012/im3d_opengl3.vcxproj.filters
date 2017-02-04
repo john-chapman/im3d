@@ -80,6 +80,9 @@
     <ClCompile Include="..\..\common\main.cpp">
       <Filter>common</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\common\teapot.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
     <ClCompile Include="..\im3d_opengl3.cpp" />
   </ItemGroup>
 </Project>

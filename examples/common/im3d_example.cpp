@@ -1,5 +1,7 @@
 #include "im3d_example.h"
 
+#include "teapot.h"
+
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -249,7 +251,7 @@ using namespace Im3d;
 				WGL_DOUBLE_BUFFER_ARB,  1,
 				WGL_COLOR_BITS_ARB,     24,
 				WGL_ALPHA_BITS_ARB,     8,
-				WGL_DEPTH_BITS_ARB,     0,
+				WGL_DEPTH_BITS_ARB,     16,
 				WGL_STENCIL_BITS_ARB,   0,
 				0
 			};
@@ -416,6 +418,58 @@ using namespace Im3d;
 		glAssert(glDrawArrays(GL_TRIANGLE_STRIP, 0, 4));
 		glAssert(glBindVertexArray(0));
 	}
+
+	void Im3d::DrawTeapot(const Mat4& _world, const Mat4& _viewProj)
+	{
+		static GLuint shTeapot;
+		static GLuint vbTeapot;
+		static GLuint ibTeapot;
+		static GLuint vaTeapot;
+		if (shTeapot == 0) {
+			GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "model.glsl", "VERTEX_SHADER\0");
+			GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "model.glsl", "FRAGMENT_SHADER\0");
+			if (vs && fs) {
+				glAssert(shTeapot = glCreateProgram());
+				glAssert(glAttachShader(shTeapot, vs));
+				glAssert(glAttachShader(shTeapot, fs));
+				bool ret = LinkShaderProgram(shTeapot);
+				glAssert(glDeleteShader(vs));
+				glAssert(glDeleteShader(fs));
+				if (!ret) {
+					return;
+				}
+			} else {
+				return;
+			}
+			glAssert(glCreateBuffers(1, &vbTeapot));
+			glAssert(glCreateBuffers(1, &ibTeapot));
+			glAssert(glCreateVertexArrays(1, &vaTeapot));	
+			glAssert(glBindVertexArray(vaTeapot));
+			glAssert(glBindBuffer(GL_ARRAY_BUFFER, vbTeapot));
+			glAssert(glEnableVertexAttribArray(0));
+			glAssert(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vec3) * 2, (GLvoid*)0));
+			glAssert(glEnableVertexAttribArray(1));
+			glAssert(glEnableVertexAttribArray(0));
+			glAssert(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, (GLvoid*)0));
+			glAssert(glEnableVertexAttribArray(1));
+			glAssert(glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 6, (GLvoid*)(sizeof(float) * 3)));
+			glAssert(glBufferData(GL_ARRAY_BUFFER, sizeof(s_teapotVertices), (GLvoid*)s_teapotVertices, GL_STATIC_DRAW));
+			glAssert(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibTeapot));
+			glAssert(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(s_teapotIndices), (GLvoid*)s_teapotIndices, GL_STATIC_DRAW));
+			glAssert(glBindVertexArray(0));
+		}
+		glAssert(glUseProgram(shTeapot));
+		glAssert(glUniformMatrix4fv(glGetUniformLocation(shTeapot, "uWorldMatrix"), 1, false, _world.m));
+		glAssert(glUniformMatrix4fv(glGetUniformLocation(shTeapot, "uViewProjMatrix"), 1, false, _viewProj.m));
+		glAssert(glBindVertexArray(vaTeapot));
+		glAssert(glEnable(GL_DEPTH_TEST));
+		glAssert(glEnable(GL_CULL_FACE));
+		glAssert(glDrawElements(GL_TRIANGLES, sizeof(s_teapotIndices) / sizeof(unsigned), GL_UNSIGNED_INT, (GLvoid*)0));
+		glAssert(glDisable(GL_DEPTH_TEST));
+		glAssert(glDisable(GL_CULL_FACE));
+		glAssert(glBindVertexArray(0));
+		glAssert(glUseProgram(0));
+	}
 	
 	const char* Im3d::GetGlEnumString(GLenum _enum)
 	{
@@ -541,9 +595,9 @@ Vec3 Im3d::RandVec3(float _min, float _max)
 			const ImDrawIdx* indexOffset = 0;
 	
 			glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_vbImGui));
-			glAssert(glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)drawList->VtxBuffer.size() * sizeof(ImDrawVert), (GLvoid*)&drawList->VtxBuffer.front(), GL_STREAM_DRAW));
+			glAssert(glBufferData(GL_ARRAY_BUFFER, drawList->VtxBuffer.size() * sizeof(ImDrawVert), (GLvoid*)&drawList->VtxBuffer.front(), GL_STREAM_DRAW));
 			glAssert(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_ibImGui));
-			glAssert(glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)drawList->IdxBuffer.Size * sizeof(ImDrawIdx), (const GLvoid*)drawList->IdxBuffer.Data, GL_STREAM_DRAW));
+			glAssert(glBufferData(GL_ELEMENT_ARRAY_BUFFER, drawList->IdxBuffer.Size * sizeof(ImDrawIdx), (GLvoid*)drawList->IdxBuffer.Data, GL_STREAM_DRAW));
 	
 			for (const ImDrawCmd* pcmd = drawList->CmdBuffer.begin(); pcmd != drawList->CmdBuffer.end(); ++pcmd) {
 				if (pcmd->UserCallback) {
@@ -551,7 +605,7 @@ Vec3 Im3d::RandVec3(float _min, float _max)
 				} else {
 					glAssert(glBindTexture(GL_TEXTURE_2D, (GLuint)pcmd->TextureId));
 					glAssert(glScissor((int)pcmd->ClipRect.x, (int)(fbY - pcmd->ClipRect.w), (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y)));
-					glAssert(glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, GL_UNSIGNED_SHORT, (GLvoid*)indexOffset));
+					glAssert(glDrawElements(GL_TRIANGLES, pcmd->ElemCount, GL_UNSIGNED_SHORT, (GLvoid*)indexOffset));
 				}
 				indexOffset += pcmd->ElemCount;
 			}
@@ -830,7 +884,7 @@ void Example::draw()
 		glAssert(glViewport(0, 0, m_width, m_height));
 		glAssert(glClearColor(0.5f, 0.5f, 0.5f, 0.0f));
 		//glAssert(glClearColor(0.0f, 0.0f, 0.0f, 0.0f));
-		glAssert(glClear(GL_COLOR_BUFFER_BIT));
+		glAssert(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 	#endif
 }
 
