@@ -14,22 +14,26 @@ Im3d::PushDrawState();
 	Im3d::End();
 Im3d::PopDrawState();
 ```
-_A key point to note is that there is no view-projection matrix here - the requirement for VR support precludes this. Instead, the view-projection transform is applied at draw time (in the shader)._
+_A key point to note is that there is no view-projection matrix here - the requirement for VR support precludes this. Instead, all vertices are specified in world space and the view-projection transform is applied at draw time (in the shader)._
 
 Similarly, the UI system follows the immediate mode paradigm in that no UI state is retained. For example, you can create gizmos from any place in the code:
 
-
-TODO: Gif here showing gizmos in action (code snippets above images).
 ```
-vec3 position;
+vec3 translation;
 mat3 rotation;
 vec3 scale;
 
 // ...
 
-Im3d::GizmoPosition("position", &position));
+Im3d::GizmoTranslation("translation", &position));
 Im3d::GizmoRotation("rotation", &rotation));
 Im3d::GizmoScale("scale", &scale));
 ```
+![Translation Gizmo](https://github.com/john-chapman/im3d/wiki/images/im3d_translation.gif)
+![Rotation Gizmo](https://github.com/john-chapman/im3d/wiki/images/im3d_rotation.gif)
+![Scale Gizmo](https://github.com/john-chapman/im3d/wiki/images/im3d_scale.gif)
+
 
 For a general-purpose (2d) immediate mode UI I highly recommend [dear ImGui](https://github.com/ocornut/imgui).
+
+Writing gizmo behaviors. The following skeleton code shows how gizmo behaviors works in general:
