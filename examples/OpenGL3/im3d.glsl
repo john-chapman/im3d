@@ -24,7 +24,7 @@
 	
 	void main() 
 	{
-		vData.m_color = aColor.abgr;
+		vData.m_color = aColor.abgr; // swizzle to correct endianness
 		#if !defined(TRIANGLES)
 			vData.m_color.a *= smoothstep(0.0, 1.0, aPositionSize.w / kAntialiasing);
 		#endif

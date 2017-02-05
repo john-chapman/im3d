@@ -1,15 +1,12 @@
 #include "im3d.h"
 #include "im3d_math.h"
 
-					#include "imgui/imgui.h"
-					#define IM3D_LOG_DBG(...) ImGui::Text(__VA_ARGS__)
-
 #include <cstdlib>
 #include <cstring>
 #include <cfloat>
 
 #if defined(IM3D_MALLOC) && !defined(IM3D_FREE)
-		#error im3d: IM3D_MALLOC defined without IM3D_FREE; define both or neither
+	#error im3d: IM3D_MALLOC defined without IM3D_FREE; define both or neither
 #endif
 #if defined(IM3D_FREE) && !defined(IM3D_MALLOC)
 	#error im3d: IM3D_FREE defined without IM3D_MALLOC; define both or neither
@@ -52,16 +49,16 @@
 using namespace Im3d;
 
 const Id    Im3d::Id_Invalid    = 0;
-const Color Im3d::Color_Black   = Color(0.0f, 0.0f, 0.0f);
-const Color Im3d::Color_White   = Color(1.0f, 1.0f, 1.0f);
-const Color Im3d::Color_Red     = Color(1.0f, 0.0f, 0.0f);
-const Color Im3d::Color_Green   = Color(0.0f, 1.0f, 0.0f);
-const Color Im3d::Color_Blue    = Color(0.0f, 0.0f, 1.0f);
-const Color Im3d::Color_Magenta = Color(1.0f, 0.0f, 1.0f);
-const Color Im3d::Color_Yellow  = Color(1.0f, 1.0f, 0.0f);
-const Color Im3d::Color_Cyan    = Color(0.0f, 1.0f, 1.0f);
+const Color Im3d::Color_Black   = Color(0x000000ff);
+const Color Im3d::Color_White   = Color(0xffffffff);
+const Color Im3d::Color_Red     = Color(0xff0000ff);
+const Color Im3d::Color_Green   = Color(0x00ff00ff);
+const Color Im3d::Color_Blue    = Color(0x0000ffff);
+const Color Im3d::Color_Magenta = Color(0xff00ffff);
+const Color Im3d::Color_Yellow  = Color(0xffff00ff);
+const Color Im3d::Color_Cyan    = Color(0x00ffffff);
 
-static const Color Color_GizmoHighlight = Color(1.0f, 0.78f, 0.27f);
+static const Color Color_GizmoHighlight = Color(0xffc745ff);
 
 Color::Color(const Vec4& _rgba)
 {
@@ -323,7 +320,7 @@ bool Im3d::Gizmo(const char* _id, float* _mat4_)
 	case GizmoMode_Scale: {
 		Vec3 scale(Length(m4->getCol(0)), Length(m4->getCol(1)), Length(m4->getCol(2)));
 		ctx.pushMatrix(*m4);
-		if (GizmoScaleLocal(_id, scale)) {
+		if (GizmoScale(_id, scale)) {
 			Mat3 rmat(*m4);
 			rmat.setCol(0, Normalize(rmat.getCol(0)) * scale.x);
 			rmat.setCol(1, Normalize(rmat.getCol(1)) * scale.y);
@@ -548,12 +545,12 @@ bool Im3d::GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_)
 	ctx.popId();
 	return ret;
 }
-bool Im3d::GizmoScaleLocal(const char* _id, float* _vec3_)
+bool Im3d::GizmoScale(const char* _id, float* _vec3_)
 {
 	Vec3* v3 = (Vec3*)_vec3_;
-	bool ret = false;
 	Context& ctx = GetContext();
 	AppData& appData = ctx.getAppData();
+	bool ret = false;
 		
 	const Mat4& localMatrix = ctx.getMatrix();
 	Vec3  axisX  = Normalize(localMatrix.getCol(0));
@@ -569,50 +566,59 @@ bool Im3d::GizmoScaleLocal(const char* _id, float* _vec3_)
 	ctx.pushId(MakeId(_id));
 	ctx.pushEnableSorting(false);
 	ctx.pushMatrix(Mat4(1.0f)); // don't draw with the local transformation
-		{ // uniform scale
-			Id uniformId = MakeId("uniform");
-			
-			Sphere handle(drawAt, ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoSizePixels * 2.0f));
-			Ray ray(appData.m_cursorRayOrigin, appData.m_cursorRayDirection);
-			float t0, t1;
-			bool intersects = Intersect(ray, handle, t0, t1);
-			/*if (uniformId == ctx.m_activeId) {
-				if (ctx.isKeyDown(Action_Select)) {
-				} else {
-					ctx.m_activeId = Id_Invalid;
-				}
-
-			} else if (uniformId == ctx.m_hotId) {
-				if (intersects) {
-					if (ctx.isKeyDown(Action_Select)) {
-						m_activeId = _id;
-						storedVec = Normalize(intersection - _drawAt);
-						storedAngle = *_out_;
-					}
-				} else {
-					resetId();
-				}
-
+	{ // uniform scale
+		Id uniformId = MakeId("uniform");
+		Sphere handle(drawAt, ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoSizePixels * 4.0f));
+		Ray ray(appData.m_cursorRayOrigin, appData.m_cursorRayDirection);
+		float t0, t1;
+		bool intersects = Intersect(ray, handle, t0, t1);
+		Vec3& storedScale = ctx.m_gizmoStateVec3;
+		Vec3& storedPosition = *((Vec3*)ctx.m_gizmoStateMat3.m);
+		if (uniformId == ctx.m_activeId) {
+			if (ctx.isKeyDown(Action_Select)) {
+				Plane plane(Normalize(drawAt - appData.m_viewOrigin), drawAt);
+				Intersect(ray, plane, t0);
+				Vec3 intersection = ray.m_origin + ray.m_direction * t0;
+				float delta = Length(intersection - drawAt);
+				float sign = SignOf(Dot(intersection - drawAt, storedPosition));
+				*v3 = storedScale * Vec3(Max(1.0f + delta * sign / worldHeight, 1e-3f));
+				ret = true;
 			} else {
-			 	float depth = Length2(intersection - m_appData.m_viewOrigin);
-				makeHot(_id, depth, intersects);
+				ctx.m_activeId = Id_Invalid;
 			}
-			*/
-			bool activeOrHot = ctx.m_activeId == uniformId || ctx.m_hotId == uniformId;
-			if (activeOrHot) {
-				colorX = colorY = colorZ = Color_GizmoHighlight;
+
+		} else if (uniformId == ctx.m_hotId) {
+			if (intersects) {
+				if (ctx.isKeyDown(Action_Select)) {
+					ctx.m_activeId = uniformId;
+					storedScale = *v3;
+					storedPosition = ray.m_origin + ray.m_direction * t0;
+				}
+			} else {
+				ctx.resetId();
 			}
-			ctx.pushAlpha(ctx.m_hotId == uniformId ? 1.0f : ctx.getAlpha());
-			ctx.begin(PrimitiveMode_Points);
-				ctx.vertex(drawAt, ctx.m_gizmoSizePixels * 2.0f, activeOrHot ? Color_GizmoHighlight : Color_White);
-			ctx.end();
-			ctx.popAlpha();
+
+		} else {
+		 	float depth = Length2(drawAt - ctx.getAppData().m_viewOrigin);
+			ctx.makeHot(uniformId, depth, intersects);
 		}
 
-		ctx.setEnableSorting(true);
-		ret |= ctx.gizmoAxisScale(MakeId("axisX"), drawAt, &v3->x, axisX, colorX, worldHeight, worldSize);
-		ret |= ctx.gizmoAxisScale(MakeId("axisY"), drawAt, &v3->y, axisY, colorY, worldHeight, worldSize);
-		ret |= ctx.gizmoAxisScale(MakeId("axisZ"), drawAt, &v3->z, axisZ, colorZ, worldHeight, worldSize);
+		bool activeOrHot = ctx.m_activeId == uniformId || ctx.m_hotId == uniformId;
+		if (activeOrHot) {
+			colorX = colorY = colorZ = Color_GizmoHighlight;
+		}
+		ctx.pushAlpha(ctx.m_hotId == uniformId ? 1.0f : ctx.getAlpha());
+		ctx.begin(PrimitiveMode_Points);
+			ctx.vertex(drawAt, ctx.m_gizmoSizePixels * 2.0f, activeOrHot ? Color_GizmoHighlight : Color_White);
+		ctx.end();
+		ctx.popAlpha();
+	}
+
+	ctx.setEnableSorting(true);
+	ret |= ctx.gizmoAxisScale(MakeId("axisX"), drawAt, &v3->x, axisX, colorX, worldHeight, worldSize);
+	ret |= ctx.gizmoAxisScale(MakeId("axisY"), drawAt, &v3->y, axisY, colorY, worldHeight, worldSize);
+	ret |= ctx.gizmoAxisScale(MakeId("axisZ"), drawAt, &v3->z, axisZ, colorZ, worldHeight, worldSize);
+	
 	ctx.popMatrix();
 	ctx.popEnableSorting();
 	ctx.popId();
@@ -786,7 +792,7 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 
 void Context::reset()
 {
- // All state stacks should be default here, else there was a mismatched Push*()/Pop*()
+ // all state stacks should be default here, else there was a mismatched Push*()/Pop*()
 	IM3D_ASSERT(m_colorStack.size() == 1);
 	IM3D_ASSERT(m_alphaStack.size() == 1);
 	IM3D_ASSERT(m_sizeStack.size() == 1);
@@ -946,14 +952,13 @@ void Context::sort()
 				}
 				sortData[i].back().m_key /= (float)DrawPrimitiveSize[i];
 			}
-		 // qsort is not necessarily stable but it doesn't matter assuming the prims are pushed in
-		 //   roughly the same order each frame
+		 // qsort is not necessarily stable but it doesn't matter assuming the prims are pushed in roughly the same order each frame
 			qsort(sortData[i].data(), sortData[i].size(), sizeof(SortData), SortCmp);
 			Reorder(m_vertexData[i][1], sortData[i].data(), sortData[i].size(), DrawPrimitiveSize[i]);
 		}
 	}
 
- // construct draw lists (split prim lists so that none overlap)
+ // construct draw lists - partition sort data into non-overlapping lists
 	int cprim = 0;
 	SortData* search[DrawPrimitive_Count];
 	int emptyCount = 0;
@@ -1002,6 +1007,7 @@ void Context::sort()
 	#undef modinc
 }
 
+
 float Context::pixelsToWorldSize(const Vec3& _position, float _pixels)
 {
 	float d = Length(_position - m_appData.m_viewOrigin);
@@ -1010,19 +1016,18 @@ float Context::pixelsToWorldSize(const Vec3& _position, float _pixels)
 
 bool Context::gizmoAxisTranslation(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _axis, Color _color, float _worldHeight, float _worldSize)
 {
-	Vec3& storedPosition = m_gizmoStateVec3;
-
 	Ray ray(m_appData.m_cursorRayOrigin, m_appData.m_cursorRayDirection);
 	Line axisLine(_drawAt, _axis);
 	Capsule axisCapsule(
-		_drawAt + _axis * _worldHeight * 0.2f, // *.2f = leave a small space around the origin
+		_drawAt + _axis * _worldHeight * 0.2f, // *.2 = leave a small space around the origin
 		_drawAt + _axis * _worldHeight,
 		_worldSize
 		);
+
+	Vec3& storedPosition = m_gizmoStateVec3;
+	Color color = _color;
 	bool ret = false;
 
-
-	Color color = _color;
 	if (_id == m_activeId) {
 		color = Color_GizmoHighlight;
 		if (isKeyDown(Action_Select)) {
@@ -1060,17 +1065,15 @@ bool Context::gizmoAxisTranslation(Id _id, const Vec3& _drawAt, Vec3* _out_, con
 	}
 
 	float aligned = 1.0f - fabs(Dot(_axis, Normalize(m_appData.m_viewOrigin - _drawAt)));
-	aligned = getAlpha() * Remap(aligned, 0.05f, 0.1f);
+	aligned = Remap(aligned, 0.05f, 0.1f);
 	if (m_hotId == _id) {
 		aligned = 1.0f;
 	}
-
+	color.setA(color.getA() * aligned);
 	pushColor(color);
-	pushAlpha(aligned);
 	pushSize(m_gizmoSizePixels);
 		DrawArrow(axisCapsule.m_start, axisCapsule.m_end, _worldSize * 4.0f);
 	popSize();
-	popAlpha();
 	popColor();
 	return ret;
 }
@@ -1087,6 +1090,7 @@ bool Context::gizmoPlaneTranslation(Id _id, const Vec3& _drawAt, Vec3* _out_, co
 	}
 	Vec3 intersection = ray.m_origin + ray.m_direction * tr;
 	intersects &= AllLess(Abs(intersection - _drawAt), Vec3(_worldSize));	
+	
 	bool ret = false;
 	
 	if (_id == m_activeId) {
@@ -1115,20 +1119,19 @@ bool Context::gizmoPlaneTranslation(Id _id, const Vec3& _drawAt, Vec3* _out_, co
 
 bool Context::gizmoAxisScale(Id _id, const Vec3& _drawAt, float* _out_, const Vec3& _axis, Color _color, float _worldHeight, float _worldSize)
 {
-	Vec3& storedPosition = m_gizmoStateVec3;
-	float& storedScale = m_gizmoStateFloat;
-
 	Ray ray(m_appData.m_cursorRayOrigin, m_appData.m_cursorRayDirection);
 	Line axisLine(_drawAt, _axis);
 	Capsule axisCapsule(
-		_drawAt + _axis * _worldHeight * 0.2f, // *.2f = leave a small space around the origin
+		_drawAt + _axis * _worldHeight * 0.2f, // *.2 = leave a small space around the origin
 		_drawAt + _axis * _worldHeight,
 		_worldSize
 		);
+
+	Vec3& storedPosition = m_gizmoStateVec3;
+	float& storedScale = m_gizmoStateFloat;
 	bool ret = false;
-
-
 	Color color = _color;
+	
 	if (_id == m_activeId) {
 		color = Color_GizmoHighlight;
 		if (isKeyDown(Action_Select)) {
@@ -1137,23 +1140,23 @@ bool Context::gizmoAxisScale(Id _id, const Vec3& _drawAt, float* _out_, const Ve
 			Vec3 intersection = _axis * tl;
 			Vec3 delta = intersection - storedPosition;
 			float sign = SignOf(Dot(delta, _axis));
-			*_out_ = storedScale * (1.0f + Length(delta) * sign / _worldHeight);
+			*_out_ = storedScale * Max(1.0f + Length(delta) * sign / _worldHeight, 1e-3f);
 			ret = true;
 
-			axisCapsule.m_end = axisCapsule.m_start + intersection; // update the end point for drawing the axis
+			axisCapsule.m_end = _drawAt + intersection; // update the end point for drawing the axis
 			pushEnableSorting(false);
-				begin(PrimitiveMode_Lines);
-					vertex(_drawAt - _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
-					vertex(_drawAt + _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
-				end();
+			begin(PrimitiveMode_Lines);
+				vertex(_drawAt - _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
+				vertex(_drawAt + _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
+			end();
 			popEnableSorting();
+
 		} else {
 			m_activeId = Id_Invalid;
 		}
 
 	} else if (_id == m_hotId) {
 		color = Color_GizmoHighlight;
-
 		if (Intersects(ray, axisCapsule)) {
 			if (isKeyDown(Action_Select)) {
 				m_activeId = _id;
@@ -1172,12 +1175,11 @@ bool Context::gizmoAxisScale(Id _id, const Vec3& _drawAt, float* _out_, const Ve
 	}
 
 	float aligned = 1.0f - fabs(Dot(_axis, Normalize(m_appData.m_viewOrigin - _drawAt)));
-	aligned = getAlpha() * Remap(aligned, 0.05f, 0.1f);
+	aligned = Remap(aligned, 0.05f, 0.1f);
 	if (m_hotId == _id) {
 		aligned = 1.0f;
 	}
-	
-	pushAlpha(aligned);
+	color.setA(color.getA() * aligned);
 	begin(PrimitiveMode_Lines);
 		vertex(axisCapsule.m_start, m_gizmoSizePixels, color);
 		vertex(axisCapsule.m_end, m_gizmoSizePixels, color);
@@ -1185,16 +1187,12 @@ bool Context::gizmoAxisScale(Id _id, const Vec3& _drawAt, float* _out_, const Ve
 	begin(PrimitiveMode_Points);
 		vertex(axisCapsule.m_end, m_gizmoSizePixels * 2.0f, color);
 	end();
-	popAlpha();
 
 	return ret;
 }
 
 bool Context::gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, float* _out_, Color _color, float _worldRadius, float _worldSize)
 {
-	Vec3& storedVec = m_gizmoStateVec3;
-	float& storedAngle = m_gizmoStateFloat;
-
  // \note using the plane produces an intersection blind spot at grazing angles, hence expand the ring size by 1-aligned
  // additionally this causes unintuitive behavior when the ray doesn't intersect the plane during interaction
 	Ray ray(m_appData.m_cursorRayOrigin, m_appData.m_cursorRayDirection);
@@ -1202,14 +1200,16 @@ bool Context::gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, flo
 	float tr;
 	bool intersects = Intersect(ray, plane, tr);
 	Vec3 intersection = ray.m_origin + ray.m_direction * tr;
-	
 	Vec3 viewDir = Normalize(m_appData.m_viewOrigin - _drawAt);
 	float aligned = fabs(Dot(_axis, viewDir));
 	float dist = Length(intersection - _drawAt);
 	intersects &= fabs(dist - _worldRadius) < (_worldSize + _worldSize * (1.0f - aligned) * 2.0f);
+	
+	Vec3& storedVec = m_gizmoStateVec3;
+	float& storedAngle = m_gizmoStateFloat;
+	Color color = _color;
 	bool ret = false;
 	
-	Color color = _color;
 	if (_id == m_activeId) {
 		color = Color_GizmoHighlight;
 		if (isKeyDown(Action_Select)) {
@@ -1219,20 +1219,20 @@ bool Context::gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, flo
 			ret = true;
 
 			pushEnableSorting(false);
-				begin(PrimitiveMode_Lines);
-					vertex(_drawAt - _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
-					vertex(_drawAt + _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
-					vertex(_drawAt, m_gizmoSizePixels * 0.5f, Color_GizmoHighlight);
-					vertex(_drawAt + storedVec * _worldRadius, m_gizmoSizePixels * 0.5f, Color_GizmoHighlight);
-				end();
-				pushColor(Color_GizmoHighlight);
-					pushSize(m_gizmoSizePixels);
-						DrawArrow(_drawAt, _drawAt + delta * _worldRadius, _worldSize * 4.0f);
-					popSize();
-				popColor();
-				begin(PrimitiveMode_Points);
-					vertex(_drawAt, m_gizmoSizePixels * 2.0f, Color_GizmoHighlight);
-				end();
+			begin(PrimitiveMode_Lines);
+				vertex(_drawAt - _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
+				vertex(_drawAt + _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
+				vertex(_drawAt, m_gizmoSizePixels * 0.5f, Color_GizmoHighlight);
+				vertex(_drawAt + storedVec * _worldRadius, m_gizmoSizePixels * 0.5f, Color_GizmoHighlight);
+			end();
+			pushColor(Color_GizmoHighlight);
+			pushSize(m_gizmoSizePixels);
+				DrawArrow(_drawAt, _drawAt + delta * _worldRadius, _worldSize * 4.0f);
+			popSize();
+			popColor();
+			begin(PrimitiveMode_Points);
+				vertex(_drawAt, m_gizmoSizePixels * 2.0f, Color_GizmoHighlight);
+			end();
 			popEnableSorting();
 		} else {
 			m_activeId = Id_Invalid;
@@ -1240,7 +1240,6 @@ bool Context::gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, flo
 
 	} else if (_id == m_hotId) {
 		color = Color_GizmoHighlight;
-
 		if (intersects) {
 			if (isKeyDown(Action_Select)) {
 				m_activeId = _id;
@@ -1260,24 +1259,24 @@ bool Context::gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, flo
 		aligned = 1.0f;
 	}
 	pushColor(color);
-		pushSize(m_gizmoSizePixels);
-			pushMatrix(getMatrix() * LookAt(_drawAt, _drawAt + _axis, m_appData.m_worldUp));
-				begin(PrimitiveMode_LineLoop);
-					const int _detail = 128; // \todo dynamically select detail based on worldRadius/worldSize
-					for (int i = 0; i < _detail; ++i) {
-						float rad = TwoPi * ((float)i / (float)_detail);
-						vertex(Vec3(cosf(rad) * _worldRadius, sinf(rad) * _worldRadius, 0.0f));
+	pushSize(m_gizmoSizePixels);
+	pushMatrix(getMatrix() * LookAt(_drawAt, _drawAt + _axis, m_appData.m_worldUp));
+	begin(PrimitiveMode_LineLoop);
+		const int _detail = 128; // \todo dynamically select detail based on worldRadius/worldSize
+		for (int i = 0; i < _detail; ++i) {
+			float rad = TwoPi * ((float)i / (float)_detail);
+			vertex(Vec3(cosf(rad) * _worldRadius, sinf(rad) * _worldRadius, 0.0f));
 
-					 // post-modify the alpha for parts of the ring occluded by the sphere
-						VertexData& vd = m_vertexData[DrawPrimitive_Lines][m_primList].back();
-						Vec3 v = vd.m_positionSize;
-						float d = Dot(Normalize(v - _drawAt), viewDir); 
-						d = Max(Remap(d, 0.1f, 0.2f), aligned);
-						vd.m_color.setA(vd.m_color.getA() * d);
-					}
-				end();
-			popMatrix();
-		popSize();
+		 // post-modify the alpha for parts of the ring occluded by the sphere
+			VertexData& vd = m_vertexData[DrawPrimitive_Lines][m_primList].back();
+			Vec3 v = vd.m_positionSize;
+			float d = Dot(Normalize(v - _drawAt), viewDir); 
+			d = Max(Remap(d, 0.1f, 0.2f), aligned);
+			vd.m_color.setA(vd.m_color.getA() * d);
+		}
+	end();
+	popMatrix();
+	popSize();
 	popColor();
 	return ret;
 }

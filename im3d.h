@@ -44,14 +44,13 @@ void  NewFrame();
 // Call after all Im3d calls have been made for the current frame.
 void  Draw();
 
-// Begin primitive. End() *must* be called before starting each new primitive type.
+// Begin/end primitive. End() *must* be called before starting each new primitive type.
 void  BeginPoints();
 void  BeginLines();
 void  BeginLineLoop();
 void  BeginLineStrip();
 void  BeginTriangles();
 void  BeginTriangleStrip();
-// End the current primitive.
 void  End();
 
 // Add a vertex to the current primitive (call between Begin*() and End()).
@@ -79,7 +78,7 @@ void  PopAlpha();
 void  SetAlpha(float _alpha);
 float GetAlpha();
 
-// Size draw state, for points/lines this is the width/radius in pixels (per vertex)
+// Size draw state, for points/lines this is the width/radius in pixels (per vertex).
 void  PushSize(); // push the stack top
 void  PushSize(float _size);
 void  PopSize();
@@ -132,7 +131,7 @@ Id    GetActiveId(); // GetActiveId() != Id_Invalid means that a gizmo is in use
 bool  Gizmo(const char* _id, float* _mat4_);
 bool  GizmoTranslation(const char* _id, float* _vec3_);
 bool  GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_);
-bool  GizmoScaleLocal(const char* _id, float* _vec3_);
+bool  GizmoScale(const char* _id, float* _vec3_);
 
 struct Vec2
 {
@@ -355,7 +354,7 @@ struct AppData
 	Vec2  m_viewportSize;        // Viewport size (pixels).
 	float m_tanHalfFov;          // tan(fov/2); fov = vertical field of view of the current projection.
 	float m_deltaTime;           // Time since previous frame (seconds).
-	void* m_userData;            // App-specific data (useful for passing app context to drawPrimitives).
+	void* m_userData;            // App-specific data (useful for passing app context to drawCallback).
 
 	DrawPrimitivesCallback* drawCallback;
 };
@@ -468,7 +467,7 @@ public:
 	Context();
 	~Context();
 
- // low-level interface for app-defined gizmos, may be unstable
+ // low-level interface for app-defined gizmos, may be subject to breaking changes
 
 	// Convert pixels -> world space size based on distance between _position and view origin.
 	float pixelsToWorldSize(const Vec3& _position, float _pixels);
@@ -489,7 +488,7 @@ public:
 	bool isKeyDown(Key _key) const     { return m_keyDownCurr[_key]; }
 	bool wasKeyPressed(Key _key) const { return m_keyDownCurr[_key] && !m_keyDownPrev[_key]; }
 
-	// gizmo state
+ // gizmo state
 	GizmoMode          m_gizmoMode;                // Global mode selection for gizmos.
 	Id                 m_activeId;                 // Currently active gizmo. If set, this is the same as m_hotId.
 	Id                 m_hotId;
