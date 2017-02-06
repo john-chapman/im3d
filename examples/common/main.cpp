@@ -30,7 +30,7 @@ int main(int, char**)
 			static const int   kGridSize = 20;
 			static const float kGridHalf = (float)kGridSize * 0.5f;
 			Im3d::SetAlpha(1.0f);
-			Im3d::SetSize(1.0f);
+			Im3d::SetSize(2.0f);
 			Im3d::BeginLines();
 				for (int x = 0; x <= kGridSize; ++x) {
 					Im3d::Vertex(-kGridHalf, 0.0f, (float)x - kGridHalf,  Im3d::Color(0.0f, 0.0f, 0.0f));
@@ -93,7 +93,7 @@ int main(int, char**)
 
 			ImGui::TreePop();
 		}
-		ImGui::SetNextTreeNodeOpen(true);
+		//ImGui::SetNextTreeNodeOpen(true);
 		if (ImGui::TreeNode("Gizmos")) {
 			ImGui::Text("Hot ID:    0x%x", ctx.m_hotId);
 			ImGui::Text("Active ID: 0x%x", ctx.m_activeId);

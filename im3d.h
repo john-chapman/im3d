@@ -106,14 +106,14 @@ void  Translate(float _x, float _y, float _z);
 void  Rotate(const Vec3& _axis, float _angle);
 void  Scale(float _x, float _y, float _z);
 
-// High order shapes.
+// High order shapes. Where _detail = -1, an automatic level of detail is chosen.
 void  DrawXyzAxes();
 void  DrawQuad(const Vec3& _a, const Vec3& _b, const Vec3& _c, const Vec3& _d);
 void  DrawQuad(const Vec3& _origin, const Vec3& _normal, const Vec2& _size);
 void  DrawQuadFilled(const Vec3& _a, const Vec3& _b, const Vec3& _c, const Vec3& _d);
 void  DrawQuadFilled(const Vec3& _origin, const Vec3& _normal, const Vec2& _size);
 void  DrawCircle(const Vec3& _origin, const Vec3& _normal, float _radius, int _detail = -1);
-void  DrawSphere(const Vec3& _origin, float _radius, int _detail = 24);
+void  DrawSphere(const Vec3& _origin, float _radius, int _detail = -1);
 void  DrawAlignedBox(const Vec3& _min, const Vec3& _max);
 void  DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, int _detail = -1);
 void  DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int _detail = -1);
@@ -129,7 +129,8 @@ void  PopId();
 Id    GetId();
 Id    GetActiveId(); // GetActiveId() != Id_Invalid means that a gizmo is in use
 
-// Manipulate translation/rotation/scale via a gizmo. Return true if the gizmo was used (if it modified its output).
+// Manipulate translation/rotation/scale via a gizmo. Return true if the gizmo was used (if it modified the output parameter).
+// Translation and rotation gizmos are global by default, scale is always local.
 bool  Gizmo(const char* _id, float* _mat4_);
 bool  GizmoTranslation(const char* _id, float* _vec3_);
 bool  GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_);
