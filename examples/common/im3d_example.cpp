@@ -277,7 +277,9 @@ using namespace Im3d;
 			GLenum err = glewInit();
 			IM3D_ASSERT(err == GLEW_OK);
 			glGetError(); // clear any errors caused by glewInit()
-		
+
+			winAssert(wglSwapIntervalEXT(0)); // example uses FPS as a rough perf measure, hence disable vsync
+
 			fprintf(stdout, "OpenGL context:\n\tVersion: %s\n\tGLSL Version: %s\n\tVendor: %s\n\tRenderer: %s\n",
 				GlGetString(GL_VERSION),
 				GlGetString(GL_SHADING_LANGUAGE_VERSION),
@@ -545,6 +547,11 @@ Vec3 Im3d::RandVec3(float _min, float _max)
 		RandFloat(_min, _max),
 		RandFloat(_min, _max)
 		);
+}
+Color Im3d::RandColor(float _min, float _max)
+{
+	Vec3 v = RandVec3(_min, _max);
+	return Color(v.x, v.y, v.z);
 }
 
 /******************************************************************************/
@@ -868,7 +875,7 @@ bool Example::update()
 		ImGuiWindowFlags_NoSavedSettings |
 		ImGuiWindowFlags_AlwaysAutoResize
 		);
-		ImGui::Text("%.3f fps", 1.0f / m_deltaTime);
+		ImGui::Text("%.2f fps", 1.0f / m_deltaTime);
 		ImGui::Text("Triangles: %u ", Im3d::GetContext().getPrimitiveCount(Im3d::DrawPrimitive_Triangles));
 		ImGui::Text("Lines:     %u ", Im3d::GetContext().getPrimitiveCount(Im3d::DrawPrimitive_Lines));
 		ImGui::Text("Points:    %u ", Im3d::GetContext().getPrimitiveCount(Im3d::DrawPrimitive_Points));
@@ -897,7 +904,6 @@ void Example::draw()
 		glAssert(glUseProgram(0));
 		glAssert(glViewport(0, 0, m_width, m_height));
 		glAssert(glClearColor(0.5f, 0.5f, 0.5f, 0.0f));
-		//glAssert(glClearColor(0.0f, 0.0f, 0.0f, 0.0f));
 		glAssert(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 	#endif
 }

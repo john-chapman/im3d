@@ -103,6 +103,7 @@ void  RandSeed(int _seed);
 int   RandInt(int _min, int _max);
 float RandFloat(float _min, float _max);
 Vec3  RandVec3(float _min, float _max);
+Color RandColor(float _min, float _max);
 
 void  DrawNdcQuad();
 void  DrawTeapot(const Mat4& _world, const Mat4& _viewProj);
