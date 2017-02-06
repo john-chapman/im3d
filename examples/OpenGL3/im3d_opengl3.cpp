@@ -158,9 +158,9 @@ bool Im3d_Init()
 	glAssert(glBindVertexArray(g_vaIm3d));
 	glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_vbIm3d));
 	glAssert(glEnableVertexAttribArray(0));
-    glAssert(glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(Im3d::VertexData), (GLvoid*)offsetof(Im3d::VertexData, m_positionSize)));
+	glAssert(glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(Im3d::VertexData), (GLvoid*)offsetof(Im3d::VertexData, m_positionSize)));
 	glAssert(glEnableVertexAttribArray(1));
-    glAssert(glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Im3d::VertexData), (GLvoid*)offsetof(Im3d::VertexData, m_color)));
+	glAssert(glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Im3d::VertexData), (GLvoid*)offsetof(Im3d::VertexData, m_color)));
 	glAssert(glBindVertexArray(0));
 
 	GetAppData().drawCallback = &Im3d_Draw;

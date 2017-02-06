@@ -18,41 +18,46 @@ int main(int, char**)
 		
 		ImGui::SetNextTreeNodeOpen(true, ImGuiSetCond_Once);
 		if (ImGui::TreeNode("About")) {
-			ImGui::Text("Welcome to Im3d!");
+			ImGui::Text("Welcome to the Im3d demo!");
+			ImGui::Spacing();
 			ImGui::Text("WASD = camera position + QE for down/up");
 			ImGui::Text("LShift = go faster");
 			ImGui::Text("Mouse Right + drag = camera orientation");
+			ImGui::Spacing();
+
 			ImGui::TreePop();
 		}
-		static bool s_showGrid = false;
-		ImGui::Checkbox("Show Grid", &s_showGrid);
-		if (s_showGrid) {
-			static const int   kGridSize = 20;
-			static const float kGridHalf = (float)kGridSize * 0.5f;
+
+		if (ImGui::TreeNode("Grid")) {
+			static int gridSize = 20;
+			ImGui::SliderInt("Grid Size", &gridSize, 1, 50);
+			const float gridHalf = (float)gridSize * 0.5f;
 			Im3d::SetAlpha(1.0f);
-			Im3d::SetSize(2.0f);
+			Im3d::SetSize(1.0f);
 			Im3d::BeginLines();
-				for (int x = 0; x <= kGridSize; ++x) {
-					Im3d::Vertex(-kGridHalf, 0.0f, (float)x - kGridHalf,  Im3d::Color(0.0f, 0.0f, 0.0f));
-					Im3d::Vertex( kGridHalf, 0.0f, (float)x - kGridHalf,  Im3d::Color(1.0f, 0.0f, 0.0f));
+				for (int x = 0; x <= gridSize; ++x) {
+					Im3d::Vertex(-gridHalf, 0.0f, (float)x - gridHalf, Im3d::Color(0.0f, 0.0f, 0.0f));
+					Im3d::Vertex( gridHalf, 0.0f, (float)x - gridHalf, Im3d::Color(1.0f, 0.0f, 0.0f));
 				}
-				for (int z = 0; z <= kGridSize; ++z) {
-					Im3d::Vertex((float)z - kGridHalf, 0.0f, -kGridHalf,  Im3d::Color(0.0f, 0.0f, 0.0f));
-					Im3d::Vertex((float)z - kGridHalf, 0.0f,  kGridHalf,  Im3d::Color(0.0f, 0.0f, 1.0f));
+				for (int z = 0; z <= gridSize; ++z) {
+					Im3d::Vertex((float)z - gridHalf, 0.0f, -gridHalf,  Im3d::Color(0.0f, 0.0f, 0.0f));
+					Im3d::Vertex((float)z - gridHalf, 0.0f,  gridHalf,  Im3d::Color(0.0f, 0.0f, 1.0f));
 				}
 			Im3d::End();
+
+			ImGui::TreePop();
 		}
-		ImGui::Spacing();
+
 		if (ImGui::TreeNode("Intersection")) {
 			Im3d::PushDrawState();
-				Im3d::Ray ray(ad.m_cursorRayOrigin, ad.m_cursorRayDirection);
-				float tr;
-				Im3d::Plane plane(Im3d::Vec3(0.0f, 1.0f, 0.0f), 0.0f);
-				if (Im3d::Intersect(ray, plane, tr)) {
-					Im3d::BeginPoints();
-						Im3d::Vertex(ray.m_origin + ray.m_direction * tr, 8.0f, Im3d::Color_Magenta);
-					Im3d::End();
-				}
+			Im3d::Ray ray(ad.m_cursorRayOrigin, ad.m_cursorRayDirection);
+			float tr;
+			Im3d::Plane plane(Im3d::Vec3(0.0f, 1.0f, 0.0f), 0.0f);
+			if (Im3d::Intersect(ray, plane, tr)) {
+				Im3d::BeginPoints();
+					Im3d::Vertex(ray.m_origin + ray.m_direction * tr, 8.0f, Im3d::Color_Magenta);
+				Im3d::End();
+			}
 			Im3d::PopDrawState();
 
 			ImGui::TreePop();
@@ -76,30 +81,13 @@ int main(int, char**)
 			Im3d::PopColor();
 			Im3d::PopSize();*/
 
-			static Im3d::Mat3 rotation(1.0f);
-			Im3d::GizmoRotation("ShapeRotation", Im3d::Vec3(0.0f), rotation);
-			Im3d::Vec3 dir = rotation.getCol(1);
-			
-			Im3d::PushSize(4.0f);
-			Im3d::PushColor(Im3d::Color_Magenta);
-			Im3d::DrawArrow(Im3d::Vec3(0.0f), dir, 0.1f);
-			Im3d::SetColor(Im3d::Color(1.0f, 0.4f, 0.0f));
-				//Im3d::DrawCircle(Im3d::Vec3(0.0f), dir, 1.0f);
-				Im3d::DrawQuad(Im3d::Vec3(0.0f), Im3d::Vec3(1.0f, 0.0f, 0.0f), Im3d::Vec2(2.0f, 1.0f));
-				Im3d::DrawQuad(Im3d::Vec3(0.0f), Im3d::Vec3(0.0f, 1.0f, 0.0f), Im3d::Vec2(2.0f, 1.0f));
-				Im3d::DrawQuad(Im3d::Vec3(0.0f), Im3d::Vec3(0.0f, 0.0f, 1.0f), Im3d::Vec2(2.0f, 1.0f));
-			Im3d::PopColor();
-			Im3d::PopSize();
-
 			ImGui::TreePop();
 		}
-		//ImGui::SetNextTreeNodeOpen(true);
+
 		if (ImGui::TreeNode("Gizmos")) {
-			ImGui::Text("Hot ID:    0x%x", ctx.m_hotId);
-			ImGui::Text("Active ID: 0x%x", ctx.m_activeId);
-			ImGui::Text("Hot Depth: %.3f", ctx.m_hotDepth == FLT_MAX ? -1.0f : ctx.m_hotDepth);
-
-
+			ImGui::Text("Hot ID: 0x%x  Active ID: 0x%x  Hot Depth: %.3f", ctx.m_hotId, ctx.m_activeId, ctx.m_hotDepth);
+			
+			ImGui::Spacing();
 			int gizmoMode = (int)Im3d::GetContext().m_gizmoMode;
 			ImGui::RadioButton("Translate (Ctrl+T)", &gizmoMode, Im3d::GizmoMode_Translation); 
 			ImGui::SameLine();
@@ -112,11 +100,11 @@ int main(int, char**)
 			static Im3d::Vec3 translation(0.0f, 0.0f, 0.0f);
 			static Im3d::Mat3 rotation(1.0f);
 			static Im3d::Vec3 scale(1.0f);
+			static Im3d::Mat4 m(1.0f);				
 			ImGui::Checkbox("Separate Transforms", &separate);
-		
 			ImGui::SliderFloat("Gizmo Size", &ctx.m_gizmoHeightPixels, 0.0f, 256.0f);
 			ImGui::SliderFloat("Gizmo Thickness", &ctx.m_gizmoSizePixels, 0.0f, 32.0f);
-			static Im3d::Mat4 m(1.0f);				
+		
 			Im3d::DrawTeapot(m, example.m_camViewProj); // drawing the object first avoids 1 frame lag
 
 			if (separate) {
@@ -176,6 +164,7 @@ int main(int, char**)
 
 			ImGui::TreePop();
 		}
+
 		if (ImGui::TreeNode("Sorting")) {
 			static bool s_enableSorting = true;
 			static int  s_primCount = 1000;

@@ -8,7 +8,7 @@ Im3d outputs vertex buffers for rendering by the application. Im3d does not affe
 
 The API design follows OpenGL immediate mode in that it functions as a state machine:
 
-```
+```C++
 Im3d::PushDrawState();
 Im3d::SetSize(2.0f);
 Im3d::BeginLineLoop();
@@ -22,7 +22,7 @@ _A key point to note is that there is no view-projection matrix here - the requi
 
 The UI system follows the immediate mode paradigm in that no UI state is retained; you can create gizmos from anywhere in the code:
 
-```
+```C++
 static mat4 transform;
 if (Im3d::Gizmo("UnifiedGizmo", &transform)) {
 	// transform was modified, do something with the matrix
@@ -37,9 +37,9 @@ See [here](https://github.com/john-chapman/im3d/blob/master/examples/common/main
 ### Integration
 Integration is fairly straightforward: simply copy the files from the root of this repo and add them to the application project. The application should then proceed as follows:
 
-- At startup, load the graphcis resources (shaders, etc.) required to actually draw the Im3d vertex buffers.
+- At startup, load the graphics resources (shaders, etc.) required to actually draw the Im3d vertex buffers.
 - Each frame, the fill the `Im3d::AppData` struct, providing user input and other relevant context data, then call `Im3d::NewFrame()`.
-- Towards the end of the frame, call `Im3d::Draw()` for each view/projection to be rendered. Im3d calls an application-defined callback to actually execute rendering commands and draw the points/lines/triangles pushed during the frame via calls to the API.
+- Towards the end of the frame, call `Im3d::Draw()` once for each view/projection to be rendered. Im3d calls an application-defined callback to actually execute rendering commands and draw the points/lines/triangles pushed during the frame via calls to the API.
 
 More detailed and API-specific integration examples are available in the [examples](https://github.com/john-chapman/im3d/tree/master/examples) directory.
 
