@@ -2,16 +2,19 @@ Im3d is a small, self-contained library for immediate mode rendering of simple p
 
 Im3d outputs vertex buffers for rendering by the application. Im3d does not affect the system graphics state directly, therefore Im3d calls can be made from anywhere inside the application code.
 
+![Demo Screenshot 1](https://github.com/john-chapman/im3d/wiki/images/im3d_demo1.jpg)
+![Demo Screenshot 2](https://github.com/john-chapman/im3d/wiki/images/im3d_demo2.jpg)
+![Demo Screenshot 3](https://github.com/john-chapman/im3d/wiki/images/im3d_demo3.jpg)
+
 The design follows OpenGL immediate mode in that it functions as a state machine:
 
-TODO: Gif here showing rendering in action (code snippets above images).
 ```
 Im3d::PushDrawState();
 Im3d::SetSize(2.0f);
-Im3d::SetColor(Im3d::kColor_Green);
-Im3d::BeginLines();
-	Im3d::Vertex(0.0f, 0.0f, 0.0f);
-	Im3d::Vertex(1.0f, 0.0f, 0.0f);
+Im3d::BeginLineLoop();
+	Im3d::Vertex(0.0f, 0.0f, 0.0f, Im3d::Color_Magenta);
+	Im3d::Vertex(1.0f, 1.0f, 0.0f, Im3d::Color_Yellow);
+	Im3d::Vertex(2.0f, 2.0f, 0.0f, Im3d::Color_Cyan);
 Im3d::End();
 Im3d::PopDrawState();
 ```
