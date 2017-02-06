@@ -15,7 +15,8 @@ int main(int, char**)
 
 		ImGui::Begin("Im3d Demo");
 		Im3d::PushDrawState();
-			
+		
+		ImGui::SetNextTreeNodeOpen(true, ImGuiSetCond_Once);
 		if (ImGui::TreeNode("About")) {
 			ImGui::Text("Welcome to Im3d!");
 			ImGui::Text("WASD = camera position + QE for down/up");
@@ -57,7 +58,48 @@ int main(int, char**)
 			ImGui::TreePop();
 		}
 
+		if (ImGui::TreeNode("Shapes")) {
+			/*static Im3d::Vec3 position;
+			Im3d::GizmoTranslation("LodPosition", &position.x);
+			static float radius = 1.0f;
+			ImGui::SliderFloat("Radius", &radius, 0.0f, 20.0f); 
+			static int lodMinMax[2] = { 16, 256 };
+			ImGui::SliderInt2("LOD Range", lodMinMax, 3, 256);
+			lodMinMax[0] = Im3d::Min(lodMinMax[0], lodMinMax[1]);
+			lodMinMax[1] = Im3d::Max(lodMinMax[0], lodMinMax[1]);
+			int lod = Im3d::GetContext().estimateLevelOfDetail(position, radius, lodMinMax[0], lodMinMax[1]);
+			ImGui::Text("LOD %d", lod);
+
+			Im3d::PushSize(4.0f);
+			Im3d::PushColor(Im3d::Color(1.0f, 0.4f, 0.0f));
+			Im3d::DrawCylinder(position + Im3d::Vec3(-radius, 0.0f, 0.0f), position + Im3d::Vec3(radius, 0.0f, 0.0f), radius, lod);
+			Im3d::PopColor();
+			Im3d::PopSize();*/
+
+			static Im3d::Mat3 rotation(1.0f);
+			Im3d::GizmoRotation("ShapeRotation", Im3d::Vec3(0.0f), rotation);
+			Im3d::Vec3 dir = rotation.getCol(1);
+			
+			Im3d::PushSize(4.0f);
+			Im3d::PushColor(Im3d::Color_Magenta);
+			Im3d::DrawArrow(Im3d::Vec3(0.0f), dir, 0.1f);
+			Im3d::SetColor(Im3d::Color(1.0f, 0.4f, 0.0f));
+				//Im3d::DrawCircle(Im3d::Vec3(0.0f), dir, 1.0f);
+				Im3d::DrawQuad(Im3d::Vec3(0.0f), Im3d::Vec3(1.0f, 0.0f, 0.0f), Im3d::Vec2(2.0f, 1.0f));
+				Im3d::DrawQuad(Im3d::Vec3(0.0f), Im3d::Vec3(0.0f, 1.0f, 0.0f), Im3d::Vec2(2.0f, 1.0f));
+				Im3d::DrawQuad(Im3d::Vec3(0.0f), Im3d::Vec3(0.0f, 0.0f, 1.0f), Im3d::Vec2(2.0f, 1.0f));
+			Im3d::PopColor();
+			Im3d::PopSize();
+
+			ImGui::TreePop();
+		}
+		ImGui::SetNextTreeNodeOpen(true);
 		if (ImGui::TreeNode("Gizmos")) {
+			ImGui::Text("Hot ID:    0x%x", ctx.m_hotId);
+			ImGui::Text("Active ID: 0x%x", ctx.m_activeId);
+			ImGui::Text("Hot Depth: %.3f", ctx.m_hotDepth == FLT_MAX ? -1.0f : ctx.m_hotDepth);
+
+
 			int gizmoMode = (int)Im3d::GetContext().m_gizmoMode;
 			ImGui::RadioButton("Translate (Ctrl+T)", &gizmoMode, Im3d::GizmoMode_Translation); 
 			ImGui::SameLine();
@@ -74,9 +116,6 @@ int main(int, char**)
 		
 			ImGui::SliderFloat("Gizmo Size", &ctx.m_gizmoHeightPixels, 0.0f, 256.0f);
 			ImGui::SliderFloat("Gizmo Thickness", &ctx.m_gizmoSizePixels, 0.0f, 32.0f);
-			ImGui::Text("Hot ID:    0x%x", ctx.m_hotId);
-			ImGui::Text("Active ID: 0x%x", ctx.m_activeId);
-			ImGui::Text("Hot Depth: %.3f", ctx.m_hotDepth == FLT_MAX ? -1.0f : ctx.m_hotDepth);
 			static Im3d::Mat4 m(1.0f);				
 			Im3d::DrawTeapot(m, example.m_camViewProj); // drawing the object first avoids 1 frame lag
 
@@ -104,6 +143,37 @@ int main(int, char**)
 				Im3d::Gizmo("GizmoTest", m);
 			}
 			
+			ImGui::TreePop();
+		}
+		
+		if (ImGui::TreeNode("Basic Perf")) {
+			static bool s_enableSorting = false;
+			static bool s_useMatrix = false;
+			static int  s_primCount = 50000;
+			ImGui::Checkbox("Enable sorting", &s_enableSorting);
+			ImGui::Checkbox("Use matrix stack", &s_useMatrix);
+			ImGui::SliderInt("Prim Count", &s_primCount, 2, 50000);
+			
+			Im3d::PushEnableSorting(s_enableSorting);
+			Im3d::BeginPoints();
+			if (s_useMatrix) {
+				Im3d::PushMatrix();
+				for (int i = 0; i < s_primCount; ++i) {
+					Im3d::Mat4 wm(1.0f);
+					wm.setTranslation(Im3d::RandVec3(-10.0f, 10.0f));
+					Im3d::SetMatrix(wm);
+					Im3d::Vertex(Im3d::Vec3(0.0f), Im3d::RandFloat(2.0f, 16.0f), Im3d::RandColor(0.0f, 1.0f));
+				}
+				Im3d::PopMatrix();
+			} else {
+				for (int i = 0; i < s_primCount; ++i) {
+					Im3d::Vec3 t = Im3d::RandVec3(-10.0f, 10.0f);
+					Im3d::Vertex(t, Im3d::RandFloat(2.0f, 16.0f), Im3d::RandColor(0.0f, 1.0f));
+				}
+			}
+			Im3d::End();
+			Im3d::PopEnableSorting();
+
 			ImGui::TreePop();
 		}
 		if (ImGui::TreeNode("Sorting")) {

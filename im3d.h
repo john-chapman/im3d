@@ -111,11 +111,13 @@ void  DrawXyzAxes();
 void  DrawQuad(const Vec3& _a, const Vec3& _b, const Vec3& _c, const Vec3& _d);
 void  DrawQuad(const Vec3& _origin, const Vec3& _normal, const Vec2& _size);
 void  DrawQuadFilled(const Vec3& _a, const Vec3& _b, const Vec3& _c, const Vec3& _d);
-void  DrawCircle(const Vec3& _origin, const Vec3& _normal, float _radius, int _detail = 24);
+void  DrawQuadFilled(const Vec3& _origin, const Vec3& _normal, const Vec2& _size);
+void  DrawCircle(const Vec3& _origin, const Vec3& _normal, float _radius, int _detail = -1);
 void  DrawSphere(const Vec3& _origin, float _radius, int _detail = 24);
 void  DrawAlignedBox(const Vec3& _min, const Vec3& _max);
-void  DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, int _detail = 24);
-void  DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int _detail = 12);
+void  DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, int _detail = -1);
+void  DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int _detail = -1);
+void  DrawPrism(const Vec3& _start, const Vec3& _end, float _radius, int _sides);
 void  DrawArrow(const Vec3& _start, const Vec3& _end, float _headLength);
 
 
@@ -471,6 +473,8 @@ public:
 
 	// Convert pixels -> world space size based on distance between _position and view origin.
 	float pixelsToWorldSize(const Vec3& _position, float _pixels);
+
+	int estimateLevelOfDetail(const Vec3& _position, float _worldSize, int _min = 16, int _max = 256);
 
 	// Translation gizmo for an arbitrary axis.
 	bool gizmoAxisTranslation(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _axis, Color _color, float _worldHeight, float _worldSize);

@@ -85,14 +85,14 @@ void Im3d::DrawXyzAxes()
 {
 	Context& ctx = GetContext();
 	ctx.pushColor(ctx.getColor());
-		ctx.begin(PrimitiveMode_Lines);
-			ctx.vertex(Vec3(0.0f, 0.0f, 0.0f), ctx.getSize(), Color_Red);
-			ctx.vertex(Vec3(1.0f, 0.0f, 0.0f), ctx.getSize(), Color_Red);
-			ctx.vertex(Vec3(0.0f, 0.0f, 0.0f), ctx.getSize(), Color_Green);
-			ctx.vertex(Vec3(0.0f, 1.0f, 0.0f), ctx.getSize(), Color_Green);
-			ctx.vertex(Vec3(0.0f, 0.0f, 0.0f), ctx.getSize(), Color_Blue);
-			ctx.vertex(Vec3(0.0f, 0.0f, 1.0f), ctx.getSize(), Color_Blue);
-		ctx.end();
+	ctx.begin(PrimitiveMode_Lines);
+		ctx.vertex(Vec3(0.0f, 0.0f, 0.0f), ctx.getSize(), Color_Red);
+		ctx.vertex(Vec3(1.0f, 0.0f, 0.0f), ctx.getSize(), Color_Red);
+		ctx.vertex(Vec3(0.0f, 0.0f, 0.0f), ctx.getSize(), Color_Green);
+		ctx.vertex(Vec3(0.0f, 1.0f, 0.0f), ctx.getSize(), Color_Green);
+		ctx.vertex(Vec3(0.0f, 0.0f, 0.0f), ctx.getSize(), Color_Blue);
+		ctx.vertex(Vec3(0.0f, 0.0f, 1.0f), ctx.getSize(), Color_Blue);
+	ctx.end();
 	ctx.popColor();
 
 }
@@ -110,12 +110,12 @@ void Im3d::DrawQuad(const Vec3& _origin, const Vec3& _normal, const Vec2& _size)
 {
 	Context& ctx = GetContext();
 	ctx.pushMatrix(LookAt(_origin, _origin + _normal, ctx.getAppData().m_worldUp));
-		DrawQuad(
-			Vec3(-_size.x,  _size.y, 0.0f),
-			Vec3( _size.x,  _size.y, 0.0f),
-			Vec3( _size.x, -_size.y, 0.0f),
-			Vec3(-_size.x, -_size.y, 0.0f)
-			);
+	DrawQuad(
+		Vec3(-_size.x,  _size.y, 0.0f),
+		Vec3( _size.x,  _size.y, 0.0f),
+		Vec3( _size.x, -_size.y, 0.0f),
+		Vec3(-_size.x, -_size.y, 0.0f)
+		);
 	ctx.popMatrix();
 }
 void Im3d::DrawQuadFilled(const Vec3& _a, const Vec3& _b, const Vec3& _c, const Vec3& _d)
@@ -130,9 +130,24 @@ void Im3d::DrawQuadFilled(const Vec3& _a, const Vec3& _b, const Vec3& _c, const 
 		ctx.vertex(_d);
 	ctx.end();
 }
+void Im3d::DrawQuadFilled(const Vec3& _origin, const Vec3& _normal, const Vec2& _size)
+{
+	Context& ctx = GetContext();
+	ctx.pushMatrix(LookAt(_origin, _origin + _normal, ctx.getAppData().m_worldUp));
+	DrawQuadFilled(
+		Vec3(-_size.x,  _size.y, 0.0f),
+		Vec3( _size.x,  _size.y, 0.0f),
+		Vec3( _size.x, -_size.y, 0.0f),
+		Vec3(-_size.x, -_size.y, 0.0f)
+		);
+	ctx.popMatrix();
+}
 void Im3d::DrawCircle(const Vec3& _origin, const Vec3& _normal, float _radius, int _detail)
 {
 	Context& ctx = GetContext();
+	if (_detail < 0) {
+		_detail = ctx.estimateLevelOfDetail(_origin, _radius);
+	}
  	ctx.pushMatrix(ctx.getMatrix() * LookAt(_origin, _origin + _normal, ctx.getAppData().m_worldUp));
 	ctx.begin(PrimitiveMode_LineLoop);
 		for (int i = 0; i < _detail; ++i) {
@@ -145,6 +160,9 @@ void Im3d::DrawCircle(const Vec3& _origin, const Vec3& _normal, float _radius, i
 void Im3d::DrawSphere(const Vec3& _origin, float _radius, int _detail)
 {
 	Context& ctx = GetContext();
+	if (_detail < 0) {
+		_detail = ctx.estimateLevelOfDetail(_origin, _radius);
+	}
  // xy circle
 	ctx.begin(PrimitiveMode_LineLoop);
 		for (int i = 0; i < _detail; ++i) {
@@ -197,70 +215,103 @@ void Im3d::DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, int
 {
 	Context& ctx = GetContext();
 	Vec3 org  = _start + (_end - _start) * 0.5f;
+	if (_detail < 0) {
+		_detail = ctx.estimateLevelOfDetail(org, _radius);
+	}
 	float ln  = Length(_end - _start) * 0.5f;
 	ctx.pushMatrix(ctx.getMatrix() * LookAt(org, _end, ctx.getAppData().m_worldUp));
-		ctx.begin(PrimitiveMode_LineLoop);
-			for (int i = 0; i <= _detail; ++i) {
-				float rad = TwoPi * ((float)i / (float)_detail) - HalfPi;
-				ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
-			}
-			for (int i = 0; i <= _detail; ++i) {
-				float rad = TwoPi * ((float)i / (float)_detail) - HalfPi;
-				ctx.vertex(Vec3(0.0f, 0.0f, ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
-			}
-		ctx.end();
-		ctx.begin(PrimitiveMode_Lines);
-			for (int i = 0; i <= _detail; ++i) {
-				float rad = TwoPi * ((float)i / (float)_detail) - HalfPi;
-				ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
-				ctx.vertex(Vec3(0.0f, 0.0f,  ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
-			}
-		ctx.end();
+	ctx.begin(PrimitiveMode_LineLoop);
+		for (int i = 0; i <= _detail; ++i) {
+			float rad = TwoPi * ((float)i / (float)_detail) - HalfPi;
+			ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
+		}
+	ctx.end();
+	ctx.begin(PrimitiveMode_LineLoop);
+		for (int i = 0; i <= _detail; ++i) {
+			float rad = TwoPi * ((float)i / (float)_detail) - HalfPi;
+			ctx.vertex(Vec3(0.0f, 0.0f, ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
+		}
+	ctx.end();
+	ctx.begin(PrimitiveMode_Lines);
+		for (int i = 0; i <= 6; ++i) {
+			float rad = TwoPi * ((float)i / 6.0f) - HalfPi;
+			ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
+			ctx.vertex(Vec3(0.0f, 0.0f,  ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
+		}
+	ctx.end();
 	ctx.popMatrix();
 }
 void Im3d::DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int _detail)
 {
 	Context& ctx = GetContext();
 	Vec3 org = _start + (_end - _start) * 0.5f;
+	if (_detail < 0) {
+		_detail = ctx.estimateLevelOfDetail(org, _radius);
+	}
 	float ln = Length(_end - _start) * 0.5f;
 	int detail2 = _detail * 2; // force cap base detail to match ends
 	ctx.pushMatrix(ctx.getMatrix() * LookAt(org, _end, ctx.getAppData().m_worldUp));
+	ctx.begin(PrimitiveMode_LineLoop);
 	 // yz silhoette + cap bases
-		ctx.begin(PrimitiveMode_LineLoop);
-			for (int i = 0; i <= detail2; ++i) {
-				float rad = TwoPi * ((float)i / (float)detail2) - HalfPi;
-				ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
-			}
-			for (int i = 0; i < _detail; ++i) {
-				float rad = Pi * ((float)i / (float)_detail) + Pi;
-				ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(0.0f, cosf(rad), sinf(rad)) * _radius);
-			}
-			for (int i = 0; i < _detail; ++i) {
-				float rad = Pi * ((float)i / (float)_detail);
-				ctx.vertex(Vec3(0.0f, 0.0f, ln) + Vec3(0.0f, cosf(rad), sinf(rad)) * _radius);
-			}
-			for (int i = 0; i <= detail2; ++i) {
-				float rad = TwoPi * ((float)i / (float)detail2) - HalfPi;
-				ctx.vertex(Vec3(0.0f, 0.0f, ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
-			}
-		ctx.end();
+		for (int i = 0; i <= detail2; ++i) {
+			float rad = TwoPi * ((float)i / (float)detail2) - HalfPi;
+			ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
+		}
+		for (int i = 0; i < _detail; ++i) {
+			float rad = Pi * ((float)i / (float)_detail) + Pi;
+			ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(0.0f, cosf(rad), sinf(rad)) * _radius);
+		}
+		for (int i = 0; i < _detail; ++i) {
+			float rad = Pi * ((float)i / (float)_detail);
+			ctx.vertex(Vec3(0.0f, 0.0f, ln) + Vec3(0.0f, cosf(rad), sinf(rad)) * _radius);
+		}
+		for (int i = 0; i <= detail2; ++i) {
+			float rad = TwoPi * ((float)i / (float)detail2) - HalfPi;
+			ctx.vertex(Vec3(0.0f, 0.0f, ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
+		}
+	ctx.end();
+	ctx.begin(PrimitiveMode_LineLoop);
 	 // xz silhoette
-		ctx.begin(PrimitiveMode_LineLoop);
-			for (int i = 0; i < _detail; ++i) {
-				float rad = Pi * ((float)i / (float)_detail) + Pi;
-				ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(cosf(rad), 0.0f, sinf(rad)) * _radius);
-			}
-			for (int i = 0; i < _detail; ++i) {
-				float rad = Pi * ((float)i / (float)_detail);
-				ctx.vertex(Vec3(0.0f, 0.0f, ln) + Vec3(cosf(rad), 0.0f, sinf(rad)) * _radius);
-			}
-		ctx.end();
+		for (int i = 0; i < _detail; ++i) {
+			float rad = Pi * ((float)i / (float)_detail) + Pi;
+			ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(cosf(rad), 0.0f, sinf(rad)) * _radius);
+		}
+		for (int i = 0; i < _detail; ++i) {
+			float rad = Pi * ((float)i / (float)_detail);
+			ctx.vertex(Vec3(0.0f, 0.0f, ln) + Vec3(cosf(rad), 0.0f, sinf(rad)) * _radius);
+		}
+	ctx.end();
+	ctx.popMatrix();
+}
+void Im3d::DrawPrism(const Vec3& _start, const Vec3& _end, float _radius, int _sides)
+{
+	IM3D_ASSERT(_sides > 2);
+	Context& ctx = GetContext();
+	Vec3 org  = _start + (_end - _start) * 0.5f;
+	float ln  = Length(_end - _start) * 0.5f;
+	ctx.pushMatrix(ctx.getMatrix() * LookAt(org, _end, ctx.getAppData().m_worldUp));
+	ctx.begin(PrimitiveMode_LineLoop);
+		for (int i = 0; i <= _sides; ++i) {
+			float rad = TwoPi * ((float)i / (float)_sides) - HalfPi;
+			ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
+		}
+		for (int i = 0; i <= _sides; ++i) {
+			float rad = TwoPi * ((float)i / (float)_sides) - HalfPi;
+			ctx.vertex(Vec3(0.0f, 0.0f, ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
+		}
+	ctx.end();
+	ctx.begin(PrimitiveMode_Lines);
+		for (int i = 0; i <= _sides; ++i) {
+			float rad = TwoPi * ((float)i / (float)_sides) - HalfPi;
+			ctx.vertex(Vec3(0.0f, 0.0f, -ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
+			ctx.vertex(Vec3(0.0f, 0.0f,  ln) + Vec3(cosf(rad), sinf(rad), 0.0f) * _radius);
+		}
+	ctx.end();
 	ctx.popMatrix();
 }
 void Im3d::DrawArrow(const Vec3& _start, const Vec3& _end, float _headLength)
 {
 	Context& ctx = GetContext();
-
 	float normHeadLength = _headLength / Length(_end - _start);
 	Vec3 head = _start + (_end - _start) * (1.0f - normHeadLength);
 	ctx.begin(PrimitiveMode_Lines);
@@ -348,120 +399,75 @@ bool Im3d::GizmoTranslation(const char* _id, float* _vec3_)
 	ctx.pushId(MakeId(_id));
 	ctx.pushEnableSorting(true);
 	ctx.pushColor(Color_GizmoHighlight);
-		float worldHeight = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoHeightPixels);
-		float worldSize = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoSizePixels);
-		float planeSize = worldHeight * (0.5f * 0.5f);
-		float planeOffset = worldHeight * 0.5f;
-		
-		Color colorX = Color_Red;
-		Color colorY = Color_Green;
-		Color colorZ = Color_Blue;
-		
-		{ // XZ plane
-			Id planeId = MakeId("xzplane");
-			Vec3 planeNormal = Vec3(0.0f, 1.0f, 0.0f);
-			Vec3 planeOrigin = drawAt + Vec3(planeOffset, 0.0f, planeOffset);
-			float aligned = fabs(Dot(planeNormal, Normalize(ctx.getAppData().m_viewOrigin - planeOrigin)));
-			aligned = Remap(aligned, 0.1f, 0.2f);
-			if (aligned > 0.0f || ctx.m_hotId == planeId) {
-				ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, v3, planeNormal, Color_GizmoHighlight, planeSize); 
-				if (ctx.m_hotId == planeId) {
-					colorX = colorZ = Color_GizmoHighlight;
-				}
-				ctx.pushAlpha(ctx.getAlpha() * aligned);
-					ctx.pushAlpha(ctx.m_hotId == planeId ? 0.7f : 0.1f * ctx.getAlpha());
-						DrawQuadFilled(
-							planeOrigin + Vec3(-1.0f,  0.0f,  1.0f) * planeSize,
-							planeOrigin + Vec3( 1.0f,  0.0f,  1.0f) * planeSize,
-							planeOrigin + Vec3( 1.0f,  0.0f, -1.0f) * planeSize,
-							planeOrigin + Vec3(-1.0f,  0.0f, -1.0f) * planeSize
-							);
-					ctx.popAlpha();
-					DrawQuad(
-						planeOrigin + Vec3(-1.0f,  0.0f,  1.0f) * planeSize,
-						planeOrigin + Vec3( 1.0f,  0.0f,  1.0f) * planeSize,
-						planeOrigin + Vec3( 1.0f,  0.0f, -1.0f) * planeSize,
-						planeOrigin + Vec3(-1.0f,  0.0f, -1.0f) * planeSize
-						);
-				ctx.popAlpha();
-			}
-		}
-		{ // XY plane
-			Id planeId = MakeId("xyplane");
-			Vec3 planeNormal = Vec3(0.0f, 0.0f, 1.0f);
-			Vec3 planeOrigin = drawAt + Vec3(planeOffset, planeOffset, 0.0f);
-			float aligned = fabs(Dot(planeNormal, Normalize(ctx.getAppData().m_viewOrigin - planeOrigin)));
-			aligned = Remap(aligned, 0.1f, 0.2f);
-			if (aligned > 0.0f || ctx.m_hotId == planeId) {
-				ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, v3, planeNormal, Color_GizmoHighlight, planeSize); 
-				if (ctx.m_hotId == planeId) {
-					colorX = colorY = Color_GizmoHighlight;
-				}
-				ctx.pushAlpha(ctx.getAlpha() * aligned);
-					ctx.pushAlpha(ctx.m_hotId == planeId ? 0.7f : 0.1f * ctx.getAlpha());
-						DrawQuadFilled(
-							planeOrigin + Vec3(-1.0f,  1.0f,  0.0f) * planeSize,
-							planeOrigin + Vec3( 1.0f,  1.0f,  0.0f) * planeSize,
-							planeOrigin + Vec3( 1.0f, -1.0f,  0.0f) * planeSize,
-							planeOrigin + Vec3(-1.0f, -1.0f,  0.0f) * planeSize
-							);
-					ctx.popAlpha();
-					DrawQuad(
-						planeOrigin + Vec3(-1.0f,  1.0f,  0.0f) * planeSize,
-						planeOrigin + Vec3( 1.0f,  1.0f,  0.0f) * planeSize,
-						planeOrigin + Vec3( 1.0f, -1.0f,  0.0f) * planeSize,
-						planeOrigin + Vec3(-1.0f, -1.0f,  0.0f) * planeSize
-						);
-				ctx.popAlpha();
-			}
-		}
-		{ // YZ plane
-			Id planeId = MakeId("yzplane");
-			Vec3 planeNormal = Vec3(1.0f, 0.0f, 0.0f);
-			Vec3 planeOrigin = drawAt + Vec3(0.0f, planeOffset, planeOffset);
-			float aligned = fabs(Dot(planeNormal, Normalize(ctx.getAppData().m_viewOrigin - planeOrigin)));
-			aligned = Remap(aligned, 0.1f, 0.2f);
-			if (aligned > 0.0f || ctx.m_hotId == planeId) {
-				ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, v3, planeNormal, Color_GizmoHighlight, planeSize); 
-				if (ctx.m_hotId == planeId) {
-					colorY = colorZ = Color_GizmoHighlight;
-				}
-				ctx.pushAlpha(ctx.getAlpha() * aligned);
-					ctx.pushAlpha(ctx.m_hotId == planeId ? 0.7f : 0.1f * ctx.getAlpha());
-						DrawQuadFilled(
-							planeOrigin + Vec3(0.0f, -1.0f,  1.0f) * planeSize,
-							planeOrigin + Vec3(0.0f,  1.0f,  1.0f) * planeSize,
-							planeOrigin + Vec3(0.0f,  1.0f, -1.0f) * planeSize,
-							planeOrigin + Vec3(0.0f, -1.0f, -1.0f) * planeSize
-							);
-					ctx.popAlpha();
-					DrawQuad(
-						planeOrigin + Vec3(0.0f, -1.0f,  1.0f) * planeSize,
-						planeOrigin + Vec3(0.0f,  1.0f,  1.0f) * planeSize,
-						planeOrigin + Vec3(0.0f,  1.0f, -1.0f) * planeSize,
-						planeOrigin + Vec3(0.0f, -1.0f, -1.0f) * planeSize
-						);
-				ctx.popAlpha();
-			}
-		}
-		{ // view plane
-			Id planeId = MakeId("viewplane");
-			Vec3 planeNormal = Normalize(drawAt - ctx.getAppData().m_viewOrigin);
-			Vec3 planeOrigin = drawAt;
-			ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, v3, planeNormal, Color_GizmoHighlight, planeSize * 0.5f); 
-			if (ctx.m_activeId == planeId || ctx.m_hotId == planeId) {
-				colorX = colorY = colorZ = Color_GizmoHighlight;
-			}
-			ctx.pushAlpha(ctx.m_hotId == planeId ? 1.0f : ctx.getAlpha());
-			ctx.begin(PrimitiveMode_Points);
-				ctx.vertex(planeOrigin, ctx.m_gizmoSizePixels * 2.0f, (ctx.m_activeId == planeId || ctx.m_hotId == planeId) ? Color_GizmoHighlight : Color_White);
-			ctx.end();
-			ctx.popAlpha();
-		}
+	
+	float worldHeight = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoHeightPixels);
+	float worldSize = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoSizePixels);
+	float planeSize = worldHeight * (0.5f * 0.5f);
+	float planeOffset = worldHeight * 0.5f;
+	
+	Vec3 axisX(1.0f, 0.0f, 0.0f);
+	Vec3 axisY(0.0f, 1.0f, 0.0f);
+	Vec3 axisZ(0.0f, 0.0f, 1.0f);
+	//if (local) {
+	//	const Mat4& localMatrix = ctx.getMatrix();
+	//	axisX = Normalize(localMatrix.getCol(0));
+	//	axisY = Normalize(localMatrix.getCol(1));
+	//	axisZ = Normalize(localMatrix.getCol(2));
+	//	ctx.pushMatrix(Mat4(1.0f)); // don't draw with the local transformation
+	//}
 
-		ret |= ctx.gizmoAxisTranslation(MakeId("xaxis"), drawAt, v3, Vec3(1.0f, 0.0f, 0.0f), colorX, worldHeight, worldSize);
-		ret |= ctx.gizmoAxisTranslation(MakeId("yaxis"), drawAt, v3, Vec3(0.0f, 1.0f, 0.0f), colorY, worldHeight, worldSize);
-		ret |= ctx.gizmoAxisTranslation(MakeId("zaxis"), drawAt, v3, Vec3(0.0f, 0.0f, 1.0f), colorZ, worldHeight, worldSize);
+	Color colorX = Color_Red;
+	Color colorY = Color_Green;
+	Color colorZ = Color_Blue;
+	
+	{ // XZ plane
+		Id planeId = MakeId("planeXZ");
+		Vec3 planeNormal = axisY;
+		Vec3 planeOrigin = drawAt + Vec3(planeOffset, 0.0f, planeOffset);
+		ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, v3, planeNormal, Color_GizmoHighlight, planeSize); 
+		if (ctx.m_hotId == planeId) {
+			colorX = colorZ = Color_GizmoHighlight;
+		}
+	}
+	{ // XY plane
+		Id planeId = MakeId("planeXY");
+		Vec3 planeNormal = axisZ;
+		Vec3 planeOrigin = drawAt + Vec3(planeOffset, planeOffset, 0.0f);
+		ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, v3, planeNormal, Color_GizmoHighlight, planeSize); 
+		if (ctx.m_hotId == planeId) {
+			colorX = colorZ = Color_GizmoHighlight;
+		}
+	}
+	{ // YZ plane
+		Id planeId = MakeId("planeYZ");
+		Vec3 planeNormal = axisX;
+		Vec3 planeOrigin = drawAt + Vec3(0.0f, planeOffset, planeOffset);
+		ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, v3, planeNormal, Color_GizmoHighlight, planeSize); 
+		if (ctx.m_hotId == planeId) {
+			colorX = colorZ = Color_GizmoHighlight;
+		}
+	}
+	/*{ // view plane
+		Id planeId = MakeId("viewplane");
+		Vec3 planeNormal = Normalize(drawAt - ctx.getAppData().m_viewOrigin);
+		Vec3 planeOrigin = drawAt;
+		ret |= ctx.gizmoPlaneTranslation(planeId, planeOrigin, v3, planeNormal, Color_GizmoHighlight, planeSize * 0.5f); 
+		if (ctx.m_activeId == planeId || ctx.m_hotId == planeId) {
+			colorX = colorY = colorZ = Color_GizmoHighlight;
+		}
+		ctx.pushAlpha(ctx.m_hotId == planeId ? 1.0f : ctx.getAlpha());
+		ctx.begin(PrimitiveMode_Points);
+			ctx.vertex(planeOrigin, ctx.m_gizmoSizePixels * 2.0f, (ctx.m_activeId == planeId || ctx.m_hotId == planeId) ? Color_GizmoHighlight : Color_White);
+		ctx.end();
+		ctx.popAlpha();
+	}*/
+
+	ret |= ctx.gizmoAxisTranslation(MakeId("axisX"), drawAt, v3, axisX, colorX, worldHeight, worldSize);
+	ret |= ctx.gizmoAxisTranslation(MakeId("axisY"), drawAt, v3, axisY, colorY, worldHeight, worldSize);
+	ret |= ctx.gizmoAxisTranslation(MakeId("axisZ"), drawAt, v3, axisZ, colorZ, worldHeight, worldSize);
+	//if (local) {
+	//	ctx.popMatrix();
+	// }
 	ctx.popColor();
 	ctx.popEnableSorting();
 	ctx.popId();
@@ -481,10 +487,10 @@ bool Im3d::GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_)
 		float worldHeight = ctx.pixelsToWorldSize(_drawAt, ctx.m_gizmoHeightPixels);
 		float worldSize = ctx.pixelsToWorldSize(_drawAt, ctx.m_gizmoSizePixels);
 		
-		Id idXy = MakeId("xyplane");
-		Id idXz = MakeId("xzplane");
-		Id idYz = MakeId("yzplane");
-		Id idV  = MakeId("viewplane");
+		Id idXy = MakeId("planeXy");
+		Id idXz = MakeId("planeXz");
+		Id idYz = MakeId("planeYz");
+		Id idV  = MakeId("planeV");
 		if (ctx.m_activeId != idXz && ctx.m_activeId != idYz && ctx.m_activeId != idV) {
 			if (ctx.gizmoAxisAngle(idXy, _drawAt, Vec3(0.0f, 0.0f, 1.0f), &euler.z, Color_Blue,  worldHeight * 0.8f, worldSize)) {
 				euler.z -= ctx.m_gizmoStateFloat;
@@ -553,10 +559,10 @@ bool Im3d::GizmoScale(const char* _id, float* _vec3_)
 	bool ret = false;
 		
 	const Mat4& localMatrix = ctx.getMatrix();
-	Vec3  axisX  = Normalize(localMatrix.getCol(0));
-	Vec3  axisY  = Normalize(localMatrix.getCol(1));
-	Vec3  axisZ  = Normalize(localMatrix.getCol(2));
-	Vec3  drawAt = localMatrix.getCol(3);
+	const Vec3  axisX       = Normalize(localMatrix.getCol(0));
+	const Vec3  axisY       = Normalize(localMatrix.getCol(1));
+	const Vec3  axisZ       = Normalize(localMatrix.getCol(2));
+	Vec3 drawAt = localMatrix.getCol(3);
 	float worldHeight = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoHeightPixels);
 	float worldSize   = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoSizePixels);
 	Color colorX = Color_Red;
@@ -580,7 +586,7 @@ bool Im3d::GizmoScale(const char* _id, float* _vec3_)
 				Intersect(ray, plane, t0);
 				Vec3 intersection = ray.m_origin + ray.m_direction * t0;
 				float delta = Length(intersection - drawAt);
-				float sign = SignOf(Dot(intersection - drawAt, storedPosition));
+				float sign = SignOf(Dot(intersection - drawAt, storedPosition - drawAt));
 				*v3 = storedScale * Vec3(Max(1.0f + delta * sign / worldHeight, 1e-3f));
 				ret = true;
 			} else {
@@ -754,8 +760,10 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 {	
 	IM3D_ASSERT(m_primMode != PrimitiveMode_None); // Vertex() called without Begin*()
 
-	// \todo optim: force alpha/matrix stack bottom to be 1/identity, then skip the transform if the stack size == 1
-	VertexData vd(m_matrixStack.back() * _position, _size, _color);
+	VertexData vd(_position, _size, _color);
+	if (m_matrixStack.size() > 1) { // optim, skip the matrix multiplication when the stack size is 1
+		vd.m_positionSize = Vec4(m_matrixStack.back() * _position, _size);
+	}
 	vd.m_color.setA(vd.m_color.getA() * m_alphaStack.back());
 
 	switch (m_primMode) {
@@ -1014,6 +1022,15 @@ float Context::pixelsToWorldSize(const Vec3& _position, float _pixels)
 	return m_appData.m_tanHalfFov * 2.0f * d * (_pixels / m_appData.m_viewportSize.y);
 }
 
+int Context::estimateLevelOfDetail(const Vec3& _position, float _worldSize, int _min, int _max)
+{
+	float d = Length(_position - m_appData.m_viewOrigin);
+	float x = Clamp(2.0f * atanf(_worldSize / (2.0f * d)), 0.0f, 1.0f);
+	float fmin = (float)_min;
+	float fmax = (float)_max;
+	return (int)(fmin + (fmax - fmin) * x);
+}
+
 bool Context::gizmoAxisTranslation(Id _id, const Vec3& _drawAt, Vec3* _out_, const Vec3& _axis, Color _color, float _worldHeight, float _worldSize)
 {
 	Ray ray(m_appData.m_cursorRayOrigin, m_appData.m_cursorRayDirection);
@@ -1113,6 +1130,16 @@ bool Context::gizmoPlaneTranslation(Id _id, const Vec3& _drawAt, Vec3* _out_, co
 		float depth = Length2(_drawAt - m_appData.m_viewOrigin);
 		makeHot(_id, depth, intersects);
 	}
+
+	Context& ctx = GetContext();
+	float aligned = fabs(Dot(_normal, Normalize(ctx.getAppData().m_viewOrigin - _drawAt)));
+	aligned = Remap(aligned, 0.1f, 0.2f);
+	ctx.pushAlpha(ctx.getAlpha() * aligned);
+		ctx.pushAlpha(ctx.m_hotId == _id ? 0.7f : 0.1f * ctx.getAlpha());
+			DrawQuadFilled(_drawAt, _normal, Vec2(_worldSize));
+		ctx.popAlpha();
+		DrawQuad(_drawAt, _normal, Vec2(_worldSize));
+	ctx.popAlpha();
 
 	return ret;
 }
@@ -1262,9 +1289,9 @@ bool Context::gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, flo
 	pushSize(m_gizmoSizePixels);
 	pushMatrix(getMatrix() * LookAt(_drawAt, _drawAt + _axis, m_appData.m_worldUp));
 	begin(PrimitiveMode_LineLoop);
-		const int _detail = 128; // \todo dynamically select detail based on worldRadius/worldSize
-		for (int i = 0; i < _detail; ++i) {
-			float rad = TwoPi * ((float)i / (float)_detail);
+		const int detail = estimateLevelOfDetail(_drawAt, _worldRadius, 16, 128);
+		for (int i = 0; i < detail; ++i) {
+			float rad = TwoPi * ((float)i / (float)detail);
 			vertex(Vec3(cosf(rad) * _worldRadius, sinf(rad) * _worldRadius, 0.0f));
 
 		 // post-modify the alpha for parts of the ring occluded by the sphere
@@ -1564,13 +1591,29 @@ Mat4 Im3d::AlignZ(const Vec3& _axis, const Vec3& _up)
 	Vec3 x, y;
 	y = _up - _axis * Dot(_up, _axis);
 	float ylen = Length(y);
-	if_unlikely (!(ylen > FLT_EPSILON)) {
-		Vec3 k = _up + Vec3(FLT_EPSILON);
+	if_unlikely (!(ylen > 0.0f)) {
+		Vec3 k = Vec3(1.0f, 0.0f, 0.0f);
 		y = k - _axis * Dot(k, _axis);
 		ylen = Length(y);
+		if_unlikely (!(ylen > 0.0f)) {
+			k = Vec3(0.0f, 0.0f, 1.0f);
+			y = k - _axis * Dot(k, _axis);
+			ylen = Length(y);
+		}
 	}
 	y = y / ylen;
 	x = Cross(y, _axis);
+
+	//Vec3 x, y;
+	//y = _up - _axis * Dot(_up, _axis);
+	//float ylen = Length(y);
+	//if_unlikely (!(ylen > FLT_EPSILON)) {
+	//	Vec3 k = _up + Vec3(FLT_EPSILON);
+	//	y = k - _axis * Dot(k, _axis);
+	//	ylen = Length(y);
+	//}
+	//y = y / ylen;
+	//x = Cross(y, _axis);
 
 	return Mat4(
 		x.x,    y.x,    _axis.x,    0.0f,
