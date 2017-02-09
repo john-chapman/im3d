@@ -129,7 +129,7 @@ void  PopId();
 Id    GetId();
 Id    GetActiveId(); // GetActiveId() != Id_Invalid means that a gizmo is in use
 
-// Manipulate translation/rotation/scale via a gizmo. Return true if the gizmo was used (if it modified the output parameter).
+// Manipulate translation/rotation/scale via a gizmo. Return true if the gizmo is 'active' (if it modified the output parameter).
 // Translation and rotation gizmos are global by default, scale is always local.
 bool  Gizmo(const char* _id, float* _mat4_);
 bool  GizmoTranslation(const char* _id, float* _vec3_);

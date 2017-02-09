@@ -80,6 +80,22 @@ void Im3d::MulMatrix(const Mat4& _mat4)
 	Context& ctx = GetContext();
 	ctx.setMatrix(ctx.getMatrix() * _mat4);
 }
+void Im3d::Translate(float _x, float _y, float _z)
+{
+	Context& ctx = GetContext();
+	ctx.setMatrix(ctx.getMatrix() * Translation(Vec3(_x, _y, _z)));
+}
+void Im3d::Rotate(const Vec3& _axis, float _angle)
+{
+	Context& ctx = GetContext();
+	ctx.setMatrix(ctx.getMatrix() * Mat4(Rotation(_axis, _angle)));
+}
+void Im3d::Scale(float _x, float _y, float _z)
+{
+	Context& ctx = GetContext();
+	ctx.setMatrix(ctx.getMatrix() * Mat4(Scale(Vec3(_x, _y, _z))));
+}
+
 
 void Im3d::DrawXyzAxes()
 {
@@ -109,7 +125,7 @@ void Im3d::DrawQuad(const Vec3& _a, const Vec3& _b, const Vec3& _c, const Vec3& 
 void Im3d::DrawQuad(const Vec3& _origin, const Vec3& _normal, const Vec2& _size)
 {
 	Context& ctx = GetContext();
-	ctx.pushMatrix(LookAt(_origin, _origin + _normal, ctx.getAppData().m_worldUp));
+	ctx.pushMatrix(ctx.getMatrix() * LookAt(_origin, _origin + _normal, ctx.getAppData().m_worldUp));
 	DrawQuad(
 		Vec3(-_size.x,  _size.y, 0.0f),
 		Vec3( _size.x,  _size.y, 0.0f),
@@ -133,7 +149,7 @@ void Im3d::DrawQuadFilled(const Vec3& _a, const Vec3& _b, const Vec3& _c, const 
 void Im3d::DrawQuadFilled(const Vec3& _origin, const Vec3& _normal, const Vec2& _size)
 {
 	Context& ctx = GetContext();
-	ctx.pushMatrix(LookAt(_origin, _origin + _normal, ctx.getAppData().m_worldUp));
+	ctx.pushMatrix(ctx.getMatrix() * LookAt(_origin, _origin + _normal, ctx.getAppData().m_worldUp));
 	DrawQuadFilled(
 		Vec3(-_size.x,  _size.y, 0.0f),
 		Vec3( _size.x,  _size.y, 0.0f),
@@ -1336,6 +1352,7 @@ U32 Context::getPrimitiveCount(DrawPrimitiveType _type) const
                                  im3d_math
 
 ******************************************************************************/
+
 const float Im3d::Pi     = 3.14159265359f;
 const float Im3d::TwoPi  = 2.0f * Pi;
 const float Im3d::HalfPi = 0.5f * Pi;

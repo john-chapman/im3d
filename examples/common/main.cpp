@@ -64,6 +64,16 @@ int main(int, char**)
 		}
 
 		if (ImGui::TreeNode("Shapes")) {
+			Im3d::PushDrawState();
+
+			static Im3d::Mat4 m(1.0f);
+			Im3d::Gizmo("ShapeGizmo", m);
+			Im3d::PushMatrix(m);
+				Im3d::SetColor(Im3d::Color_Magenta);
+				Im3d::SetSize(4.0f);
+				//Im3d::DrawQuad(Im3d::Vec3(0.0f), Im3d::Vec3(0.0f, 0.0f, 1.0f), Im3d::Vec2(1.0f));
+				Im3d::DrawCapsule(Im3d::Vec3(-1.0f, -1.0f, 0.0f), Im3d::Vec3(1.0f, 1.0f, 0.0f), 1.0f);
+			Im3d::PopMatrix();
 			/*static Im3d::Vec3 position;
 			Im3d::GizmoTranslation("LodPosition", &position.x);
 			static float radius = 1.0f;
@@ -80,7 +90,8 @@ int main(int, char**)
 			Im3d::DrawCylinder(position + Im3d::Vec3(-radius, 0.0f, 0.0f), position + Im3d::Vec3(radius, 0.0f, 0.0f), radius, lod);
 			Im3d::PopColor();
 			Im3d::PopSize();*/
-
+			
+			Im3d::PopDrawState();
 			ImGui::TreePop();
 		}
 
