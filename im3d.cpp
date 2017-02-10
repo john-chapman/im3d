@@ -367,43 +367,47 @@ bool Im3d::Gizmo(const char* _id, float* _mat4_)
 		ctx.resetId();
 	}
 
+	bool ret = false;
 	switch (ctx.m_gizmoMode) {
-	case GizmoMode_Translation: {
-		Vec3 translation = m4->getCol(3);
-		if (GizmoTranslation(_id, translation)) {
-			m4->setTranslation(translation);
-			return true;
-		}
-		break;
-	}
-	case GizmoMode_Rotation: {
-		Mat3 m3(*m4);
-		if (GizmoRotation(_id, m4->getCol(3), m3)) {
-			m4->setRotationScale(m3);
-			return true;
-		}
-		break;
-	}
-	case GizmoMode_Scale: {
-		Vec3 scale(Length(m4->getCol(0)), Length(m4->getCol(1)), Length(m4->getCol(2)));
-		ctx.pushMatrix(*m4);
-		if (GizmoScale(_id, scale)) {
-			Mat3 rmat(*m4);
-			rmat.setCol(0, Normalize(rmat.getCol(0)) * scale.x);
-			rmat.setCol(1, Normalize(rmat.getCol(1)) * scale.y);
-			rmat.setCol(2, Normalize(rmat.getCol(2)) * scale.z);
-			m4->setRotationScale(rmat);
+		case GizmoMode_Translation: {
+			Vec3 translation = m4->getCol(3);
+			ctx.pushMatrix(*m4);
+			if (GizmoTranslation(_id, translation)) {
+				m4->setTranslation(translation);
+				ret = true;
+			}
 			ctx.popMatrix();
-			return true;
+			break;
 		}
-		ctx.popMatrix();
-		break;
-	}
-	default:
-		break;
+		case GizmoMode_Rotation: {
+			Mat3 m3(*m4);
+			//ctx.pushMatrix(*m4);
+			if (GizmoRotation(_id, m4->getCol(3), m3)) {
+				m4->setRotationScale(m3);
+				ret = true;
+			}
+			//ctx.popMatrix();
+			break;
+		}
+		case GizmoMode_Scale: {
+			Vec3 scale(Length(m4->getCol(0)), Length(m4->getCol(1)), Length(m4->getCol(2)));
+			ctx.pushMatrix(*m4);
+			if (GizmoScale(_id, scale)) {
+				Mat3 rmat(*m4);
+				rmat.setCol(0, Normalize(rmat.getCol(0)) * scale.x);
+				rmat.setCol(1, Normalize(rmat.getCol(1)) * scale.y);
+				rmat.setCol(2, Normalize(rmat.getCol(2)) * scale.z);
+				m4->setRotationScale(rmat);
+				ret = true;
+			}
+			ctx.popMatrix();
+			break;
+		}
+		default:
+			break;
 	};
 
-	return false;
+	return ret;
 }
 
 bool Im3d::GizmoTranslation(const char* _id, float* _vec3_)
@@ -424,13 +428,13 @@ bool Im3d::GizmoTranslation(const char* _id, float* _vec3_)
 	Vec3 axisX(1.0f, 0.0f, 0.0f);
 	Vec3 axisY(0.0f, 1.0f, 0.0f);
 	Vec3 axisZ(0.0f, 0.0f, 1.0f);
-	//if (local) {
-	//	const Mat4& localMatrix = ctx.getMatrix();
-	//	axisX = Normalize(localMatrix.getCol(0));
-	//	axisY = Normalize(localMatrix.getCol(1));
-	//	axisZ = Normalize(localMatrix.getCol(2));
-	//	ctx.pushMatrix(Mat4(1.0f)); // don't draw with the local transformation
-	//}
+	if (ctx.m_gizmoLocal) {
+		const Mat4& localMatrix = ctx.getMatrix();
+		axisX = Normalize(localMatrix.getCol(0));
+		axisY = Normalize(localMatrix.getCol(1));
+		axisZ = Normalize(localMatrix.getCol(2));
+		//ctx.pushMatrix(Mat4(1.0f)); // don't draw with the local transformation
+	}
 
 	Color colorX = Color_Red;
 	Color colorY = Color_Green;
@@ -445,7 +449,7 @@ bool Im3d::GizmoTranslation(const char* _id, float* _vec3_)
 			colorX = colorZ = Color_GizmoHighlight;
 		}
 	}
-	{ // XY plane
+	/*{ // XY plane
 		Id planeId = MakeId("planeXY");
 		Vec3 planeNormal = axisZ;
 		Vec3 planeOrigin = drawAt + Vec3(planeOffset, planeOffset, 0.0f);
@@ -462,7 +466,7 @@ bool Im3d::GizmoTranslation(const char* _id, float* _vec3_)
 		if (ctx.m_hotId == planeId) {
 			colorX = colorZ = Color_GizmoHighlight;
 		}
-	}
+	}*/
 	/*{ // view plane
 		Id planeId = MakeId("viewplane");
 		Vec3 planeNormal = Normalize(drawAt - ctx.getAppData().m_viewOrigin);
@@ -477,13 +481,12 @@ bool Im3d::GizmoTranslation(const char* _id, float* _vec3_)
 		ctx.end();
 		ctx.popAlpha();
 	}*/
-
+	ctx.pushMatrix(Mat4(1.0f));
 	ret |= ctx.gizmoAxisTranslation(MakeId("axisX"), drawAt, v3, axisX, colorX, worldHeight, worldSize);
 	ret |= ctx.gizmoAxisTranslation(MakeId("axisY"), drawAt, v3, axisY, colorY, worldHeight, worldSize);
 	ret |= ctx.gizmoAxisTranslation(MakeId("axisZ"), drawAt, v3, axisZ, colorZ, worldHeight, worldSize);
-	//if (local) {
-	//	ctx.popMatrix();
-	// }
+	ctx.popMatrix();
+	
 	ctx.popColor();
 	ctx.popEnableSorting();
 	ctx.popId();
@@ -726,20 +729,20 @@ void Context::begin(PrimitiveMode _mode)
 	m_primMode = _mode;
 	m_vertCountThisPrim = 0;
 	switch (m_primMode) {
-	case PrimitiveMode_Points:
-		m_firstVertThisPrim = m_vertexData[DrawPrimitive_Points][m_primList].size();
-		break;
-	case PrimitiveMode_Lines:
-	case PrimitiveMode_LineStrip:
-	case PrimitiveMode_LineLoop:
-		m_firstVertThisPrim = m_vertexData[DrawPrimitive_Lines][m_primList].size();
-		break;
-	case PrimitiveMode_Triangles:
-	case PrimitiveMode_TriangleStrip:
-		m_firstVertThisPrim = m_vertexData[DrawPrimitive_Triangles][m_primList].size();
-		break;
-	default:
-		break;
+		case PrimitiveMode_Points:
+			m_firstVertThisPrim = m_vertexData[DrawPrimitive_Points][m_primList].size();
+			break;
+		case PrimitiveMode_Lines:
+		case PrimitiveMode_LineStrip:
+		case PrimitiveMode_LineLoop:
+			m_firstVertThisPrim = m_vertexData[DrawPrimitive_Lines][m_primList].size();
+			break;
+		case PrimitiveMode_Triangles:
+		case PrimitiveMode_TriangleStrip:
+			m_firstVertThisPrim = m_vertexData[DrawPrimitive_Triangles][m_primList].size();
+			break;
+		default:
+			break;
 	};
 }
 
@@ -747,27 +750,27 @@ void Context::end()
 {
 	IM3D_ASSERT(m_primMode != PrimitiveMode_None); // End() called without Begin*()
 	switch (m_primMode) {
-	case PrimitiveMode_Points:
-		break;
-	case PrimitiveMode_Lines:
-		IM3D_ASSERT(m_vertCountThisPrim % 2 == 0);
-		break;
-	case PrimitiveMode_LineStrip:
-		IM3D_ASSERT(m_vertCountThisPrim > 1);
-		break;
-	case PrimitiveMode_LineLoop:
-		IM3D_ASSERT(m_vertCountThisPrim > 1);
-		m_vertexData[DrawPrimitive_Lines][m_primList].push_back(m_vertexData[DrawPrimitive_Lines][m_primList].back());
-		m_vertexData[DrawPrimitive_Lines][m_primList].push_back(m_vertexData[DrawPrimitive_Lines][m_primList][m_firstVertThisPrim]);
-		break;
-	case PrimitiveMode_Triangles:
-		IM3D_ASSERT(m_vertCountThisPrim % 3 == 0);
-		break;
-	case PrimitiveMode_TriangleStrip:
-		IM3D_ASSERT(m_vertCountThisPrim >= 3);
-		break;
-	default:
-		break;
+		case PrimitiveMode_Points:
+			break;
+		case PrimitiveMode_Lines:
+			IM3D_ASSERT(m_vertCountThisPrim % 2 == 0);
+			break;
+		case PrimitiveMode_LineStrip:
+			IM3D_ASSERT(m_vertCountThisPrim > 1);
+			break;
+		case PrimitiveMode_LineLoop:
+			IM3D_ASSERT(m_vertCountThisPrim > 1);
+			m_vertexData[DrawPrimitive_Lines][m_primList].push_back(m_vertexData[DrawPrimitive_Lines][m_primList].back());
+			m_vertexData[DrawPrimitive_Lines][m_primList].push_back(m_vertexData[DrawPrimitive_Lines][m_primList][m_firstVertThisPrim]);
+			break;
+		case PrimitiveMode_Triangles:
+			IM3D_ASSERT(m_vertCountThisPrim % 3 == 0);
+			break;
+		case PrimitiveMode_TriangleStrip:
+			IM3D_ASSERT(m_vertCountThisPrim >= 3);
+			break;
+		default:
+			break;
 	};
 	m_primMode = PrimitiveMode_None;
 }
@@ -783,33 +786,33 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 	vd.m_color.setA(vd.m_color.getA() * m_alphaStack.back());
 
 	switch (m_primMode) {
-	case PrimitiveMode_Points:
-		m_vertexData[DrawPrimitive_Points][m_primList].push_back(vd);
-		break;
-	case PrimitiveMode_Lines:
-		m_vertexData[DrawPrimitive_Lines][m_primList].push_back(vd);
-		break;
-	case PrimitiveMode_LineStrip:
-	case PrimitiveMode_LineLoop:
-		if (m_vertCountThisPrim >= 2) {
-			m_vertexData[DrawPrimitive_Lines][m_primList].push_back(m_vertexData[DrawPrimitive_Lines][m_primList].back());
-			++m_vertCountThisPrim;
-		}
-		m_vertexData[DrawPrimitive_Lines][m_primList].push_back(vd);
-		break;
-	case PrimitiveMode_Triangles:
-		m_vertexData[DrawPrimitive_Triangles][m_primList].push_back(vd);
-		break;
-	case PrimitiveMode_TriangleStrip:
-		if (m_vertCountThisPrim >= 3) {
-			m_vertexData[DrawPrimitive_Triangles][m_primList].push_back(*(m_vertexData[DrawPrimitive_Triangles][m_primList].end() - 2));
-			m_vertexData[DrawPrimitive_Triangles][m_primList].push_back(*(m_vertexData[DrawPrimitive_Triangles][m_primList].end() - 2));
-			m_vertCountThisPrim += 2;
-		}
-		m_vertexData[DrawPrimitive_Triangles][m_primList].push_back(vd);
-		break;
-	default:
-		break;
+		case PrimitiveMode_Points:
+			m_vertexData[DrawPrimitive_Points][m_primList].push_back(vd);
+			break;
+		case PrimitiveMode_Lines:
+			m_vertexData[DrawPrimitive_Lines][m_primList].push_back(vd);
+			break;
+		case PrimitiveMode_LineStrip:
+		case PrimitiveMode_LineLoop:
+			if (m_vertCountThisPrim >= 2) {
+				m_vertexData[DrawPrimitive_Lines][m_primList].push_back(m_vertexData[DrawPrimitive_Lines][m_primList].back());
+				++m_vertCountThisPrim;
+			}
+			m_vertexData[DrawPrimitive_Lines][m_primList].push_back(vd);
+			break;
+		case PrimitiveMode_Triangles:
+			m_vertexData[DrawPrimitive_Triangles][m_primList].push_back(vd);
+			break;
+		case PrimitiveMode_TriangleStrip:
+			if (m_vertCountThisPrim >= 3) {
+				m_vertexData[DrawPrimitive_Triangles][m_primList].push_back(*(m_vertexData[DrawPrimitive_Triangles][m_primList].end() - 2));
+				m_vertexData[DrawPrimitive_Triangles][m_primList].push_back(*(m_vertexData[DrawPrimitive_Triangles][m_primList].end() - 2));
+				m_vertCountThisPrim += 2;
+			}
+			m_vertexData[DrawPrimitive_Triangles][m_primList].push_back(vd);
+			break;
+		default:
+			break;
 	};
 	++m_vertCountThisPrim;
 }
@@ -899,6 +902,7 @@ Context::Context()
 	m_firstVertThisPrim = 0;
 	m_vertCountThisPrim = 0;
 
+	m_gizmoLocal = false;
 	m_gizmoMode = GizmoMode_Translation;
 	m_hotId = Id_Invalid;
 	m_activeId = Id_Invalid;
