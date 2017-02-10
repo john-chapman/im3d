@@ -21,13 +21,15 @@ int main(int, char**)
 			ImGui::Text("Welcome to the Im3d demo!");
 			ImGui::Spacing();
 			ImGui::Text("WASD = camera position + QE for down/up");
-			ImGui::Text("LShift = go faster");
-			ImGui::Text("Mouse Right + drag = camera orientation");
+			ImGui::Text("L Shift = go faster");
+			ImGui::Text("R Mouse + drag = camera orientation");
 			ImGui::Spacing();
 
 			ImGui::TreePop();
 		}
+		ImGui::Spacing();
 
+		ImGui::SetNextTreeNodeOpen(true, ImGuiSetCond_Once);
 		if (ImGui::TreeNode("Grid")) {
 			static int gridSize = 20;
 			ImGui::SliderInt("Grid Size", &gridSize, 1, 50);
@@ -99,6 +101,7 @@ int main(int, char**)
 			ImGui::Text("Hot ID: 0x%x  Active ID: 0x%x  Hot Depth: %.3f", ctx.m_hotId, ctx.m_activeId, ctx.m_hotDepth);
 			
 			ImGui::Spacing();
+			ImGui::Checkbox("Local", &ctx.m_gizmoLocal);
 			int gizmoMode = (int)Im3d::GetContext().m_gizmoMode;
 			ImGui::RadioButton("Translate (Ctrl+T)", &gizmoMode, Im3d::GizmoMode_Translation); 
 			ImGui::SameLine();
@@ -141,6 +144,17 @@ int main(int, char**)
 			} else {
 				Im3d::Gizmo("GizmoTest", m);
 			}
+
+Im3d::PushDrawState();
+Im3d::PushMatrix(m);
+	Im3d::DrawXyzAxes();
+	Im3d::SetColor(Im3d::Color_Magenta);
+	Im3d::SetAlpha(0.1f);
+	Im3d::DrawQuadFilled(Im3d::Vec3(0.5f, 0.0f, 0.5f), Im3d::Vec3(0.0f, 1.0f, 0.0f), Im3d::Vec2(1.0f));
+	Im3d::SetAlpha(0.5f);
+	Im3d::DrawQuad(Im3d::Vec3(0.5f, 0.0f, 0.5f), Im3d::Vec3(0.0f, 1.0f, 0.0f), Im3d::Vec2(1.0f));
+Im3d::PopMatrix();
+Im3d::PopDrawState();
 			
 			ImGui::TreePop();
 		}
@@ -184,8 +198,8 @@ int main(int, char**)
 
 			Im3d::PushDrawState();
 				Im3d::EnableSorting(s_enableSorting);
-				Im3d::SetAlpha(1.0f);
-				for (int i = 0; i < s_primCount / 2; ++i) {
+				Im3d::SetAlpha(0.9f);
+				for (int i = 0; i < s_primCount / 3; ++i) {
 					Im3d::PushMatrix();
 						Im3d::Mat4 wm(1.0f);
 						wm.setRotationScale(Im3d::Rotation(Im3d::Normalize(Im3d::RandVec3(-1.0f, 1.0f)), Im3d::RandFloat(0.0f, 6.0f)));
@@ -199,9 +213,9 @@ int main(int, char**)
 					Im3d::PopMatrix();
 				}
 
-				Im3d::SetAlpha(1.0f);
+				Im3d::SetAlpha(0.9f);
 				Im3d::SetSize(2.5f);
-				for (int i = 0; i < s_primCount / 2; ++i) {
+				for (int i = 0; i < s_primCount / 3 / 3; ++i) {
 					Im3d::PushMatrix();
 						Im3d::Mat4 wm(1.0f);
 						wm.setRotationScale(Im3d::Rotation(Im3d::Normalize(Im3d::RandVec3(-1.0f, 1.0f)), Im3d::RandFloat(0.0f, 6.0f)));
@@ -211,6 +225,19 @@ int main(int, char**)
 							Im3d::Vertex(-1.0f,  0.0f, -1.0f, Im3d::Color_Magenta);
 							Im3d::Vertex( 0.0f,  2.0f, -1.0f, Im3d::Color_Yellow);
 							Im3d::Vertex( 1.0f,  0.0f, -1.0f, Im3d::Color_Cyan);
+						Im3d::End();
+					Im3d::PopMatrix();
+				}
+
+				Im3d::SetAlpha(0.9f);
+				Im3d::SetSize(16.0f);
+				for (int i = 0; i < s_primCount / 3; ++i) {
+					Im3d::PushMatrix();
+						Im3d::Mat4 wm(1.0f);
+						wm.setTranslation(Im3d::RandVec3(-10.0f, 10.0f));
+						Im3d::MulMatrix(wm);
+						Im3d::BeginPoints();
+							Im3d::Vertex(-1.0f,  0.0f, -1.0f, Im3d::RandColor(0.0f, 1.0f));
 						Im3d::End();
 					Im3d::PopMatrix();
 				}
