@@ -1,6 +1,6 @@
-Im3d is a small, self-contained library for immediate mode rendering of simple primitives (points, lines, triangles), plus an immediate mode UI which provides 3d manipulation 'gizmos' and other tools. It is platform and graphics API agnostic and designed to be compatible with VR.
+Im3d is a small, self-contained library for immediate mode rendering of basic primitives (points, lines, triangles), plus an immediate mode UI which provides 3d manipulation 'gizmos' and other tools. It is platform and graphics API agnostic and designed to be compatible with VR.
 
-Im3d outputs vertex buffers for rendering by the application. Im3d does not affect the system graphics state directly, therefore Im3d calls can be made from anywhere inside the application code. This is useful for graphics debugging, 3d data visualization, writing CAD & game development tools, etc.
+Im3d outputs vertex buffers for rendering by the application. Im3d does not affect the system graphics state directly, therefore Im3d calls can be made from anywhere in the application code. This is useful for graphics debugging, 3d data visualization, writing CAD & game development tools, etc.
 
 ![Demo Screenshot 1](https://github.com/john-chapman/im3d/wiki/images/im3d_demo1.jpg)
 ![Demo Screenshot 2](https://github.com/john-chapman/im3d/wiki/images/im3d_demo2.jpg)
@@ -35,11 +35,11 @@ if (Im3d::Gizmo("UnifiedGizmo", &transform)) {
 See [here](https://github.com/john-chapman/im3d/blob/master/examples/common/main.cpp) for more complete examples.
 
 ### Integration
-Integration is fairly straightforward: simply copy the files from the root of this repo and add them to the application project. The application should then proceed as follows:
+Integration is fairly straightforward: copy the files from the root of this repo and add them to the application project. The application should then proceed as follows:
 
 - At startup, load the graphics resources (shaders, etc.) required to actually draw the Im3d vertex buffers.
 - Each frame, the fill the `Im3d::AppData` struct, providing user input and other relevant context data, then call `Im3d::NewFrame()`.
-- Towards the end of the frame, call `Im3d::Draw()` once for each view/projection to be rendered. Im3d calls an application-defined callback to actually execute rendering commands and draw the points/lines/triangles pushed during the frame via calls to the API.
+- Towards the end of the frame, call `Im3d::Draw()` once for each view/projection to be rendered. Im3d calls an application-defined callback to actually execute rendering commands and draw the points/lines/triangles pushed during the frame.
 
-More detailed and API-specific integration examples are available in the [examples](https://github.com/john-chapman/im3d/tree/master/examples) directory.
+More detailed and API-specific integration examples are available in [examples/](https://github.com/john-chapman/im3d/tree/master/examples).
 
