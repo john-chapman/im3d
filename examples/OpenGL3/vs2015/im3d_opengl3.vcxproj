@@ -203,6 +203,7 @@
     <ClInclude Include="..\..\common\imgui\stb_rect_pack.h" />
     <ClInclude Include="..\..\common\imgui\stb_textedit.h" />
     <ClInclude Include="..\..\common\imgui\stb_truetype.h" />
+    <ClInclude Include="..\..\common\teapot.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\im3d.cpp" />
@@ -212,7 +213,6 @@
     <ClCompile Include="..\..\common\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\..\common\imgui\imgui_draw.cpp" />
     <ClCompile Include="..\..\common\main.cpp" />
-    <ClCompile Include="..\..\common\teapot.h" />
     <ClCompile Include="..\im3d_opengl3.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

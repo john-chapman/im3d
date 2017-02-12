@@ -4,12 +4,6 @@
     <Filter Include="common">
       <UniqueIdentifier>{AEFEE3F6-9AA0-0ECD-835B-22216F9C951D}</UniqueIdentifier>
     </Filter>
-    <Filter Include="common\GL">
-      <UniqueIdentifier>{5079AB3B-BCE3-5FB2-0522-115871CB3D07}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="common">
-      <UniqueIdentifier>{AEFEE3F6-9AA0-0ECD-835B-22216F9C951D}</UniqueIdentifier>
-    </Filter>
     <Filter Include="im3d">
       <UniqueIdentifier>{F279987C-DEB0-990D-879D-7F1073B3150F}</UniqueIdentifier>
     </Filter>
@@ -26,15 +20,6 @@
     </ClInclude>
     <ClInclude Include="..\..\..\im3d_math.h">
       <Filter>im3d</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\common\GL\glew.h">
-      <Filter>common\GL</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\common\GL\glxew.h">
-      <Filter>common\GL</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\common\GL\wglew.h">
-      <Filter>common\GL</Filter>
     </ClInclude>
     <ClInclude Include="..\..\common\im3d_example.h">
       <Filter>common</Filter>
@@ -65,9 +50,6 @@
     <ClCompile Include="..\..\..\im3d.cpp">
       <Filter>im3d</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\common\GL\glew.c">
-      <Filter>common\GL</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\common\im3d_example.cpp">
       <Filter>common</Filter>
     </ClCompile>
@@ -83,6 +65,6 @@
     <ClCompile Include="..\..\common\main.cpp">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\im3d_opengl3.cpp" />
+    <ClCompile Include="..\im3d_directx11.cpp" />
   </ItemGroup>
 </Project>

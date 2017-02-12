@@ -136,7 +136,7 @@ Id    GetActiveId(); // GetActiveId() != Id_Invalid means that a gizmo is in use
 bool  GizmoTranslation(const char* _id, float* _vec3_, bool _local = false);
 bool  GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_, bool _local = false);
 bool  GizmoScale(const char* _id, const Vec3& _drawAt, float* _vec3_);
-// Unified gizmo, choses local/global, translation/rotation/scale based on the context gizmo state. Return true if the gizmo is active.
+// Unified gizmo, selects local/global, translation/rotation/scale based on the context gizmo state. Return true if the gizmo is active.
 bool  Gizmo(const char* _id, float* _mat4_);
 
 

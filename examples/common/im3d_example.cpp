@@ -296,57 +296,142 @@ using namespace Im3d;
 			winAssert(ReleaseDC(g_Example->m_hwnd, g_Example->m_hdc) != 0);
 		}
 		
+	#elif defined(IM3D_DX11)
+		#include <d3dcompiler.h>	
+
+		static bool InitDx11()
+		{
+			g_Example->m_dxgiSwapChain   = nullptr;
+			g_Example->m_d3dDevice       = nullptr;
+			g_Example->m_d3dDeviceCtx    = nullptr;
+			g_Example->m_d3dRenderTarget = nullptr;
+
+			DXGI_SWAP_CHAIN_DESC swapDesc = {};
+			swapDesc.BufferCount = 2;
+			swapDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+			swapDesc.BufferDesc.Width = 0;
+			swapDesc.BufferDesc.Height = 0;
+			swapDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+			swapDesc.BufferDesc.RefreshRate.Numerator = 60;
+			swapDesc.BufferDesc.RefreshRate.Denominator = 1;
+			swapDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+			swapDesc.OutputWindow = g_Example->m_hwnd;
+			swapDesc.SampleDesc.Count = 1;
+			swapDesc.SampleDesc.Quality = 0;
+			swapDesc.Windowed = TRUE;
+			swapDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+
+			UINT createDeviceFlags = 0;
+			//createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+			D3D_FEATURE_LEVEL featureLevel;
+			const D3D_FEATURE_LEVEL featureLevelArray[1] = { D3D_FEATURE_LEVEL_11_0, };
+			if (D3D11CreateDeviceAndSwapChain(
+				NULL, 
+				D3D_DRIVER_TYPE_HARDWARE, 
+				NULL, 
+				createDeviceFlags, 
+				featureLevelArray, 
+				1, 
+				D3D11_SDK_VERSION, 
+				&swapDesc,
+				&g_Example->m_dxgiSwapChain,
+				&g_Example->m_d3dDevice, 
+				&featureLevel, 
+				&g_Example->m_d3dDeviceCtx
+				) != S_OK) {
+				return false;
+			}
+
+			ID3D11Texture2D* backBuffer;
+			D3D11_RENDER_TARGET_VIEW_DESC rtDesc = {};
+			rtDesc.Format = swapDesc.BufferDesc.Format;
+			rtDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+			g_Example->m_dxgiSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBuffer);
+			g_Example->m_d3dDevice->CreateRenderTargetView(backBuffer, &rtDesc, &g_Example->m_d3dRenderTarget);
+			g_Example->m_d3dDeviceCtx->OMSetRenderTargets(1, &g_Example->m_d3dRenderTarget, NULL);
+			backBuffer->Release();
+			return true;
+		}
+		
+		static void ShutdownDx11()
+		{
+			if (g_Example->m_d3dRenderTarget) { 
+				g_Example->m_d3dRenderTarget->Release();
+				g_Example->m_d3dRenderTarget = nullptr;
+			}
+			if (g_Example->m_dxgiSwapChain) {
+				g_Example->m_dxgiSwapChain->Release();
+				g_Example->m_dxgiSwapChain = nullptr;
+			}
+			if (g_Example->m_d3dDeviceCtx) {
+				g_Example->m_d3dDeviceCtx->Release();
+				g_Example->m_d3dDeviceCtx = nullptr;
+			}
+			if (g_Example->m_d3dDevice) {
+				g_Example->m_d3dDevice->Release();
+				g_Example->m_d3dDevice = nullptr;
+			}
+		}
+		
 	#endif // graphics
 	
 #endif // platform
 
 /******************************************************************************/
-#if defined(IM3D_OPENGL)
-	static void Append(const char* _str, Vector<char>& _out_)
-	{
-		while (*_str) {
-			_out_.push_back(*_str);
-			++_str;
+static void Append(const char* _str, Vector<char>& _out_)
+{
+	while (*_str) {
+		_out_.push_back(*_str);
+		++_str;
+	}
+}
+static void AppendLine(const char* _str, Vector<char>& _out_)
+{
+	Append(_str, _out_);
+	_out_.push_back('\n');
+}
+static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _out_)
+{
+	if (_defines) {
+		while (*_defines != '\0') {
+			Append("#define ", _out_);
+			AppendLine(_defines, _out_);
+			_defines = strchr(_defines, 0);
+			IM3D_ASSERT(_defines);
+			++_defines;
 		}
 	}
-	static void AppendLine(const char* _str, Vector<char>& _out_)
-	{
-		Append(_str, _out_);
-		_out_.push_back('\n');
-	}
 	
+	FILE* fin = fopen(_path, "rb");
+	if (!fin) {
+		fprintf(stderr, "Error opening '%s'\n", _path);
+		return false;
+	}
+	IM3D_VERIFY(fseek(fin, 0, SEEK_END) == 0); // not portable but should work almost everywhere
+	long fsize = ftell(fin);
+	IM3D_VERIFY(fseek(fin, 0, SEEK_SET) == 0);
+	
+	int srcbeg = _out_.size();
+	_out_.resize(srcbeg + fsize, '\0');
+	if (fread(_out_.data() + srcbeg, 1, fsize, fin) != fsize) {
+		fclose(fin);
+		fprintf(stderr, "Error reading '%s'\n", _path);
+		return false;
+	}
+	fclose(fin);
+	_out_.push_back('\0');
+
+	return true;
+}
+
+#if defined(IM3D_OPENGL)
 	GLuint Im3d::LoadCompileShader(GLenum _stage, const char* _path, const char* _defines)
 	{
 		Vector<char> src;
 		AppendLine(IM3D_OPENGL_VSHADER, src);
-		if (_defines) {
-			while (*_defines != '\0') {
-				Append("#define ", src);
-				AppendLine(_defines, src);
-				_defines = strchr(_defines, 0);
-				IM3D_ASSERT(_defines);
-				++_defines;
-			}
-		}
-	
-		FILE* fin = fopen(_path, "rb");
-		if (!fin) {
-			fprintf(stderr, "Error opening '%s'\n", _path);
+		if (!LoadShader(_path, _defines, src)) {
 			return 0;
 		}
-		IM3D_VERIFY(fseek(fin, 0, SEEK_END) == 0); // not portable but should work almost everywhere
-		long fsize = ftell(fin);
-		IM3D_VERIFY(fseek(fin, 0, SEEK_SET) == 0);
-	
-		int srcbeg = src.size();
-		src.resize(srcbeg + fsize, '\0');
-		if (fread(src.data() + srcbeg, 1, fsize, fin) != fsize) {
-			fclose(fin);
-			fprintf(stderr, "Error reading '%s'\n", _path);
-			return 0;
-		}
-		fclose(fin);
-		src.push_back('\0');
 	
 		GLuint ret = 0;
 		glAssert(ret = glCreateShader(_stage));
@@ -495,6 +580,32 @@ using namespace Im3d;
 		const char* ret;
 		glAssert(ret = (const char*)glGetString(_name));
 		return ret ? ret : "";
+	}
+
+#elif defined(IM3D_DX11)
+	ID3D10Blob* LoadCompileShader(const char* _target, const char* _path, const char* _defines)
+	{
+		Vector<char> src;
+		if (!LoadShader(_path, _defines, src)) {
+			return 0;
+		}
+
+		ID3D10Blob* ret = nullptr;
+		ID3D10Blob* err = nullptr;
+		D3DCompile(src.data(), src.size(), NULL, NULL, NULL, "main", _target, 0, 0, &ret, &err);
+		if (ret == nullptr) {
+			err->
+		}
+
+		return ret;
+	}
+	
+	void Im3d::DrawNdcQuad()
+	{
+	}
+	
+	void Im3d::DrawTeapot(const Mat4& _world, const Mat4& _viewProj)
+	{
 	}
 	
 #endif // graphics
@@ -686,6 +797,22 @@ Color Im3d::RandColor(float _min, float _max)
 		glAssert(glDeleteProgram(g_shImGui));
 		glAssert(glDeleteTextures(1, &g_txImGui));
 	}
+
+#elif defined(IM3D_DX11)
+
+	static void ImGui_Draw()
+	{
+	}
+	
+	static bool ImGui_Init()
+	{
+		return true;
+	}
+
+	static void ImGui_Shutdown()
+	{
+	}
+
 #endif
 
 #if defined(IM3D_PLATFORM_WIN)
@@ -752,6 +879,10 @@ bool Example::init(int _width, int _height, const char* _title)
 		if (!InitOpenGL(IM3D_OPENGL_VMAJ, IM3D_OPENGL_VMIN)) {
 			goto Example_init_fail;
 		}
+	#elif defined(IM3D_DX11)
+		if (!InitDx11()) {
+			goto Example_init_fail;
+		}
 	#endif
 
 	if (!ImGui_Init()) {
@@ -779,6 +910,8 @@ void Example::shutdown()
 
 	#if defined(IM3D_OPENGL) 
 		ShutdownOpenGL();
+	#elif defined(IM3D_DX11)
+		ShutdownDx11();
 	#endif
 	
 	ShutdownWindow();

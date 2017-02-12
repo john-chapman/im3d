@@ -59,6 +59,13 @@
 		const char* GlGetString(GLenum _name);
 	}
 	
+#elif defined(IM3D_DX11)
+ // DirectX 11
+	#include <d3d11.h>
+	
+	// Return 0 on failure (prints log info to stderr). _defines is a list of null-separated strings e.g. "DEFINE1 1\0DEFINE2 1\0"
+	ID3D10Blob* LoadCompileShader(const char* _target, const char* _path, const char* _defines = 0);
+
 #else
 	#error im3d: Graphics API not defined
 #endif
@@ -145,7 +152,13 @@ struct Example
 		#if defined(IM3D_OPENGL)
 			HDC   m_hdc;
 			HGLRC m_hglrc;
-			
+		
+		#elif defined(IM3D_DX11)
+			ID3D11Device*           m_d3dDevice;
+			ID3D11DeviceContext*    m_d3dDeviceCtx;
+			IDXGISwapChain*         m_dxgiSwapChain;
+			ID3D11RenderTargetView* m_d3dRenderTarget;
+
 		#endif
 	#endif
 
