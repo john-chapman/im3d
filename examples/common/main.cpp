@@ -125,6 +125,9 @@ int main(int, char**)
 			Im3d::DrawTeapot(m1, example.m_camViewProj);
 
 			if (separate) {
+				if (gizmoLocal) {
+					Im3d::PushMatrix(m0);
+				}
 				bool changed = false;
 				switch (Im3d::GetContext().m_gizmoMode) {
 				case Im3d::GizmoMode_Translation:
@@ -140,9 +143,10 @@ int main(int, char**)
 					break;
 				};
 				if (changed) {
-					m0 = Im3d::Mat4(1.0f);
-					m0.setRotationScale(rotation * Im3d::Scale(scale));
-					m0.setTranslation(translation);
+					m0 = Im3d::Mat4(translation, rotation, scale);
+				}
+				if (gizmoLocal) {
+					Im3d::PopMatrix();
 				}
 			} else {
 				Im3d::Gizmo("GizmoTest0", m0, gizmoLocal);
@@ -206,7 +210,7 @@ Im3d::PopDrawState();
 				for (int i = 0; i < s_primCount / 3; ++i) {
 					Im3d::PushMatrix();
 						Im3d::Mat4 wm(1.0f);
-						wm.setRotationScale(Im3d::Rotation(Im3d::Normalize(Im3d::RandVec3(-1.0f, 1.0f)), Im3d::RandFloat(0.0f, 6.0f)));
+						wm.setRotation(Im3d::Rotation(Im3d::Normalize(Im3d::RandVec3(-1.0f, 1.0f)), Im3d::RandFloat(0.0f, 6.0f)));
 						wm.setTranslation(Im3d::RandVec3(-10.0f, 10.0f));
 						Im3d::MulMatrix(wm);
 						Im3d::BeginTriangles();
@@ -222,7 +226,7 @@ Im3d::PopDrawState();
 				for (int i = 0; i < s_primCount / 3 / 3; ++i) {
 					Im3d::PushMatrix();
 						Im3d::Mat4 wm(1.0f);
-						wm.setRotationScale(Im3d::Rotation(Im3d::Normalize(Im3d::RandVec3(-1.0f, 1.0f)), Im3d::RandFloat(0.0f, 6.0f)));
+						wm.setRotation(Im3d::Rotation(Im3d::Normalize(Im3d::RandVec3(-1.0f, 1.0f)), Im3d::RandFloat(0.0f, 6.0f)));
 						wm.setTranslation(Im3d::RandVec3(-10.0f, 10.0f));
 						Im3d::MulMatrix(wm);
 						Im3d::BeginLineLoop();

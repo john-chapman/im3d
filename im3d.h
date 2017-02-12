@@ -118,7 +118,7 @@ void  DrawAlignedBox(const Vec3& _min, const Vec3& _max);
 void  DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, int _detail = -1);
 void  DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int _detail = -1);
 void  DrawPrism(const Vec3& _start, const Vec3& _end, float _radius, int _sides);
-void  DrawArrow(const Vec3& _start, const Vec3& _end, float _headLength);
+void  DrawArrow(const Vec3& _start, const Vec3& _end, float _headFraction);
 
 
 // Generate an Id from a null-terminated string.
@@ -195,6 +195,9 @@ struct Mat3
 	Vec3 getRow(int _i) const;
 	void setCol(int _i, const Vec3& _v);
 	void setRow(int _i, const Vec3& _v);
+
+	Vec3 getScale() const;
+	void setScale(const Vec3& _scale);
 	
 	float operator()(int _row, int _col) const
 	{
@@ -231,6 +234,7 @@ struct Mat4
 		float m30 = 0.0f, float m31 = 0.0f, float m32 = 0.0f, float m33 = 1.0f
 		);
 	Mat4(const Mat3& _mat3);
+	Mat4(const Vec3& _translation, const Mat3& _rotation, const Vec3& _scale);
 	operator float*()                                                        { return m; }
 	operator const float*() const                                            { return m; }
 
@@ -238,9 +242,13 @@ struct Mat4
 	Vec4 getRow(int _i) const;
 	void setCol(int _i, const Vec4& _v);
 	void setRow(int _i, const Vec4& _v);
-	
-	void setRotationScale(const Mat3& _m); // insert upper 3x3
-	void setTranslation(const Vec3& _v);   // insert col 3
+
+	Vec3 getTranslation() const;
+	void setTranslation(const Vec3& _translation);
+	Mat3 getRotation() const;
+	void setRotation(const Mat3& _rotation);
+	Vec3 getScale() const;
+	void setScale(const Vec3& _scale);
 	
 	float operator()(int _row, int _col) const
 	{
@@ -484,10 +492,9 @@ public:
 	void gizmoPlaneTranslation_Draw    (Id _id, const Vec3& _origin, const Vec3& _normal, float _worldSize, Color _color);
 	
 	bool gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldRadius, float _worldSize, float* _out_);
-	void gizmoAxislAngle_Draw    (Id _id, const Vec3& _origin, const Vec3& _axis, float _worldRadius, float _worldSize, float _angle, Color _color);
+	void gizmoAxislAngle_Draw    (Id _id, const Vec3& _origin, const Vec3& _axis, float _worldRadius, float _angle, Color _color);
 
 	bool gizmoAxisScale(Id _id, const Vec3& _drawAt, float* _out_, const Vec3& _axis, Color _color, float _worldHeight, float _worldSize);
-	bool gizmoAxisAngle(Id _id, const Vec3& _drawAt, const Vec3& _axis, float* _out_, Color _color, float _worldRadius, float _worldSize);
 	
 	// Make _id hot if _depth < m_hotDepth && _intersects.
 	bool makeHot(Id _id, float _depth, bool _intersects);
