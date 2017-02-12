@@ -540,6 +540,10 @@ float Im3d::RandFloat(float _min, float _max)
 {
 	return _min + (float)rand() / (float)RAND_MAX * (_max - _min);
 }
+Mat3 Im3d::RandRotation()
+{
+	return Rotation(Normalize(RandVec3(-1.0f, 1.0f)), RandFloat(-Pi, Pi));
+}
 Vec3 Im3d::RandVec3(float _min, float _max)
 {
 	return Im3d::Vec3(

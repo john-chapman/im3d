@@ -134,7 +134,7 @@ Id    GetActiveId(); // GetActiveId() != Id_Invalid means that a gizmo is in use
 bool  Gizmo(const char* _id, float* _mat4_, bool _local = false);
 bool  GizmoTranslation(const char* _id, float* _vec3_, bool _local = false);
 bool  GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_, bool _local = false);
-bool  GizmoScale(const char* _id, float* _vec3_);
+bool  GizmoScale(const char* _id, const Vec3& _drawAt, float* _vec3_);
 
 struct Vec2
 {
@@ -342,6 +342,7 @@ typedef void (DrawPrimitivesCallback)(const DrawList& _drawList);
 enum Key
 {
 	Mouse_Left,
+	Key_L,
 	Key_T,
 	Key_R,
 	Key_S,
@@ -350,6 +351,7 @@ enum Key
 
  // the following map keys -> 'action' states which may be more intuitive, especially for VR
 	Action_Select           = Mouse_Left,
+	Action_GizmoLocal       = Key_L,
 	Action_GizmoTranslation = Key_T,
 	Action_GizmoRotation    = Key_R,
 	Action_GizmoScale       = Key_S
@@ -480,21 +482,22 @@ public:
 
  // low-level interface for app-defined gizmos, may be subject to breaking changes
 
-	// Convert pixels -> world space size based on distance between _position and view origin.
-	float pixelsToWorldSize(const Vec3& _position, float _pixels);
-
-	int estimateLevelOfDetail(const Vec3& _position, float _worldSize, int _min = 16, int _max = 256);
-
 	bool gizmoAxisTranslation_Behvaior(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, Vec3* _out_);
 	void gizmoAxisTranslation_Draw    (Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, Color _color);
 
 	bool gizmoPlaneTranslation_Behavior(Id _id, const Vec3& _origin, const Vec3& _normal, float _worldSize, Vec3* _out_);
 	void gizmoPlaneTranslation_Draw    (Id _id, const Vec3& _origin, const Vec3& _normal, float _worldSize, Color _color);
-	
+
 	bool gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldRadius, float _worldSize, float* _out_);
 	void gizmoAxislAngle_Draw    (Id _id, const Vec3& _origin, const Vec3& _axis, float _worldRadius, float _angle, Color _color);
 
-	bool gizmoAxisScale(Id _id, const Vec3& _drawAt, float* _out_, const Vec3& _axis, Color _color, float _worldHeight, float _worldSize);
+	bool gizmoAxisScale_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, float *_out_);
+	void gizmoAxisScale_Draw    (Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, Color _color);
+
+	// Convert pixels -> world space size based on distance between _position and view origin.
+	float pixelsToWorldSize(const Vec3& _position, float _pixels);
+	// Blend between _min and _max based on distance betwen _position and view origin.
+	int estimateLevelOfDetail(const Vec3& _position, float _worldSize, int _min = 16, int _max = 256);
 	
 	// Make _id hot if _depth < m_hotDepth && _intersects.
 	bool makeHot(Id _id, float _depth, bool _intersects);
@@ -506,6 +509,7 @@ public:
 	bool wasKeyPressed(Key _key) const { return m_keyDownCurr[_key] && !m_keyDownPrev[_key]; }
 
  // gizmo state
+	bool               m_gizmoLocal;
 	GizmoMode          m_gizmoMode;                // Global mode selection for gizmos.
 	Id                 m_activeId;                 // Currently active gizmo. If set, this is the same as m_hotId.
 	Id                 m_hotId;
