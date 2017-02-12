@@ -131,9 +131,9 @@ Id    GetActiveId(); // GetActiveId() != Id_Invalid means that a gizmo is in use
 
 // Manipulate translation/rotation/scale via a gizmo. Return true if the gizmo is 'active' (if it modified the output parameter).
 // Translation and rotation gizmos are global by default, scale is always local.
-bool  Gizmo(const char* _id, float* _mat4_);
-bool  GizmoTranslation(const char* _id, float* _vec3_);
-bool  GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_);
+bool  Gizmo(const char* _id, float* _mat4_, bool _local = false);
+bool  GizmoTranslation(const char* _id, float* _vec3_, bool _local = false);
+bool  GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_, bool _local = false);
 bool  GizmoScale(const char* _id, float* _vec3_);
 
 struct Vec2
@@ -499,7 +499,6 @@ public:
 	bool wasKeyPressed(Key _key) const { return m_keyDownCurr[_key] && !m_keyDownPrev[_key]; }
 
  // gizmo state
-	bool               m_gizmoLocal;
 	GizmoMode          m_gizmoMode;                // Global mode selection for gizmos.
 	Id                 m_activeId;                 // Currently active gizmo. If set, this is the same as m_hotId.
 	Id                 m_hotId;

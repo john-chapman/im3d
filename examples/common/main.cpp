@@ -101,7 +101,8 @@ int main(int, char**)
 			ImGui::Text("Hot ID: 0x%x  Active ID: 0x%x  Hot Depth: %.3f", ctx.m_hotId, ctx.m_activeId, ctx.m_hotDepth);
 			
 			ImGui::Spacing();
-			ImGui::Checkbox("Local", &ctx.m_gizmoLocal);
+			static bool gizmoLocal = false;
+			ImGui::Checkbox("Local", &gizmoLocal);
 			int gizmoMode = (int)Im3d::GetContext().m_gizmoMode;
 			ImGui::RadioButton("Translate (Ctrl+T)", &gizmoMode, Im3d::GizmoMode_Translation); 
 			ImGui::SameLine();
@@ -114,21 +115,23 @@ int main(int, char**)
 			static Im3d::Vec3 translation(0.0f, 0.0f, 0.0f);
 			static Im3d::Mat3 rotation(1.0f);
 			static Im3d::Vec3 scale(1.0f);
-			static Im3d::Mat4 m(1.0f);				
+			static Im3d::Mat4 m0(1.0f);
+			static Im3d::Mat4 m1 = Im3d::Translation(Im3d::Vec3(1.0f, 0.0f, 0.0f));
 			ImGui::Checkbox("Separate Transforms", &separate);
 			ImGui::SliderFloat("Gizmo Size", &ctx.m_gizmoHeightPixels, 0.0f, 256.0f);
 			ImGui::SliderFloat("Gizmo Thickness", &ctx.m_gizmoSizePixels, 0.0f, 32.0f);
 		
-			Im3d::DrawTeapot(m, example.m_camViewProj); // drawing the object first avoids 1 frame lag
+			Im3d::DrawTeapot(m0, example.m_camViewProj); // drawing the object first avoids 1 frame lag
+			Im3d::DrawTeapot(m1, example.m_camViewProj);
 
 			if (separate) {
 				bool changed = false;
 				switch (Im3d::GetContext().m_gizmoMode) {
 				case Im3d::GizmoMode_Translation:
-					changed = Im3d::GizmoTranslation("GizmoTestTranslation", translation);
+					changed = Im3d::GizmoTranslation("GizmoTestTranslation", translation, gizmoLocal);
 					break;
 				case Im3d::GizmoMode_Rotation:
-					changed = Im3d::GizmoRotation("GizmoTestRotation", translation, rotation);
+					changed = Im3d::GizmoRotation("GizmoTestRotation", translation, rotation, gizmoLocal);
 					break;
 				case Im3d::GizmoMode_Scale:
 					changed = Im3d::GizmoScale("GizmoTestScale", scale); 
@@ -137,16 +140,17 @@ int main(int, char**)
 					break;
 				};
 				if (changed) {
-					m = Im3d::Mat4(1.0f);
-					m.setRotationScale(rotation * Im3d::Scale(scale));
-					m.setTranslation(translation);
+					m0 = Im3d::Mat4(1.0f);
+					m0.setRotationScale(rotation * Im3d::Scale(scale));
+					m0.setTranslation(translation);
 				}
 			} else {
-				Im3d::Gizmo("GizmoTest", m);
+				Im3d::Gizmo("GizmoTest0", m0, gizmoLocal);
+				Im3d::Gizmo("GizmoTest1", m1, gizmoLocal);
 			}
 
-Im3d::PushDrawState();
-Im3d::PushMatrix(m);
+/*Im3d::PushDrawState();
+Im3d::PushMatrix(m0);
 	Im3d::DrawXyzAxes();
 	Im3d::SetColor(Im3d::Color_Magenta);
 	Im3d::SetAlpha(0.1f);
@@ -155,7 +159,7 @@ Im3d::PushMatrix(m);
 	Im3d::DrawQuad(Im3d::Vec3(0.5f, 0.0f, 0.5f), Im3d::Vec3(0.0f, 1.0f, 0.0f), Im3d::Vec2(1.0f));
 Im3d::PopMatrix();
 Im3d::PopDrawState();
-			
+*/			
 			ImGui::TreePop();
 		}
 		
