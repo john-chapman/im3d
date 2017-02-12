@@ -222,8 +222,6 @@ template <typename T>
 inline T Min(T _a, T _b)                                   { return _a < _b ? _a : _b; }
 template <typename T>
 inline T Clamp(T _a, T _min, T _max)                       { return Max(Min(_a, _max), _min); }
-template <typename T> 
-inline T SignOf(T _a)                                      { return (T)((T(0) < _a) - (_a < T(0))); }
 // Remap _x in [_start,_end] to [0,1].
 inline float Remap(float _x, float _start, float _end)     { return Clamp(_x * (1.0f / (_end - _start)) + (-_start / (_end - _start)), 0.0f, 1.0f); }
 
