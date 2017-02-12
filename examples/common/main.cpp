@@ -132,7 +132,7 @@ int main(int, char**)
 			 // drawing the object first avoids 1 frame lag
 				Im3d::DrawTeapot(transforms[i], example.m_camViewProj);
 				Im3d::PushId((Im3d::Id)(i + 1));
-				Im3d::Gizmo("GizmoTest", transforms[i], ctx.m_gizmoLocal);
+				Im3d::Gizmo("GizmoTest", transforms[i]);
 				Im3d::PopId();
 			}
 			

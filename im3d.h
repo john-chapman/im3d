@@ -129,12 +129,17 @@ void  PopId();
 Id    GetId();
 Id    GetActiveId(); // GetActiveId() != Id_Invalid means that a gizmo is in use
 
+
 // Manipulate translation/rotation/scale via a gizmo. Return true if the gizmo is 'active' (if it modified the output parameter).
-// Translation and rotation gizmos are global by default, scale is always local.
-bool  Gizmo(const char* _id, float* _mat4_, bool _local = false);
+// If _local is true, the Gizmo* functions expect that the local matrix is on the matrix stack; in general the application should
+// push the local matrix before calling any of the following.
 bool  GizmoTranslation(const char* _id, float* _vec3_, bool _local = false);
 bool  GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_, bool _local = false);
 bool  GizmoScale(const char* _id, const Vec3& _drawAt, float* _vec3_);
+// Unified gizmo, choses local/global, translation/rotation/scale based on the context gizmo state. Return true if the gizmo is active.
+bool  Gizmo(const char* _id, float* _mat4_);
+
+
 
 struct Vec2
 {
