@@ -62,9 +62,20 @@
 #elif defined(IM3D_DX11)
  // DirectX 11
 	#include <d3d11.h>
+
+	#define dxAssert(call) \
+		do { \
+			HRESULT err = (call); \
+			if (err != S_OK) { \
+				Im3d::Assert(#call, __FILE__, __LINE__, Im3d::GetPlatformErrorString((DWORD)err)); \
+				IM3D_BREAK(); \
+			} \
+		} while (0)
 	
-	// Return 0 on failure (prints log info to stderr). _defines is a list of null-separated strings e.g. "DEFINE1 1\0DEFINE2 1\0"
-	ID3D10Blob* LoadCompileShader(const char* _target, const char* _path, const char* _defines = 0);
+	namespace Im3d {
+		// Return 0 on failure (prints log info to stderr). _defines is a list of null-separated strings e.g. "DEFINE1 1\0DEFINE2 1\0"
+		ID3D10Blob* LoadCompileShader(const char* _target, const char* _path, const char* _defines = 0);
+	}
 
 #else
 	#error im3d: Graphics API not defined

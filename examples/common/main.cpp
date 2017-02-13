@@ -14,8 +14,7 @@ int main(int, char**)
 		Im3d::AppData& ad  = Im3d::GetAppData();
 
 		ImGui::Begin("Im3d Demo");
-		Im3d::PushDrawState();
-		
+		Im3d::PushDrawState();		
 		ImGui::SetNextTreeNodeOpen(true, ImGuiSetCond_Once);
 		if (ImGui::TreeNode("About")) {
 			ImGui::Text("Welcome to the Im3d demo!");

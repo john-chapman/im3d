@@ -325,7 +325,7 @@ using namespace Im3d;
 			//createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 			D3D_FEATURE_LEVEL featureLevel;
 			const D3D_FEATURE_LEVEL featureLevelArray[1] = { D3D_FEATURE_LEVEL_11_0, };
-			if (D3D11CreateDeviceAndSwapChain(
+			dxAssert(D3D11CreateDeviceAndSwapChain(
 				NULL, 
 				D3D_DRIVER_TYPE_HARDWARE, 
 				NULL, 
@@ -338,7 +338,9 @@ using namespace Im3d;
 				&g_Example->m_d3dDevice, 
 				&featureLevel, 
 				&g_Example->m_d3dDeviceCtx
-				) != S_OK) {
+				));
+			if (!g_Example->m_dxgiSwapChain || !g_Example->m_d3dDevice || !g_Example->m_d3dDeviceCtx) {
+				fprintf(stderr, "Error initializing DirectX");
 				return false;
 			}
 
@@ -583,20 +585,26 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 	}
 
 #elif defined(IM3D_DX11)
-	ID3D10Blob* LoadCompileShader(const char* _target, const char* _path, const char* _defines)
+	ID3D10Blob* Im3d::LoadCompileShader(const char* _target, const char* _path, const char* _defines)
 	{
 		Vector<char> src;
 		if (!LoadShader(_path, _defines, src)) {
 			return 0;
 		}
-
 		ID3D10Blob* ret = nullptr;
 		ID3D10Blob* err = nullptr;
-		D3DCompile(src.data(), src.size(), NULL, NULL, NULL, "main", _target, 0, 0, &ret, &err);
-		if (ret == nullptr) {
-			err->
-		}
+		UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
 
+	 // D3DCompile is not portable - linking with d3dcompiler.lib introdices a dependency on d3dcompiler_XX.lib
+	 // \todo get a ptr to D3DCompile at runtime via LoadLibrary/GetProcAddress
+		D3DCompile(src.data(), src.size(), NULL, NULL, NULL, "main", _target, flags, 0, &ret, &err);
+		if (ret == nullptr) {
+			fprintf(stderr, "Error compiling '%s':\n\n", _path);
+			if (err) {
+				fprintf(stderr, (char*)err->GetBufferPointer());
+				err->Release();
+			}
+		}
 		return ret;
 	}
 	
@@ -701,7 +709,7 @@ Color Im3d::RandColor(float _min, float _max)
 		Mat4 ortho = Mat4(
 			2.0f/io.DisplaySize.x, 0.0f,                   0.0f, -1.0f,
 			0.0f,                  2.0f/-io.DisplaySize.y, 0.0f,  1.0f,
-			0.0f,                  0.0f,                  -1.0f,  0.0f
+			0.0f,                  0.0f,                   1.0f,  0.0f
 			);
 		glAssert(glUseProgram(g_shImGui));
 	
@@ -799,18 +807,250 @@ Color Im3d::RandColor(float _min, float _max)
 	}
 
 #elif defined(IM3D_DX11)
+	static ID3D11InputLayout*        g_vdeclImGui;
+	static ID3D10Blob*               g_vsBlobImGui;
+	static ID3D11VertexShader*       g_vsImGui;
+	static ID3D10Blob*               g_psBlobImGui;
+	static ID3D11PixelShader*        g_psImGui;
+	static ID3D11RasterizerState*    g_rsImGui;
+	static ID3D11BlendState*         g_bsImGui;
+	static ID3D11DepthStencilState*  g_dsImGui;
+	static ID3D11ShaderResourceView* g_txImGui;
+	static ID3D11SamplerState*       g_ssImGui;
+	static ID3D11Buffer*             g_cbImGui;
+	static ID3D11Buffer*             g_vbImGui;
+	static ID3D11Buffer*             g_ibImGui;
 
-	static void ImGui_Draw()
+	static void ImGui_Draw(ImDrawData* _drawData)
 	{
+		ImGuiIO& io = ImGui::GetIO();
+		ID3D11Device* d3d = g_Example->m_d3dDevice;
+		ID3D11DeviceContext* ctx = g_Example->m_d3dDeviceCtx;
+
+		static int s_vbSize = 5000;
+		if (!g_vbImGui || s_vbSize < _drawData->TotalVtxCount) {
+			if (g_vbImGui) { 
+				g_vbImGui->Release(); 
+				g_vbImGui = nullptr;	
+			}
+			s_vbSize = _drawData->TotalVtxCount + 5000;
+			D3D11_BUFFER_DESC desc;
+			memset(&desc, 0, sizeof(D3D11_BUFFER_DESC));
+			desc.Usage = D3D11_USAGE_DYNAMIC;
+			desc.ByteWidth = s_vbSize * sizeof(ImDrawVert);
+			desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+			desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+			desc.MiscFlags = 0;
+			dxAssert(d3d->CreateBuffer(&desc, NULL, &g_vbImGui));
+		}
+
+		static int s_ibSize = 10000;
+		if (!g_ibImGui || s_ibSize < _drawData->TotalIdxCount) {
+			if (g_ibImGui) { 
+				g_ibImGui->Release(); 
+				g_ibImGui = nullptr; 
+			}
+			s_ibSize = _drawData->TotalIdxCount + 10000;
+			D3D11_BUFFER_DESC desc;
+			memset(&desc, 0, sizeof(D3D11_BUFFER_DESC));
+			desc.Usage = D3D11_USAGE_DYNAMIC;
+			desc.ByteWidth = s_ibSize * sizeof(ImDrawIdx);
+			desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+			desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+			dxAssert(d3d->CreateBuffer(&desc, NULL, &g_ibImGui));
+		}
+
+	 // copy and convert all vertices into a single contiguous buffer
+		D3D11_MAPPED_SUBRESOURCE vtx_resource, idx_resource;
+		dxAssert(ctx->Map(g_vbImGui, 0, D3D11_MAP_WRITE_DISCARD, 0, &vtx_resource));
+		dxAssert(ctx->Map(g_ibImGui, 0, D3D11_MAP_WRITE_DISCARD, 0, &idx_resource));
+		ImDrawVert* vtx_dst = (ImDrawVert*)vtx_resource.pData;
+		ImDrawIdx* idx_dst = (ImDrawIdx*)idx_resource.pData;
+		for (int n = 0; n < _drawData->CmdListsCount; ++n) {
+			const ImDrawList* cmd_list = _drawData->CmdLists[n];
+			memcpy(vtx_dst, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
+			memcpy(idx_dst, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
+			vtx_dst += cmd_list->VtxBuffer.Size;
+			idx_dst += cmd_list->IdxBuffer.Size;
+		}
+		ctx->Unmap(g_vbImGui, 0);
+		ctx->Unmap(g_ibImGui, 0);
+
+		D3D11_MAPPED_SUBRESOURCE bf;
+		dxAssert(ctx->Map(g_cbImGui, 0, D3D11_MAP_WRITE_DISCARD, 0, &bf));
+		Mat4* ortho = (Mat4*)bf.pData;
+		*ortho = Mat4(
+			2.0f/io.DisplaySize.x, 0.0f,                   0.0f, -1.0f,
+			0.0f,                  2.0f/-io.DisplaySize.y, 0.0f,  1.0f,
+			0.0f,                  0.0f,                   1.0f,  0.0f
+			);
+		ctx->Unmap(g_cbImGui, 0);
+		
+		D3D11_VIEWPORT vp = {};
+		vp.Width = ImGui::GetIO().DisplaySize.x;
+		vp.Height = ImGui::GetIO().DisplaySize.y;
+		vp.MinDepth = 0.0f;
+		vp.MaxDepth = 1.0f;
+		vp.TopLeftX = vp.TopLeftY = 0.0f;
+		ctx->RSSetViewports(1, &vp);
+
+		unsigned int stride = sizeof(ImDrawVert);
+		unsigned int offset = 0;
+		ctx->IASetInputLayout(g_vdeclImGui);
+		ctx->IASetVertexBuffers(0, 1, &g_vbImGui, &stride, &offset);
+		ctx->IASetIndexBuffer(g_ibImGui, sizeof(ImDrawIdx) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT, 0);
+		ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		ctx->VSSetShader(g_vsImGui, NULL, 0);
+		ctx->VSSetConstantBuffers(0, 1, &g_cbImGui);
+		ctx->PSSetShader(g_psImGui, NULL, 0);
+		ctx->PSSetSamplers(0, 1, &g_ssImGui);
+
+		const float blend_factor[4] = {};
+		ctx->OMSetBlendState(g_bsImGui, blend_factor, 0xffffffff);
+		ctx->OMSetDepthStencilState(g_dsImGui, 0);
+		ctx->RSSetState(g_rsImGui);
+
+		int vtx_offset = 0;
+		int idx_offset = 0;
+		for (int n = 0; n < _drawData->CmdListsCount; n++) {
+			const ImDrawList* cmd_list = _drawData->CmdLists[n];
+			for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; ++cmd_i) {
+				const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+				if (pcmd->UserCallback) {
+					pcmd->UserCallback(cmd_list, pcmd);
+				} else {
+					const D3D11_RECT r = { (LONG)pcmd->ClipRect.x, (LONG)pcmd->ClipRect.y, (LONG)pcmd->ClipRect.z, (LONG)pcmd->ClipRect.w };
+					ctx->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&pcmd->TextureId);
+					ctx->RSSetScissorRects(1, &r);
+					ctx->DrawIndexed(pcmd->ElemCount, idx_offset, vtx_offset);
+				}
+				idx_offset += pcmd->ElemCount;
+			}
+			vtx_offset += cmd_list->VtxBuffer.Size;
+		}
 	}
 	
 	static bool ImGui_Init()
 	{
+		ID3D11Device* d3d = g_Example->m_d3dDevice;
+
+		g_vsBlobImGui = LoadCompileShader("vs_4_0", "imgui.hlsl", "VERTEX_SHADER\0");
+		if (!g_vsBlobImGui) {
+			return false;
+		}
+		dxAssert(d3d->CreateVertexShader((DWORD*)g_vsBlobImGui->GetBufferPointer(), g_vsBlobImGui->GetBufferSize(), NULL, &g_vsImGui));
+		
+		g_psBlobImGui = LoadCompileShader("ps_4_0", "imgui.hlsl", "PIXEL_SHADER\0");
+		if (!g_psBlobImGui) {
+			return false;
+		}
+		dxAssert(d3d->CreatePixelShader((DWORD*)g_psBlobImGui->GetBufferPointer(), g_psBlobImGui->GetBufferSize(), NULL, &g_psImGui));
+	
+        D3D11_INPUT_ELEMENT_DESC vdecl[] = {
+			{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (size_t)(&((ImDrawVert*)0)->pos), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (size_t)(&((ImDrawVert*)0)->uv),  D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (size_t)(&((ImDrawVert*)0)->col), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        };
+        dxAssert(d3d->CreateInputLayout(vdecl, 3, g_vsBlobImGui->GetBufferPointer(), g_vsBlobImGui->GetBufferSize(), &g_vdeclImGui));
+
+		D3D11_BUFFER_DESC bufDesc = {};
+		bufDesc.ByteWidth = sizeof(Mat4);
+		bufDesc.Usage = D3D11_USAGE_DYNAMIC;
+		bufDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		bufDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		dxAssert(d3d->CreateBuffer(&bufDesc, NULL, &g_cbImGui));
+		
+		D3D11_RASTERIZER_DESC rs = {};
+		rs.FillMode = D3D11_FILL_SOLID;
+		rs.CullMode = D3D11_CULL_NONE;
+		rs.ScissorEnable = true;
+		rs.DepthClipEnable = true;
+		dxAssert(d3d->CreateRasterizerState(&rs, &g_rsImGui));
+	
+		D3D11_DEPTH_STENCIL_DESC ds = {};
+		ds.DepthEnable = false;
+		ds.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+		ds.DepthFunc = D3D11_COMPARISON_ALWAYS;
+		ds.StencilEnable = false;
+		ds.FrontFace.StencilFailOp = ds.FrontFace.StencilDepthFailOp = ds.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+		ds.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+		ds.BackFace = ds.FrontFace;
+		dxAssert(d3d->CreateDepthStencilState(&ds, &g_dsImGui));
+   
+		D3D11_BLEND_DESC bs = {};
+		bs.AlphaToCoverageEnable = false;
+		bs.RenderTarget[0].BlendEnable = true;
+		bs.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+		bs.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+		bs.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+		bs.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
+		bs.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+		bs.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+		bs.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+		dxAssert(d3d->CreateBlendState(&bs, &g_bsImGui));
+
+		unsigned char* txbuf;
+		int txX, txY;
+		ImGuiIO& io = ImGui::GetIO();
+		io.Fonts->GetTexDataAsAlpha8(&txbuf, &txX, &txY);
+
+        D3D11_TEXTURE2D_DESC txDesc = {};
+        txDesc.Width = txX;
+        txDesc.Height = txY;
+        txDesc.MipLevels = 1;
+        txDesc.ArraySize = 1;
+        txDesc.Format = DXGI_FORMAT_R8_UNORM;
+        txDesc.SampleDesc.Count = 1;
+        txDesc.Usage = D3D11_USAGE_DEFAULT;
+        txDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        txDesc.CPUAccessFlags = 0;
+
+		ID3D11Texture2D* tx = nullptr;
+		D3D11_SUBRESOURCE_DATA subResource = {};
+		subResource.pSysMem = txbuf;
+		subResource.SysMemPitch = txDesc.Width;
+		subResource.SysMemSlicePitch = 0;
+		dxAssert(d3d->CreateTexture2D(&txDesc, &subResource, &tx));
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Format = DXGI_FORMAT_R8_UNORM;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = txDesc.MipLevels;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		dxAssert(d3d->CreateShaderResourceView(tx, &srvDesc, &g_txImGui));
+		tx->Release();
+
+		D3D11_SAMPLER_DESC ssDesc = {};
+		ssDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+		ssDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+		ssDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+		ssDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+		ssDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+		ssDesc.MinLOD = 0.0f;
+		ssDesc.MaxLOD = 0.0f;
+		ssDesc.MipLODBias = 0.0f;
+
+		io.Fonts->TexID = (void*)g_txImGui;
+		io.RenderDrawListsFn = &ImGui_Draw;
+
 		return true;
 	}
 
 	static void ImGui_Shutdown()
 	{
+		if (g_cbImGui)     g_cbImGui->Release();
+		if (g_vbImGui)     g_vbImGui->Release();
+		if (g_ibImGui)     g_ibImGui->Release();
+		if (g_ssImGui)     g_ssImGui->Release();
+		if (g_txImGui)     g_txImGui->Release();
+		if (g_bsImGui)     g_bsImGui->Release();
+		if (g_dsImGui)     g_dsImGui->Release();
+		if (g_rsImGui)     g_rsImGui->Release();
+		if (g_vdeclImGui)  g_vdeclImGui->Release();
+		if (g_vsImGui)     g_vsImGui->Release();
+		if (g_vsBlobImGui) g_vsBlobImGui->Release();
+		if (g_psImGui)     g_psImGui->Release();
+		if (g_psBlobImGui) g_psBlobImGui->Release();
 	}
 
 #endif
@@ -1025,13 +1265,18 @@ bool Example::update()
 
 void Example::draw()
 {
+	static const Vec4 kClearColor(0.5f, 0.5f, 0.5f, 0.0f);
+
 	Im3d::Draw();
 	ImGui::Render();
 
 	#if defined(IM3D_PLATFORM_WIN)
+		winAssert(ValidateRect(m_hwnd, 0)); // suppress WM_PAINT
+		
 		#if defined(IM3D_OPENGL)
 			winAssert(SwapBuffers(m_hdc));
-			winAssert(ValidateRect(m_hwnd, 0)); // suppress WM_PAINT
+		#elif defined(IM3D_DX11)
+			m_dxgiSwapChain->Present(0, 0);
 		#endif
 	#endif
 	
@@ -1040,8 +1285,12 @@ void Example::draw()
 		glAssert(glBindVertexArray(0));
 		glAssert(glUseProgram(0));
 		glAssert(glViewport(0, 0, m_width, m_height));
-		glAssert(glClearColor(0.5f, 0.5f, 0.5f, 0.0f));
+		glAssert(glClearColor(kClearColor.x, kClearColor.y, kClearColor.z, kClearColor.w));
 		glAssert(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+	
+	#elif defined (IM3D_DX11)
+		m_d3dDeviceCtx->ClearRenderTargetView(m_d3dRenderTarget, kClearColor);
+
 	#endif
 }
 

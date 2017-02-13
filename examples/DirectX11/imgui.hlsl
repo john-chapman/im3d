@@ -1,32 +1,40 @@
+struct PS_INPUT
+{
+	float4 m_position : SV_POSITION;
+	float4 m_color    : COLOR0;
+	float2 m_uv       : TEXCOORD0;
+};
+	
 #ifdef VERTEX_SHADER
-	layout(location=0) in vec2 aPosition;
-	layout(location=1) in vec2 aTexcoord;
-	layout(location=2) in vec4 aColor;
-	
-	uniform mat4 uProjMatrix;
-	
-	noperspective out vec2 vUv;
-	noperspective out vec4 vColor;
-	
-	void main() 
+	cbuffer vertexBuffer : register(b0)
 	{
-		vUv         = aTexcoord;
-		vColor      = aColor;
-		gl_Position = uProjMatrix * vec4(aPosition.xy, 0.0, 1.0);
+		float4x4 projMatrix;
+	};
+	struct VS_INPUT
+	{
+		float2 m_position : POSITION;
+		float4 m_color    : COLOR0;
+		float2 m_uv       : TEXCOORD0;
+	};
+
+	PS_INPUT main(VS_INPUT _vin)
+	{
+		PS_INPUT ret;
+		ret.m_position = mul(projMatrix, float4(_vin.m_position.xy, 0.0f, 1.0f));
+		ret.m_color    = _vin.m_color;
+		ret.m_uv       = _vin.m_uv;
+		return ret;
 	}
 #endif
 
-#ifdef FRAGMENT_SHADER
-	noperspective in vec2 vUv;
-	noperspective in vec4 vColor;
-	
-	uniform sampler2D txTexture;
-	
-	layout(location=0) out vec4 fResult;
-	
-	void main() 
+#ifdef PIXEL_SHADER
+	Texture2D texture0;
+	sampler   sampler0;
+
+	float4 main(PS_INPUT _pin) : SV_Target
 	{
-		fResult = vColor;
-		fResult.a *= texture(txTexture, vUv).r;
+		float4 ret = _pin.m_color;
+		ret.a *= texture0.Sample(sampler0, _pin.m_uv).r;
+		return ret;
 	}
 #endif

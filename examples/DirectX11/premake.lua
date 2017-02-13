@@ -26,7 +26,7 @@ workspace "im3d_directx11"
 
 	 -- \todo select graphics lib?
 		defines { "IM3D_DX11" }
-		links { "d3d11" }
+		links { "d3d11", "d3dcompiler" }
 
 	filter { "platforms:Win32" }
 		architecture "x86"

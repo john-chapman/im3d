@@ -163,8 +163,8 @@ bool Im3d_Init()
 	glAssert(glEnableVertexAttribArray(1));
 	glAssert(glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Im3d::VertexData), (GLvoid*)offsetof(Im3d::VertexData, m_color)));
 	glAssert(glBindVertexArray(0));
-
-	GetAppData().drawCallback = &Im3d_Draw;*/
+*/
+	GetAppData().drawCallback = &Im3d_Draw;
 
 	return true;
 }
