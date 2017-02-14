@@ -30,24 +30,24 @@ void Im3d_Draw(const Im3d::DrawList& _drawList)
 	GLenum prim;
 	GLuint sh;
 	switch (_drawList.m_primType) {
-	case Im3d::DrawPrimitive_Points:
-		prim = GL_POINTS;
-		sh = g_Im3dShaderPoints;
-		glAssert(glDisable(GL_CULL_FACE)); // points are view-aligned
-		break;
-	case Im3d::DrawPrimitive_Lines:
-		prim = GL_LINES;
-		sh = g_Im3dShaderLines;
-		glAssert(glDisable(GL_CULL_FACE)); // lines are view-aligned
-		break;
-	case Im3d::DrawPrimitive_Triangles:
-		prim = GL_TRIANGLES;
-		sh = g_Im3dShaderTriangles;
-		//glAssert(glEnable(GL_CULL_FACE)); // culling valid for triangles, but optional
-		break;
-	default:
-		IM3D_ASSERT(false);
-		return;
+		case Im3d::DrawPrimitive_Points:
+			prim = GL_POINTS;
+			sh = g_Im3dShaderPoints;
+			glAssert(glDisable(GL_CULL_FACE)); // points are view-aligned
+			break;
+		case Im3d::DrawPrimitive_Lines:
+			prim = GL_LINES;
+			sh = g_Im3dShaderLines;
+			glAssert(glDisable(GL_CULL_FACE)); // lines are view-aligned
+			break;
+		case Im3d::DrawPrimitive_Triangles:
+			prim = GL_TRIANGLES;
+			sh = g_Im3dShaderTriangles;
+			//glAssert(glEnable(GL_CULL_FACE)); // culling valid for triangles, but optional
+			break;
+		default:
+			IM3D_ASSERT(false);
+			return;
 	};
 
 	glAssert(glBindVertexArray(g_Im3dVertexArray));

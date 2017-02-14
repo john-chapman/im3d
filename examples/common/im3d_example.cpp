@@ -832,13 +832,13 @@ Color Im3d::RandColor(float _min, float _max)
 		ID3D11DeviceContext* ctx = g_Example->m_d3dDeviceCtx;
 
 		{ // (re)alloc vertex/index buffers
-			static int s_vertexBufferSize = 5000;
+			static int s_vertexBufferSize = 0;
 			if (!g_ImGuiVertexBuffer || s_vertexBufferSize < _drawData->TotalVtxCount) {
 				if (g_ImGuiVertexBuffer) { 
 					g_ImGuiVertexBuffer->Release(); 
 					g_ImGuiVertexBuffer = nullptr;	
 				}
-				s_vertexBufferSize = _drawData->TotalVtxCount + 5000;
+				s_vertexBufferSize = _drawData->TotalVtxCount;
 				D3D11_BUFFER_DESC desc = {};
 				desc.Usage = D3D11_USAGE_DYNAMIC;
 				desc.ByteWidth = s_vertexBufferSize * sizeof(ImDrawVert);
@@ -846,13 +846,13 @@ Color Im3d::RandColor(float _min, float _max)
 				desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 				dxAssert(d3d->CreateBuffer(&desc, nullptr, &g_ImGuiVertexBuffer));
 			}
-			static int s_indexBufferSize = 10000;
+			static int s_indexBufferSize = 0;
 			if (!g_ImGuiIndexBuffer || s_indexBufferSize < _drawData->TotalIdxCount) {
 				if (g_ImGuiIndexBuffer) { 
 					g_ImGuiIndexBuffer->Release(); 
 					g_ImGuiIndexBuffer = nullptr; 
 				}
-				s_indexBufferSize = _drawData->TotalIdxCount + 10000;
+				s_indexBufferSize = _drawData->TotalIdxCount;
 				D3D11_BUFFER_DESC desc = {};
 				desc.Usage = D3D11_USAGE_DYNAMIC;
 				desc.ByteWidth = s_indexBufferSize * sizeof(ImDrawIdx);
@@ -1222,7 +1222,7 @@ bool Example::update()
 			}
 			if (!ImGui::GetIO().WantCaptureMouse) {
 				if (GetAsyncKeyState(VK_RBUTTON) & 0x8000) {
-					Vec2 cursorDelta = ((cursorPos - m_prevCursorPos) / Vec2(m_width, m_height)) * kCamRotationMul;
+					Vec2 cursorDelta = ((cursorPos - m_prevCursorPos) / Vec2((float)m_width, (float)m_height)) * kCamRotationMul;
 					m_camDir = Rotation(Vec3(0.0f, 1.0f, 0.0f), -cursorDelta.x) * m_camDir;
 					m_camDir = Rotation(m_camWorld.getCol(0), -cursorDelta.y) * m_camDir;
 				}

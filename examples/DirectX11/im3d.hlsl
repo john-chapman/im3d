@@ -1,7 +1,7 @@
 #if !defined(POINTS) && !defined(LINES) && !defined(TRIANGLES)
 	#error No primitive type defined
 #endif
-#if !defined(VERTEX_SHADER) && !defined(GEOMETRY_SHADER) && !defined(FRAGMENT_SHADER)
+#if !defined(VERTEX_SHADER) && !defined(GEOMETRY_SHADER) && !defined(PIXEL_SHADER)
 	#error No shader stage defined
 #endif
 
@@ -31,12 +31,12 @@ struct VS_OUTPUT
 	VS_OUTPUT main(VS_INPUT _vin) 
 	{
 		VS_OUTPUT ret;
-		ret.m_color = _vin.m_color
+		ret.m_color = _vin.m_color.abgr; // swizzle to correct endianness
 		#if !defined(TRIANGLES)
 			ret.m_color.a *= smoothstep(0.0, 1.0, _vin.m_positionSize.w / kAntialiasing);
 		#endif
 		ret.m_size = max(_vin.m_positionSize.w, kAntialiasing);
-		ret.m_position = mul(uViewProjMatrix, float4(_vin.m_positionSize.xyz, 1.0);
+		ret.m_position = mul(uViewProjMatrix, float4(_vin.m_positionSize.xyz, 1.0));
 		return ret;
 	}
 #endif
@@ -87,12 +87,12 @@ struct VS_OUTPUT
 	}
 #endif
 
-#ifdef FRAGMENT_SHADER
-	float4 main(VS_OUTPUT _pin) 
+#ifdef PIXEL_SHADER
+	float4 main(VS_OUTPUT _pin): SV_Target
 	{
 		float4 ret = _pin.m_color;
 		
-		#if   defined(LINES)
+		/*#if   defined(LINES)
 			float d = abs(_pin.m_edgeDistance) / _pin.m_size;
 			d = smoothstep(1.0, 1.0 - (kAntialiasing / _pin.m_size), d);
 			ret.a *= d;
@@ -102,7 +102,7 @@ struct VS_OUTPUT
 			d = smoothstep(0.5, 0.5 - (kAntialiasing / _pin.m_size), d);
 			ret.a *= d;
 			
-		#endif
+		#endif*/
 		
 		return ret;
 	}
