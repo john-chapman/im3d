@@ -1,10 +1,10 @@
 #include "im3d_example.h"
 
-static GLuint g_vaIm3d; // vertex array object
-static GLuint g_vbIm3d; // vertex buffer
-static GLuint g_shIm3dPoints;
-static GLuint g_shIm3dLines;
-static GLuint g_shIm3dTriangles;
+static GLuint g_Im3dVertexArray;
+static GLuint g_Im3dVertexBuffer;
+static GLuint g_Im3dShaderPoints;
+static GLuint g_Im3dShaderLines;
+static GLuint g_Im3dShaderTriangles;
 
 using namespace Im3d;
 
@@ -32,17 +32,17 @@ void Im3d_Draw(const Im3d::DrawList& _drawList)
 	switch (_drawList.m_primType) {
 	case Im3d::DrawPrimitive_Points:
 		prim = GL_POINTS;
-		sh = g_shIm3dPoints;
+		sh = g_Im3dShaderPoints;
 		glAssert(glDisable(GL_CULL_FACE)); // points are view-aligned
 		break;
 	case Im3d::DrawPrimitive_Lines:
 		prim = GL_LINES;
-		sh = g_shIm3dLines;
+		sh = g_Im3dShaderLines;
 		glAssert(glDisable(GL_CULL_FACE)); // lines are view-aligned
 		break;
 	case Im3d::DrawPrimitive_Triangles:
 		prim = GL_TRIANGLES;
-		sh = g_shIm3dTriangles;
+		sh = g_Im3dShaderTriangles;
 		//glAssert(glEnable(GL_CULL_FACE)); // culling valid for triangles, but optional
 		break;
 	default:
@@ -50,8 +50,8 @@ void Im3d_Draw(const Im3d::DrawList& _drawList)
 		return;
 	};
 
-	glAssert(glBindVertexArray(g_vaIm3d));
-	glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_vbIm3d));
+	glAssert(glBindVertexArray(g_Im3dVertexArray));
+	glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_Im3dVertexBuffer));
 	glAssert(glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)_drawList.m_vertexCount * sizeof(Im3d::VertexData), (GLvoid*)_drawList.m_vertexData, GL_STREAM_DRAW));
 
 	glAssert(glUseProgram(sh));
@@ -103,10 +103,10 @@ bool Im3d_Init()
 		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0POINTS\0");
 		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "im3d.glsl", "FRAGMENT_SHADER\0POINTS\0");
 		if (vs && fs) {
-			glAssert(g_shIm3dPoints = glCreateProgram());
-			glAssert(glAttachShader(g_shIm3dPoints, vs));
-			glAssert(glAttachShader(g_shIm3dPoints, fs));
-			bool ret = LinkShaderProgram(g_shIm3dPoints);
+			glAssert(g_Im3dShaderPoints = glCreateProgram());
+			glAssert(glAttachShader(g_Im3dShaderPoints, vs));
+			glAssert(glAttachShader(g_Im3dShaderPoints, fs));
+			bool ret = LinkShaderProgram(g_Im3dShaderPoints);
 			glAssert(glDeleteShader(vs));
 			glAssert(glDeleteShader(fs));
 			if (!ret) {
@@ -121,11 +121,11 @@ bool Im3d_Init()
 		GLuint gs = LoadCompileShader(GL_GEOMETRY_SHADER, "im3d.glsl", "GEOMETRY_SHADER\0LINES\0");
 		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "im3d.glsl", "FRAGMENT_SHADER\0LINES\0");
 		if (vs && gs && fs) {
-			glAssert(g_shIm3dLines = glCreateProgram());
-			glAssert(glAttachShader(g_shIm3dLines, vs));
-			glAssert(glAttachShader(g_shIm3dLines, gs));
-			glAssert(glAttachShader(g_shIm3dLines, fs));
-			bool ret = LinkShaderProgram(g_shIm3dLines);
+			glAssert(g_Im3dShaderLines = glCreateProgram());
+			glAssert(glAttachShader(g_Im3dShaderLines, vs));
+			glAssert(glAttachShader(g_Im3dShaderLines, gs));
+			glAssert(glAttachShader(g_Im3dShaderLines, fs));
+			bool ret = LinkShaderProgram(g_Im3dShaderLines);
 			glAssert(glDeleteShader(vs));
 			glAssert(glDeleteShader(gs));
 			glAssert(glDeleteShader(fs));
@@ -140,10 +140,10 @@ bool Im3d_Init()
 		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0TRIANGLES\0");
 		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "im3d.glsl", "FRAGMENT_SHADER\0TRIANGLES\0");
 		if (vs && fs) {
-			glAssert(g_shIm3dTriangles = glCreateProgram());
-			glAssert(glAttachShader(g_shIm3dTriangles, vs));
-			glAssert(glAttachShader(g_shIm3dTriangles, fs));
-			bool ret = LinkShaderProgram(g_shIm3dTriangles);
+			glAssert(g_Im3dShaderTriangles = glCreateProgram());
+			glAssert(glAttachShader(g_Im3dShaderTriangles, vs));
+			glAssert(glAttachShader(g_Im3dShaderTriangles, fs));
+			bool ret = LinkShaderProgram(g_Im3dShaderTriangles);
 			glAssert(glDeleteShader(vs));
 			glAssert(glDeleteShader(fs));
 			if (!ret) {
@@ -154,10 +154,10 @@ bool Im3d_Init()
 		}
 	}
 
-	glAssert(glCreateBuffers(1, &g_vbIm3d));;
-	glAssert(glCreateVertexArrays(1, &g_vaIm3d));	
-	glAssert(glBindVertexArray(g_vaIm3d));
-	glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_vbIm3d));
+	glAssert(glCreateBuffers(1, &g_Im3dVertexBuffer));;
+	glAssert(glCreateVertexArrays(1, &g_Im3dVertexArray));	
+	glAssert(glBindVertexArray(g_Im3dVertexArray));
+	glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_Im3dVertexBuffer));
 	glAssert(glEnableVertexAttribArray(0));
 	glAssert(glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(Im3d::VertexData), (GLvoid*)offsetof(Im3d::VertexData, m_positionSize)));
 	glAssert(glEnableVertexAttribArray(1));
@@ -171,9 +171,9 @@ bool Im3d_Init()
 
 void Im3d_Shutdown()
 {
-	glAssert(glDeleteVertexArrays(1, &g_vaIm3d));
-	glAssert(glDeleteBuffers(1, &g_vbIm3d));
-	glAssert(glDeleteProgram(g_shIm3dPoints));
-	glAssert(glDeleteProgram(g_shIm3dLines));
-	glAssert(glDeleteProgram(g_shIm3dTriangles));
+	glAssert(glDeleteVertexArrays(1, &g_Im3dVertexArray));
+	glAssert(glDeleteBuffers(1, &g_Im3dVertexBuffer));
+	glAssert(glDeleteProgram(g_Im3dShaderPoints));
+	glAssert(glDeleteProgram(g_Im3dShaderLines));
+	glAssert(glDeleteProgram(g_Im3dShaderTriangles));
 }

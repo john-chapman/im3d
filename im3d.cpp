@@ -895,7 +895,7 @@ void Context::draw()
 		sort();
 		m_sortCalled = true;
 	}
-	for (auto dl = m_sortedDrawLists.begin(); dl != m_sortedDrawLists.end(); ++dl) {
+	for (Im3d::DrawList* dl = m_sortedDrawLists.begin(); dl != m_sortedDrawLists.end(); ++dl) {
 		m_appData.drawCallback(*dl);
 	}
 	

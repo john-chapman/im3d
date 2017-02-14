@@ -1,10 +1,34 @@
 #include "im3d_example.h"
 
-/*static GLuint g_vaIm3d; // vertex array object
-static GLuint g_vbIm3d; // vertex buffer
-static GLuint g_shIm3dPoints;
-static GLuint g_shIm3dLines;
-static GLuint g_shIm3dTriangles;*/
+struct D3DShader
+{
+	ID3DBlob*             m_vsBlob;
+	ID3D11VertexShader*   m_vs;
+	ID3DBlob*             m_gsBlob;
+	ID3D11GeometryShader* m_gs;
+	ID3DBlob*             m_psBlob;
+	ID3D11PixelShader*    m_ps;
+
+	void Release()
+	{
+		if (m_vsBlob) m_vsBlob->Release();
+		if (m_vs)     m_vs->Release();
+		if (m_gsBlob) m_gsBlob->Release();
+		if (m_gs)     m_gs->Release();
+		if (m_psBlob) m_psBlob->Release();
+		if (m_ps)     m_ps->Release();
+	}
+};
+
+static D3DShader                 g_Im3dShaderPoints;
+static D3DShader                 g_Im3dShaderLines;
+static D3DShader                 g_Im3dShaderTriangles;
+static ID3D11InputLayout*        g_Im3dInputLayout;
+static ID3D11RasterizerState*    g_Im3dRasterizerState;
+static ID3D11BlendState*         g_Im3dBlendState;
+static ID3D11DepthStencilState*  g_Im3dDepthStencilState;
+static ID3D11Buffer*             g_Im3dConstantBuffer;
+static ID3D11Buffer*             g_Im3dVertexBuffer;
 
 using namespace Im3d;
 
@@ -99,71 +123,62 @@ void Im3d_Update()
 // draw primitive types (points, lines, triangles), plus some number of vertex buffers.
 bool Im3d_Init()
 {
-	/*{
-		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0POINTS\0");
-		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "im3d.glsl", "FRAGMENT_SHADER\0POINTS\0");
-		if (vs && fs) {
-			glAssert(g_shIm3dPoints = glCreateProgram());
-			glAssert(glAttachShader(g_shIm3dPoints, vs));
-			glAssert(glAttachShader(g_shIm3dPoints, fs));
-			bool ret = LinkShaderProgram(g_shIm3dPoints);
-			glAssert(glDeleteShader(vs));
-			glAssert(glDeleteShader(fs));
-			if (!ret) {
-				return false;
-			}			
-		} else {
+	ID3D11Device* d3d = g_Example->m_d3dDevice;
+	#define SHADER_VERSION "4_0"
+	{ // points shader
+		g_Im3dShaderPoints.m_vsBlob = LoadCompileShader("vs_" SHADER_VERSION, "im3d.hlsl", "VERTEX_SHADER\0POINTS\0");
+		if (!g_Im3dShaderPoints.m_vsBlob) {
 			return false;
 		}
+		dxAssert(d3d->CreateVertexShader((DWORD*)g_Im3dShaderPoints.m_vsBlob->GetBufferPointer(), g_Im3dShaderPoints.m_vsBlob->GetBufferSize(), NULL, &g_Im3dShaderPoints.m_vs));
+	
+		g_Im3dShaderPoints.m_psBlob = LoadCompileShader("ps_" SHADER_VERSION, "im3d.hlsl", "PIXEL_SHADER\0POINTS\0");
+		if (!g_Im3dShaderPoints.m_psBlob) {
+			return false;
+		}
+		dxAssert(d3d->CreatePixelShader((DWORD*)g_Im3dShaderPoints.m_psBlob->GetBufferPointer(), g_Im3dShaderPoints.m_psBlob->GetBufferSize(), NULL, &g_Im3dShaderPoints.m_ps));
 	}
-	{
-		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0LINES\0");
-		GLuint gs = LoadCompileShader(GL_GEOMETRY_SHADER, "im3d.glsl", "GEOMETRY_SHADER\0LINES\0");
-		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "im3d.glsl", "FRAGMENT_SHADER\0LINES\0");
-		if (vs && gs && fs) {
-			glAssert(g_shIm3dLines = glCreateProgram());
-			glAssert(glAttachShader(g_shIm3dLines, vs));
-			glAssert(glAttachShader(g_shIm3dLines, gs));
-			glAssert(glAttachShader(g_shIm3dLines, fs));
-			bool ret = LinkShaderProgram(g_shIm3dLines);
-			glAssert(glDeleteShader(vs));
-			glAssert(glDeleteShader(gs));
-			glAssert(glDeleteShader(fs));
-			if (!ret) {
-				return false;
-			}
-		} else {
+	{ // lines shader
+		g_Im3dShaderLines.m_vsBlob = LoadCompileShader("vs_" SHADER_VERSION, "im3d.hlsl", "VERTEX_SHADER\0LINES\0");
+		if (!g_Im3dShaderLines.m_vsBlob) {
 			return false;
 		}
+		dxAssert(d3d->CreateVertexShader((DWORD*)g_Im3dShaderLines.m_vsBlob->GetBufferPointer(), g_Im3dShaderLines.m_vsBlob->GetBufferSize(), NULL, &g_Im3dShaderLines.m_vs));
+		
+		g_Im3dShaderLines.m_gsBlob = LoadCompileShader("gs_" SHADER_VERSION, "im3d.hlsl", "GEOMETRY_SHADER\0LINES\0");
+		if (!g_Im3dShaderLines.m_gsBlob) {
+			return false;
+		}
+		dxAssert(d3d->CreateGeometryShader((DWORD*)g_Im3dShaderLines.m_gsBlob->GetBufferPointer(), g_Im3dShaderLines.m_gsBlob->GetBufferSize(), NULL, &g_Im3dShaderLines.m_gs));
+		
+		g_Im3dShaderLines.m_psBlob = LoadCompileShader("ps_" SHADER_VERSION, "im3d.hlsl", "PIXEL_SHADER\0LINES\0");
+		if (!g_Im3dShaderLines.m_psBlob) {
+			return false;
+		}
+		dxAssert(d3d->CreatePixelShader((DWORD*)g_Im3dShaderLines.m_psBlob->GetBufferPointer(), g_Im3dShaderLines.m_psBlob->GetBufferSize(), NULL, &g_Im3dShaderLines.m_ps));
 	}
-	{
-		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0TRIANGLES\0");
-		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "im3d.glsl", "FRAGMENT_SHADER\0TRIANGLES\0");
-		if (vs && fs) {
-			glAssert(g_shIm3dTriangles = glCreateProgram());
-			glAssert(glAttachShader(g_shIm3dTriangles, vs));
-			glAssert(glAttachShader(g_shIm3dTriangles, fs));
-			bool ret = LinkShaderProgram(g_shIm3dTriangles);
-			glAssert(glDeleteShader(vs));
-			glAssert(glDeleteShader(fs));
-			if (!ret) {
-				return false;
-			}		
-		} else {
+	{ // triangles shader
+		g_Im3dShaderTriangles.m_vsBlob = LoadCompileShader("vs_" SHADER_VERSION, "im3d.hlsl", "VERTEX_SHADER\0TRIANGLES\0");
+		if (!g_Im3dShaderTriangles.m_vsBlob) {
 			return false;
 		}
+		dxAssert(d3d->CreateVertexShader((DWORD*)g_Im3dShaderTriangles.m_vsBlob->GetBufferPointer(), g_Im3dShaderTriangles.m_vsBlob->GetBufferSize(), NULL, &g_Im3dShaderTriangles.m_vs));
+	
+		g_Im3dShaderTriangles.m_psBlob = LoadCompileShader("ps_" SHADER_VERSION, "im3d.hlsl", "PIXEL_SHADER\0TRIANGLES\0");
+		if (!g_Im3dShaderTriangles.m_psBlob) {
+			return false;
+		}
+		dxAssert(d3d->CreatePixelShader((DWORD*)g_Im3dShaderTriangles.m_psBlob->GetBufferPointer(), g_Im3dShaderTriangles.m_psBlob->GetBufferSize(), NULL, &g_Im3dShaderTriangles.m_ps));
 	}
 
-	glAssert(glCreateBuffers(1, &g_vbIm3d));;
-	glAssert(glCreateVertexArrays(1, &g_vaIm3d));	
-	glAssert(glBindVertexArray(g_vaIm3d));
-	glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_vbIm3d));
-	glAssert(glEnableVertexAttribArray(0));
-	glAssert(glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(Im3d::VertexData), (GLvoid*)offsetof(Im3d::VertexData, m_positionSize)));
-	glAssert(glEnableVertexAttribArray(1));
-	glAssert(glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Im3d::VertexData), (GLvoid*)offsetof(Im3d::VertexData, m_color)));
-	glAssert(glBindVertexArray(0));
-*/
+	{
+		D3D11_INPUT_ELEMENT_DESC desc[] = {
+			{ "POSITION_SIZE", 0, DXGI_FORMAT_R32G32B32A32_FLOAT,   0, (UINT)offsetof(Im3d::VertexData, m_positionSize), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "COLOR",         0, DXGI_FORMAT_R8G8B8A8_UNORM,       0, (UINT)offsetof(Im3d::VertexData, m_color),        D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		};
+		dxAssert(d3d->CreateInputLayout(desc, 3, g_Im3dShaderPoints.m_vsBlob->GetBufferPointer(), g_Im3dShaderPoints.m_vsBlob->GetBufferSize(), &g_Im3dInputLayout));
+	}
+
 	GetAppData().drawCallback = &Im3d_Draw;
 
 	return true;
@@ -171,9 +186,14 @@ bool Im3d_Init()
 
 void Im3d_Shutdown()
 {
-	/*glAssert(glDeleteVertexArrays(1, &g_vaIm3d));
-	glAssert(glDeleteBuffers(1, &g_vbIm3d));
-	glAssert(glDeleteProgram(g_shIm3dPoints));
-	glAssert(glDeleteProgram(g_shIm3dLines));
-	glAssert(glDeleteProgram(g_shIm3dTriangles));*/
+	g_Im3dShaderPoints.Release();
+	g_Im3dShaderLines.Release();
+	g_Im3dShaderTriangles.Release();
+
+	if (g_Im3dInputLayout)        g_Im3dInputLayout->Release();
+	if (g_Im3dRasterizerState)    g_Im3dRasterizerState->Release();
+	if (g_Im3dBlendState)         g_Im3dBlendState->Release();
+	if (g_Im3dDepthStencilState)  g_Im3dDepthStencilState->Release();
+	if (g_Im3dConstantBuffer)     g_Im3dConstantBuffer->Release();
+	if (g_Im3dVertexBuffer)       g_Im3dVertexBuffer->Release();
 }

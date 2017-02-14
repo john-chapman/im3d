@@ -17,6 +17,18 @@ using namespace Im3d;
 	#pragma warning(disable: 4312) //    "
 #endif
 
+static const char* StripPath(const char* _path) 
+{
+	int i = 0, last = 0;
+	while (_path[i] != '\0') {
+		if (_path[i] == '\\' || _path[i] == '/') {
+			last = i + 1;
+		}
+		++i;
+	}
+	return &_path[last];
+}
+
 /******************************************************************************/
 #if defined(IM3D_PLATFORM_WIN)
 	static LARGE_INTEGER g_SysTimerFreq;
@@ -394,8 +406,11 @@ static void AppendLine(const char* _str, Vector<char>& _out_)
 }
 static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _out_)
 {
+	fprintf(stdout, "Loading shader: '%s'", StripPath(_path));
 	if (_defines) {
+		fprintf(stdout, " ");
 		while (*_defines != '\0') {
+			fprintf(stdout, " %s,", _defines);
 			Append("#define ", _out_);
 			AppendLine(_defines, _out_);
 			_defines = strchr(_defines, 0);
@@ -403,6 +418,7 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 			++_defines;
 		}
 	}
+	fprintf(stdout, "\n");
 	
 	FILE* fin = fopen(_path, "rb");
 	if (!fin) {
@@ -585,14 +601,14 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 	}
 
 #elif defined(IM3D_DX11)
-	ID3D10Blob* Im3d::LoadCompileShader(const char* _target, const char* _path, const char* _defines)
+	ID3DBlob* Im3d::LoadCompileShader(const char* _target, const char* _path, const char* _defines)
 	{
 		Vector<char> src;
 		if (!LoadShader(_path, _defines, src)) {
 			return 0;
 		}
-		ID3D10Blob* ret = nullptr;
-		ID3D10Blob* err = nullptr;
+		ID3DBlob* ret = nullptr;
+		ID3DBlob* err = nullptr;
 		UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
 
 	 // D3DCompile is not portable - linking with d3dcompiler.lib introdices a dependency on d3dcompiler_XX.lib
@@ -619,18 +635,6 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 #endif // graphics
 
 /******************************************************************************/
-static const char* StripPath(const char* _path) 
-{
-	int i = 0, last = 0;
-	while (_path[i] != '\0') {
-		if (_path[i] == '\\' || _path[i] == '/') {
-			last = i + 1;
-		}
-		++i;
-	}
-	return &_path[last];
-}
-
 void Im3d::Assert(const char* _e, const char* _file, int _line, const char* _msg, ...)
 {
 	const int kAssertMsgMax = 1024;
@@ -679,11 +683,11 @@ Color Im3d::RandColor(float _min, float _max)
 
 /******************************************************************************/
 #if defined(IM3D_OPENGL)
-	static GLuint g_vaImGui; // vertex array object
-	static GLuint g_vbImGui; // vertex buffer
-	static GLuint g_ibImGui; // index buffer
-	static GLuint g_shImGui; // shader
-	static GLuint g_txImGui; // font texture
+	static GLuint g_ImGuiVertexArray;
+	static GLuint g_ImGuiVertexBuffer;
+	static GLuint g_ImGuiIndexBuffer;
+	static GLuint g_ImGuiShader;
+	static GLuint g_ImGuiFontTexture;
 
 	static void ImGui_Draw(ImDrawData* _drawData)
 	{
@@ -711,22 +715,22 @@ Color Im3d::RandColor(float _min, float _max)
 			0.0f,                  2.0f/-io.DisplaySize.y, 0.0f,  1.0f,
 			0.0f,                  0.0f,                   1.0f,  0.0f
 			);
-		glAssert(glUseProgram(g_shImGui));
+		glAssert(glUseProgram(g_ImGuiShader));
 	
 		bool transpose = false;
 		#ifdef IM3D_MATRIX_ROW_MAJOR
 			transpose = true;
 		#endif
-		glAssert(glUniformMatrix4fv(glGetUniformLocation(g_shImGui, "uProjMatrix"), 1, transpose, (const GLfloat*)ortho));
-		glAssert(glBindVertexArray(g_vaImGui));
+		glAssert(glUniformMatrix4fv(glGetUniformLocation(g_ImGuiShader, "uProjMatrix"), 1, transpose, (const GLfloat*)ortho));
+		glAssert(glBindVertexArray(g_ImGuiVertexArray));
 	
 		for (int i = 0; i < _drawData->CmdListsCount; ++i) {
 			const ImDrawList* drawList = _drawData->CmdLists[i];
 			const ImDrawIdx* indexOffset = 0;
 	
-			glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_vbImGui));
+			glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_ImGuiVertexBuffer));
 			glAssert(glBufferData(GL_ARRAY_BUFFER, drawList->VtxBuffer.size() * sizeof(ImDrawVert), (GLvoid*)&drawList->VtxBuffer.front(), GL_STREAM_DRAW));
-			glAssert(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_ibImGui));
+			glAssert(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_ImGuiIndexBuffer));
 			glAssert(glBufferData(GL_ELEMENT_ARRAY_BUFFER, drawList->IdxBuffer.Size * sizeof(ImDrawIdx), (GLvoid*)drawList->IdxBuffer.Data, GL_STREAM_DRAW));
 	
 			for (const ImDrawCmd* pcmd = drawList->CmdBuffer.begin(); pcmd != drawList->CmdBuffer.end(); ++pcmd) {
@@ -751,10 +755,10 @@ Color Im3d::RandColor(float _min, float _max)
 		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "imgui.glsl", "VERTEX_SHADER\0");
 		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "imgui.glsl", "FRAGMENT_SHADER\0");
 		if (vs && fs) {
-			glAssert(g_shImGui = glCreateProgram());
-			glAssert(glAttachShader(g_shImGui, vs));
-			glAssert(glAttachShader(g_shImGui, fs));
-			bool ret = LinkShaderProgram(g_shImGui);
+			glAssert(g_ImGuiShader = glCreateProgram());
+			glAssert(glAttachShader(g_ImGuiShader, vs));
+			glAssert(glAttachShader(g_ImGuiShader, fs));
+			bool ret = LinkShaderProgram(g_ImGuiShader);
 			glAssert(glDeleteShader(vs));
 			glAssert(glDeleteShader(fs));
 			if (!ret) {
@@ -763,15 +767,15 @@ Color Im3d::RandColor(float _min, float _max)
 		} else {
 			return false;
 		}
-		glAssert(glUseProgram(g_shImGui));
-		glAssert(glUniform1i(glGetUniformLocation(g_shImGui, "txTexture"), 0));
+		glAssert(glUseProgram(g_ImGuiShader));
+		glAssert(glUniform1i(glGetUniformLocation(g_ImGuiShader, "txTexture"), 0));
 		glAssert(glUseProgram(0));
 
-		glAssert(glCreateBuffers(1, &g_vbImGui));
-		glAssert(glCreateBuffers(1, &g_ibImGui));
-		glAssert(glCreateVertexArrays(1, &g_vaImGui));	
-		glAssert(glBindVertexArray(g_vaImGui));
-		glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_vbImGui));
+		glAssert(glCreateBuffers(1, &g_ImGuiVertexBuffer));
+		glAssert(glCreateBuffers(1, &g_ImGuiIndexBuffer));
+		glAssert(glCreateVertexArrays(1, &g_ImGuiVertexArray));	
+		glAssert(glBindVertexArray(g_ImGuiVertexArray));
+		glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_ImGuiVertexBuffer));
 		glAssert(glEnableVertexAttribArray(0));
 		glAssert(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*)offsetof(ImDrawVert, pos)));
 		glAssert(glEnableVertexAttribArray(1));
@@ -784,12 +788,12 @@ Color Im3d::RandColor(float _min, float _max)
 		int txX, txY;
 		ImGuiIO& io = ImGui::GetIO();
 		io.Fonts->GetTexDataAsAlpha8(&txbuf, &txX, &txY);
-		glAssert(glGenTextures(1, &g_txImGui));
-		glAssert(glBindTexture(GL_TEXTURE_2D, g_txImGui));
-		glAssert(glTextureParameteri(g_txImGui, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-		glAssert(glTextureParameteri(g_txImGui, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+		glAssert(glGenTextures(1, &g_ImGuiFontTexture));
+		glAssert(glBindTexture(GL_TEXTURE_2D, g_ImGuiFontTexture));
+		glAssert(glTextureParameteri(g_ImGuiFontTexture, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+		glAssert(glTextureParameteri(g_ImGuiFontTexture, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
 		glAssert(glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, txX, txY, 0, GL_RED, GL_UNSIGNED_BYTE, (const GLvoid*)txbuf));
-		io.Fonts->TexID = (void*)g_txImGui;
+		io.Fonts->TexID = (void*)g_ImGuiFontTexture;
 	
 		io.RenderDrawListsFn = &ImGui_Draw;
 
@@ -799,27 +803,27 @@ Color Im3d::RandColor(float _min, float _max)
 
 	static void ImGui_Shutdown()
 	{
-		glAssert(glDeleteVertexArrays(1, &g_vaImGui));
-		glAssert(glDeleteBuffers(1, &g_vbImGui));
-		glAssert(glDeleteBuffers(1, &g_ibImGui));		
-		glAssert(glDeleteProgram(g_shImGui));
-		glAssert(glDeleteTextures(1, &g_txImGui));
+		glAssert(glDeleteVertexArrays(1, &g_ImGuiVertexArray));
+		glAssert(glDeleteBuffers(1, &g_ImGuiVertexBuffer));
+		glAssert(glDeleteBuffers(1, &g_ImGuiIndexBuffer));		
+		glAssert(glDeleteProgram(g_ImGuiShader));
+		glAssert(glDeleteTextures(1, &g_ImGuiFontTexture));
 	}
 
 #elif defined(IM3D_DX11)
-	static ID3D11InputLayout*        g_vdeclImGui;
-	static ID3D10Blob*               g_vsBlobImGui;
-	static ID3D11VertexShader*       g_vsImGui;
-	static ID3D10Blob*               g_psBlobImGui;
-	static ID3D11PixelShader*        g_psImGui;
-	static ID3D11RasterizerState*    g_rsImGui;
-	static ID3D11BlendState*         g_bsImGui;
-	static ID3D11DepthStencilState*  g_dsImGui;
-	static ID3D11ShaderResourceView* g_txImGui;
-	static ID3D11SamplerState*       g_ssImGui;
-	static ID3D11Buffer*             g_cbImGui;
-	static ID3D11Buffer*             g_vbImGui;
-	static ID3D11Buffer*             g_ibImGui;
+	static ID3D11InputLayout*        g_ImGuiInputLayout;
+	static ID3DBlob*                 g_ImGuiVertexShaderBlob;
+	static ID3D11VertexShader*       g_ImGuiVertexShader;
+	static ID3DBlob*                 g_ImGuiPixelShaderBlob;
+	static ID3D11PixelShader*        g_ImGuiPixelShader;
+	static ID3D11RasterizerState*    g_ImGuiRasterizerState;
+	static ID3D11BlendState*         g_ImGuiBlendState;
+	static ID3D11DepthStencilState*  g_ImGuiDepthStencilState;
+	static ID3D11ShaderResourceView* g_ImGuiFontResourceView;
+	static ID3D11SamplerState*       g_ImGuiFontSampler;
+	static ID3D11Buffer*             g_ImGuiConstantBuffer;
+	static ID3D11Buffer*             g_ImGuiVertexBuffer;
+	static ID3D11Buffer*             g_ImGuiIndexBuffer;
 
 	static void ImGui_Draw(ImDrawData* _drawData)
 	{
@@ -827,210 +831,215 @@ Color Im3d::RandColor(float _min, float _max)
 		ID3D11Device* d3d = g_Example->m_d3dDevice;
 		ID3D11DeviceContext* ctx = g_Example->m_d3dDeviceCtx;
 
-		static int s_vbSize = 5000;
-		if (!g_vbImGui || s_vbSize < _drawData->TotalVtxCount) {
-			if (g_vbImGui) { 
-				g_vbImGui->Release(); 
-				g_vbImGui = nullptr;	
+		{ // (re)alloc vertex/index buffers
+			static int s_vertexBufferSize = 5000;
+			if (!g_ImGuiVertexBuffer || s_vertexBufferSize < _drawData->TotalVtxCount) {
+				if (g_ImGuiVertexBuffer) { 
+					g_ImGuiVertexBuffer->Release(); 
+					g_ImGuiVertexBuffer = nullptr;	
+				}
+				s_vertexBufferSize = _drawData->TotalVtxCount + 5000;
+				D3D11_BUFFER_DESC desc = {};
+				desc.Usage = D3D11_USAGE_DYNAMIC;
+				desc.ByteWidth = s_vertexBufferSize * sizeof(ImDrawVert);
+				desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+				desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+				dxAssert(d3d->CreateBuffer(&desc, nullptr, &g_ImGuiVertexBuffer));
 			}
-			s_vbSize = _drawData->TotalVtxCount + 5000;
-			D3D11_BUFFER_DESC desc;
-			memset(&desc, 0, sizeof(D3D11_BUFFER_DESC));
-			desc.Usage = D3D11_USAGE_DYNAMIC;
-			desc.ByteWidth = s_vbSize * sizeof(ImDrawVert);
-			desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-			desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-			desc.MiscFlags = 0;
-			dxAssert(d3d->CreateBuffer(&desc, NULL, &g_vbImGui));
-		}
-
-		static int s_ibSize = 10000;
-		if (!g_ibImGui || s_ibSize < _drawData->TotalIdxCount) {
-			if (g_ibImGui) { 
-				g_ibImGui->Release(); 
-				g_ibImGui = nullptr; 
+			static int s_indexBufferSize = 10000;
+			if (!g_ImGuiIndexBuffer || s_indexBufferSize < _drawData->TotalIdxCount) {
+				if (g_ImGuiIndexBuffer) { 
+					g_ImGuiIndexBuffer->Release(); 
+					g_ImGuiIndexBuffer = nullptr; 
+				}
+				s_indexBufferSize = _drawData->TotalIdxCount + 10000;
+				D3D11_BUFFER_DESC desc = {};
+				desc.Usage = D3D11_USAGE_DYNAMIC;
+				desc.ByteWidth = s_indexBufferSize * sizeof(ImDrawIdx);
+				desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+				desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+				dxAssert(d3d->CreateBuffer(&desc, nullptr, &g_ImGuiIndexBuffer));
 			}
-			s_ibSize = _drawData->TotalIdxCount + 10000;
-			D3D11_BUFFER_DESC desc;
-			memset(&desc, 0, sizeof(D3D11_BUFFER_DESC));
-			desc.Usage = D3D11_USAGE_DYNAMIC;
-			desc.ByteWidth = s_ibSize * sizeof(ImDrawIdx);
-			desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-			desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-			dxAssert(d3d->CreateBuffer(&desc, NULL, &g_ibImGui));
 		}
 
-	 // copy and convert all vertices into a single contiguous buffer
-		D3D11_MAPPED_SUBRESOURCE vtx_resource, idx_resource;
-		dxAssert(ctx->Map(g_vbImGui, 0, D3D11_MAP_WRITE_DISCARD, 0, &vtx_resource));
-		dxAssert(ctx->Map(g_ibImGui, 0, D3D11_MAP_WRITE_DISCARD, 0, &idx_resource));
-		ImDrawVert* vtx_dst = (ImDrawVert*)vtx_resource.pData;
-		ImDrawIdx* idx_dst = (ImDrawIdx*)idx_resource.pData;
-		for (int n = 0; n < _drawData->CmdListsCount; ++n) {
-			const ImDrawList* cmd_list = _drawData->CmdLists[n];
-			memcpy(vtx_dst, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
-			memcpy(idx_dst, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
-			vtx_dst += cmd_list->VtxBuffer.Size;
-			idx_dst += cmd_list->IdxBuffer.Size;
+		{ // copy and convert all vertices into a single contiguous buffer
+			D3D11_MAPPED_SUBRESOURCE vtxRes, idxRes;
+			dxAssert(ctx->Map(g_ImGuiVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &vtxRes));
+			dxAssert(ctx->Map(g_ImGuiIndexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &idxRes));
+			ImDrawVert* vtxDst = (ImDrawVert*)vtxRes.pData;
+			ImDrawIdx* idxDst = (ImDrawIdx*)idxRes.pData;
+			for (int i = 0; i < _drawData->CmdListsCount; ++i) {
+				const ImDrawList* cmdList = _drawData->CmdLists[i];
+				memcpy(vtxDst, cmdList->VtxBuffer.Data, cmdList->VtxBuffer.Size * sizeof(ImDrawVert));
+				memcpy(idxDst, cmdList->IdxBuffer.Data, cmdList->IdxBuffer.Size * sizeof(ImDrawIdx));
+				vtxDst += cmdList->VtxBuffer.Size;
+				idxDst += cmdList->IdxBuffer.Size;
+			}
+			ctx->Unmap(g_ImGuiVertexBuffer, 0);
+			ctx->Unmap(g_ImGuiIndexBuffer, 0);
 		}
-		ctx->Unmap(g_vbImGui, 0);
-		ctx->Unmap(g_ibImGui, 0);
 
-		D3D11_MAPPED_SUBRESOURCE bf;
-		dxAssert(ctx->Map(g_cbImGui, 0, D3D11_MAP_WRITE_DISCARD, 0, &bf));
-		Mat4* ortho = (Mat4*)bf.pData;
-		*ortho = Mat4(
-			2.0f/io.DisplaySize.x, 0.0f,                   0.0f, -1.0f,
-			0.0f,                  2.0f/-io.DisplaySize.y, 0.0f,  1.0f,
-			0.0f,                  0.0f,                   1.0f,  0.0f
-			);
-		ctx->Unmap(g_cbImGui, 0);
+		{ // update constant buffer
+			D3D11_MAPPED_SUBRESOURCE subRes;
+			dxAssert(ctx->Map(g_ImGuiConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subRes));
+			Mat4* ortho = (Mat4*)subRes.pData;
+			*ortho = Mat4(
+				2.0f/io.DisplaySize.x, 0.0f,                   0.0f, -1.0f,
+				0.0f,                  2.0f/-io.DisplaySize.y, 0.0f,  1.0f,
+				0.0f,                  0.0f,                   1.0f,  0.0f
+				);
+			ctx->Unmap(g_ImGuiConstantBuffer, 0);
+		}
 		
-		D3D11_VIEWPORT vp = {};
-		vp.Width = ImGui::GetIO().DisplaySize.x;
-		vp.Height = ImGui::GetIO().DisplaySize.y;
-		vp.MinDepth = 0.0f;
-		vp.MaxDepth = 1.0f;
-		vp.TopLeftX = vp.TopLeftY = 0.0f;
-		ctx->RSSetViewports(1, &vp);
+		{ // set state
+			D3D11_VIEWPORT viewport = {};
+			viewport.Width = ImGui::GetIO().DisplaySize.x;
+			viewport.Height = ImGui::GetIO().DisplaySize.y;
+			viewport.MinDepth = 0.0f;
+			viewport.MaxDepth = 1.0f;
+			viewport.TopLeftX = viewport.TopLeftY = 0.0f;
+			ctx->RSSetViewports(1, &viewport);
 
-		unsigned int stride = sizeof(ImDrawVert);
-		unsigned int offset = 0;
-		ctx->IASetInputLayout(g_vdeclImGui);
-		ctx->IASetVertexBuffers(0, 1, &g_vbImGui, &stride, &offset);
-		ctx->IASetIndexBuffer(g_ibImGui, sizeof(ImDrawIdx) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT, 0);
-		ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		ctx->VSSetShader(g_vsImGui, NULL, 0);
-		ctx->VSSetConstantBuffers(0, 1, &g_cbImGui);
-		ctx->PSSetShader(g_psImGui, NULL, 0);
-		ctx->PSSetSamplers(0, 1, &g_ssImGui);
+			unsigned int stride = sizeof(ImDrawVert);
+			unsigned int offset = 0;
+			ctx->IASetInputLayout(g_ImGuiInputLayout);
+			ctx->IASetVertexBuffers(0, 1, &g_ImGuiVertexBuffer, &stride, &offset);
+			ctx->IASetIndexBuffer(g_ImGuiIndexBuffer, sizeof(ImDrawIdx) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT, 0);
+			ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			ctx->VSSetShader(g_ImGuiVertexShader, nullptr, 0);
+			ctx->VSSetConstantBuffers(0, 1, &g_ImGuiConstantBuffer);
+			ctx->PSSetShader(g_ImGuiPixelShader, nullptr, 0);
+			ctx->PSSetSamplers(0, 1, &g_ImGuiFontSampler);
 
-		const float blend_factor[4] = {};
-		ctx->OMSetBlendState(g_bsImGui, blend_factor, 0xffffffff);
-		ctx->OMSetDepthStencilState(g_dsImGui, 0);
-		ctx->RSSetState(g_rsImGui);
+			const float blendFactor[4] = {};
+			ctx->OMSetBlendState(g_ImGuiBlendState, blendFactor, 0xffffffff);
+			ctx->OMSetDepthStencilState(g_ImGuiDepthStencilState, 0);
+			ctx->RSSetState(g_ImGuiRasterizerState);
+		}
 
-		int vtx_offset = 0;
-		int idx_offset = 0;
-		for (int n = 0; n < _drawData->CmdListsCount; n++) {
-			const ImDrawList* cmd_list = _drawData->CmdLists[n];
-			for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; ++cmd_i) {
-				const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+		int vtxOffset = 0;
+		int idxOffset = 0;
+		for (int i = 0; i < _drawData->CmdListsCount; ++i) {
+			const ImDrawList* cmdList = _drawData->CmdLists[i];
+			for (const ImDrawCmd* pcmd = cmdList->CmdBuffer.begin(); pcmd != cmdList->CmdBuffer.end(); ++pcmd) {
 				if (pcmd->UserCallback) {
-					pcmd->UserCallback(cmd_list, pcmd);
+					pcmd->UserCallback(cmdList, pcmd);
 				} else {
 					const D3D11_RECT r = { (LONG)pcmd->ClipRect.x, (LONG)pcmd->ClipRect.y, (LONG)pcmd->ClipRect.z, (LONG)pcmd->ClipRect.w };
 					ctx->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&pcmd->TextureId);
 					ctx->RSSetScissorRects(1, &r);
-					ctx->DrawIndexed(pcmd->ElemCount, idx_offset, vtx_offset);
+					ctx->DrawIndexed(pcmd->ElemCount, idxOffset, vtxOffset);
 				}
-				idx_offset += pcmd->ElemCount;
+				idxOffset += pcmd->ElemCount;
 			}
-			vtx_offset += cmd_list->VtxBuffer.Size;
+			vtxOffset += cmdList->VtxBuffer.Size;
 		}
 	}
 	
 	static bool ImGui_Init()
 	{
+		ImGuiIO& io = ImGui::GetIO();
 		ID3D11Device* d3d = g_Example->m_d3dDevice;
 
-		g_vsBlobImGui = LoadCompileShader("vs_4_0", "imgui.hlsl", "VERTEX_SHADER\0");
-		if (!g_vsBlobImGui) {
-			return false;
+		{
+			g_ImGuiVertexShaderBlob = LoadCompileShader("vs_4_0", "imgui.hlsl", "VERTEX_SHADER\0");
+			if (!g_ImGuiVertexShaderBlob) {
+				return false;
+			}
+			dxAssert(d3d->CreateVertexShader((DWORD*)g_ImGuiVertexShaderBlob->GetBufferPointer(), g_ImGuiVertexShaderBlob->GetBufferSize(), NULL, &g_ImGuiVertexShader));
 		}
-		dxAssert(d3d->CreateVertexShader((DWORD*)g_vsBlobImGui->GetBufferPointer(), g_vsBlobImGui->GetBufferSize(), NULL, &g_vsImGui));
-		
-		g_psBlobImGui = LoadCompileShader("ps_4_0", "imgui.hlsl", "PIXEL_SHADER\0");
-		if (!g_psBlobImGui) {
-			return false;
+		{
+			g_ImGuiPixelShaderBlob = LoadCompileShader("ps_4_0", "imgui.hlsl", "PIXEL_SHADER\0");
+			if (!g_ImGuiPixelShaderBlob) {
+				return false;
+			}
+			dxAssert(d3d->CreatePixelShader((DWORD*)g_ImGuiPixelShaderBlob->GetBufferPointer(), g_ImGuiPixelShaderBlob->GetBufferSize(), NULL, &g_ImGuiPixelShader));
 		}
-		dxAssert(d3d->CreatePixelShader((DWORD*)g_psBlobImGui->GetBufferPointer(), g_psBlobImGui->GetBufferSize(), NULL, &g_psImGui));
-	
-        D3D11_INPUT_ELEMENT_DESC vdecl[] = {
-			{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (size_t)(&((ImDrawVert*)0)->pos), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (size_t)(&((ImDrawVert*)0)->uv),  D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (size_t)(&((ImDrawVert*)0)->col), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        };
-        dxAssert(d3d->CreateInputLayout(vdecl, 3, g_vsBlobImGui->GetBufferPointer(), g_vsBlobImGui->GetBufferSize(), &g_vdeclImGui));
+		{
+			D3D11_INPUT_ELEMENT_DESC desc[] = {
+				{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)offsetof(ImDrawVert, pos), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+				{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)offsetof(ImDrawVert, uv),  D3D11_INPUT_PER_VERTEX_DATA, 0 },
+				{ "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (UINT)offsetof(ImDrawVert, col), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			};
+			dxAssert(d3d->CreateInputLayout(desc, 3, g_ImGuiVertexShaderBlob->GetBufferPointer(), g_ImGuiVertexShaderBlob->GetBufferSize(), &g_ImGuiInputLayout));
+		}
+		{
+			D3D11_BUFFER_DESC desc = {};
+			desc.ByteWidth = sizeof(Mat4);
+			desc.Usage = D3D11_USAGE_DYNAMIC;
+			desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+			desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+			dxAssert(d3d->CreateBuffer(&desc, NULL, &g_ImGuiConstantBuffer));
+		}
+		{
+			D3D11_RASTERIZER_DESC desc = {};
+			desc.FillMode = D3D11_FILL_SOLID;
+			desc.CullMode = D3D11_CULL_NONE;
+			desc.ScissorEnable = true;
+			desc.DepthClipEnable = true;
+			dxAssert(d3d->CreateRasterizerState(&desc, &g_ImGuiRasterizerState));
+		}
+		{
+			D3D11_DEPTH_STENCIL_DESC desc = {};
+			desc.DepthEnable = false;
+			desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+			desc.StencilEnable = false;
+			dxAssert(d3d->CreateDepthStencilState(&desc, &g_ImGuiDepthStencilState));
+		}
+		{
+			D3D11_BLEND_DESC desc = {};
+			desc.RenderTarget[0].BlendEnable = true;
+			desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+			desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+			desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+			desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
+			desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+			desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+			desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+			dxAssert(d3d->CreateBlendState(&desc, &g_ImGuiBlendState));
+		}
+		{
+			unsigned char* txbuf;
+			int txX, txY;
+			io.Fonts->GetTexDataAsAlpha8(&txbuf, &txX, &txY);
 
-		D3D11_BUFFER_DESC bufDesc = {};
-		bufDesc.ByteWidth = sizeof(Mat4);
-		bufDesc.Usage = D3D11_USAGE_DYNAMIC;
-		bufDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		bufDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		dxAssert(d3d->CreateBuffer(&bufDesc, NULL, &g_cbImGui));
+			D3D11_TEXTURE2D_DESC txDesc = {};
+			txDesc.Width = txX;
+			txDesc.Height = txY;
+			txDesc.MipLevels = 1;
+			txDesc.ArraySize = 1;
+			txDesc.Format = DXGI_FORMAT_R8_UNORM;
+			txDesc.SampleDesc.Count = 1;
+			txDesc.Usage = D3D11_USAGE_DEFAULT;
+			txDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+			ID3D11Texture2D* tx = nullptr;
+			D3D11_SUBRESOURCE_DATA subResource = {};
+			subResource.pSysMem = txbuf;
+			subResource.SysMemPitch = txX;
+			subResource.SysMemSlicePitch = 0;
+			dxAssert(d3d->CreateTexture2D(&txDesc, &subResource, &tx));
+
+			D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+			srvDesc.Format = DXGI_FORMAT_R8_UNORM;
+			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+			srvDesc.Texture2D.MipLevels = txDesc.MipLevels;
+			srvDesc.Texture2D.MostDetailedMip = 0;
+			dxAssert(d3d->CreateShaderResourceView(tx, &srvDesc, &g_ImGuiFontResourceView));
+			tx->Release();
+
+			D3D11_SAMPLER_DESC ssDesc = {};
+			ssDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+			ssDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+			ssDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+			ssDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+			ssDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+			ssDesc.MinLOD = 0.0f;
+			ssDesc.MaxLOD = 0.0f;
+			ssDesc.MipLODBias = 0.0f;
+		}
 		
-		D3D11_RASTERIZER_DESC rs = {};
-		rs.FillMode = D3D11_FILL_SOLID;
-		rs.CullMode = D3D11_CULL_NONE;
-		rs.ScissorEnable = true;
-		rs.DepthClipEnable = true;
-		dxAssert(d3d->CreateRasterizerState(&rs, &g_rsImGui));
-	
-		D3D11_DEPTH_STENCIL_DESC ds = {};
-		ds.DepthEnable = false;
-		ds.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-		ds.DepthFunc = D3D11_COMPARISON_ALWAYS;
-		ds.StencilEnable = false;
-		ds.FrontFace.StencilFailOp = ds.FrontFace.StencilDepthFailOp = ds.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-		ds.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-		ds.BackFace = ds.FrontFace;
-		dxAssert(d3d->CreateDepthStencilState(&ds, &g_dsImGui));
-   
-		D3D11_BLEND_DESC bs = {};
-		bs.AlphaToCoverageEnable = false;
-		bs.RenderTarget[0].BlendEnable = true;
-		bs.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-		bs.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-		bs.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-		bs.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
-		bs.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-		bs.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-		bs.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-		dxAssert(d3d->CreateBlendState(&bs, &g_bsImGui));
-
-		unsigned char* txbuf;
-		int txX, txY;
-		ImGuiIO& io = ImGui::GetIO();
-		io.Fonts->GetTexDataAsAlpha8(&txbuf, &txX, &txY);
-
-        D3D11_TEXTURE2D_DESC txDesc = {};
-        txDesc.Width = txX;
-        txDesc.Height = txY;
-        txDesc.MipLevels = 1;
-        txDesc.ArraySize = 1;
-        txDesc.Format = DXGI_FORMAT_R8_UNORM;
-        txDesc.SampleDesc.Count = 1;
-        txDesc.Usage = D3D11_USAGE_DEFAULT;
-        txDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-        txDesc.CPUAccessFlags = 0;
-
-		ID3D11Texture2D* tx = nullptr;
-		D3D11_SUBRESOURCE_DATA subResource = {};
-		subResource.pSysMem = txbuf;
-		subResource.SysMemPitch = txDesc.Width;
-		subResource.SysMemSlicePitch = 0;
-		dxAssert(d3d->CreateTexture2D(&txDesc, &subResource, &tx));
-
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.Format = DXGI_FORMAT_R8_UNORM;
-		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MipLevels = txDesc.MipLevels;
-		srvDesc.Texture2D.MostDetailedMip = 0;
-		dxAssert(d3d->CreateShaderResourceView(tx, &srvDesc, &g_txImGui));
-		tx->Release();
-
-		D3D11_SAMPLER_DESC ssDesc = {};
-		ssDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-		ssDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-		ssDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-		ssDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-		ssDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
-		ssDesc.MinLOD = 0.0f;
-		ssDesc.MaxLOD = 0.0f;
-		ssDesc.MipLODBias = 0.0f;
-
-		io.Fonts->TexID = (void*)g_txImGui;
+		io.Fonts->TexID = (void*)g_ImGuiFontResourceView;
 		io.RenderDrawListsFn = &ImGui_Draw;
 
 		return true;
@@ -1038,19 +1047,19 @@ Color Im3d::RandColor(float _min, float _max)
 
 	static void ImGui_Shutdown()
 	{
-		if (g_cbImGui)     g_cbImGui->Release();
-		if (g_vbImGui)     g_vbImGui->Release();
-		if (g_ibImGui)     g_ibImGui->Release();
-		if (g_ssImGui)     g_ssImGui->Release();
-		if (g_txImGui)     g_txImGui->Release();
-		if (g_bsImGui)     g_bsImGui->Release();
-		if (g_dsImGui)     g_dsImGui->Release();
-		if (g_rsImGui)     g_rsImGui->Release();
-		if (g_vdeclImGui)  g_vdeclImGui->Release();
-		if (g_vsImGui)     g_vsImGui->Release();
-		if (g_vsBlobImGui) g_vsBlobImGui->Release();
-		if (g_psImGui)     g_psImGui->Release();
-		if (g_psBlobImGui) g_psBlobImGui->Release();
+		if (g_ImGuiConstantBuffer)     g_ImGuiConstantBuffer->Release();
+		if (g_ImGuiVertexBuffer)       g_ImGuiVertexBuffer->Release();
+		if (g_ImGuiIndexBuffer)        g_ImGuiIndexBuffer->Release();
+		if (g_ImGuiFontSampler)        g_ImGuiFontSampler->Release();
+		if (g_ImGuiFontResourceView)   g_ImGuiFontResourceView->Release();
+		if (g_ImGuiBlendState)         g_ImGuiBlendState->Release();
+		if (g_ImGuiDepthStencilState)  g_ImGuiDepthStencilState->Release();
+		if (g_ImGuiRasterizerState)    g_ImGuiRasterizerState->Release();
+		if (g_ImGuiInputLayout)        g_ImGuiInputLayout->Release();
+		if (g_ImGuiVertexShader)       g_ImGuiVertexShader->Release();
+		if (g_ImGuiVertexShaderBlob)   g_ImGuiVertexShaderBlob->Release();
+		if (g_ImGuiPixelShader)        g_ImGuiPixelShader->Release();
+		if (g_ImGuiPixelShaderBlob)    g_ImGuiPixelShaderBlob->Release();
 	}
 
 #endif

@@ -5,34 +5,39 @@
 	#error No shader stage defined
 #endif
 
-#define VertexData \
-	VertexData { \
-		noperspective float m_edgeDistance; \
-		noperspective float m_size; \
-		smooth float4 m_color; \
-	}
+struct VS_OUTPUT
+{
+	float4 m_position     : SV_POSITION;
+	float4 m_color        : COLOR0;
+	float2 m_uv           : TEXCOORD0;
+	float  m_size         : PSIZE0;
+	float  m_edgeDistance : EDGE_DISTANCE;
+};
 
 #define kAntialiasing 2.0
 
 #ifdef VERTEX_SHADER
-	uniform mat4 uViewProjMatrix;
-	
-	layout(location=0) in float4 aPositionSize;
-	layout(location=1) in float4 aColor;
-	
-	out VertexData vData;
-	
-	void main() 
+	cbuffer cbViewProjMatrix : register(b0)
 	{
-		vData.m_color = aColor.abgr; // swizzle to correct endianness
+		float4x4 uViewProjMatrix;
+	};
+	
+	struct VS_INPUT
+	{
+		float4 m_positionSize : POSITION_SIZE;
+		float4 m_color        : COLOR;
+	};
+	
+	VS_OUTPUT main(VS_INPUT _vin) 
+	{
+		VS_OUTPUT ret;
+		ret.m_color = _vin.m_color
 		#if !defined(TRIANGLES)
-			vData.m_color.a *= smoothstep(0.0, 1.0, aPositionSize.w / kAntialiasing);
+			ret.m_color.a *= smoothstep(0.0, 1.0, _vin.m_positionSize.w / kAntialiasing);
 		#endif
-		vData.m_size = max(aPositionSize.w, kAntialiasing);
-		gl_Position = uViewProjMatrix * float4(aPositionSize.xyz, 1.0);
-		#if defined(POINTS)
-			gl_PointSize = vData.m_size;
-		#endif
+		ret.m_size = max(_vin.m_positionSize.w, kAntialiasing);
+		ret.m_position = mul(uViewProjMatrix, float4(_vin.m_positionSize.xyz, 1.0);
+		return ret;
 	}
 #endif
 
@@ -83,24 +88,22 @@
 #endif
 
 #ifdef FRAGMENT_SHADER
-	in VertexData vData;
-	
-	layout(location=0) out float4 fResult;
-	
-	void main() 
+	float4 main(VS_OUTPUT _pin) 
 	{
-		fResult = vData.m_color;
+		float4 ret = _pin.m_color;
 		
 		#if   defined(LINES)
-			float d = abs(vData.m_edgeDistance) / vData.m_size;
-			d = smoothstep(1.0, 1.0 - (kAntialiasing / vData.m_size), d);
-			fResult.a *= d;
+			float d = abs(_pin.m_edgeDistance) / _pin.m_size;
+			d = smoothstep(1.0, 1.0 - (kAntialiasing / _pin.m_size), d);
+			ret.a *= d;
 			
 		#elif defined(POINTS)
-			float d = length(gl_PointCoord.xy - float2(0.5));
-			d = smoothstep(0.5, 0.5 - (kAntialiasing / vData.m_size), d);
-			fResult.a *= d;
+			float d = length(_pin.m_uv - float2(0.5));
+			d = smoothstep(0.5, 0.5 - (kAntialiasing / _pin.m_size), d);
+			ret.a *= d;
 			
-		#endif		
+		#endif
+		
+		return ret;
 	}
 #endif
