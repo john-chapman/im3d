@@ -440,7 +440,7 @@ bool Im3d::GizmoTranslation(const char* _id, float* _vec3_, bool _local)
  // axes
 	for (int i = 0; i < 3; ++i) {
 		AxisG& axis = axes[i];
-		ret |= ctx.gizmoAxisTranslation_Behvaior(axis.m_id, drawAt, axis.m_axis, worldHeight, worldSize, outVec3);
+		ret |= ctx.gizmoAxisTranslation_Behavior(axis.m_id, drawAt, axis.m_axis, worldHeight, worldSize, outVec3);
 		ctx.gizmoAxisTranslation_Draw(axis.m_id, drawAt, axis.m_axis, worldHeight, worldSize, axis.m_color);
 	}
 	ctx.popMatrix();
@@ -1079,7 +1079,7 @@ int Context::estimateLevelOfDetail(const Vec3& _position, float _worldSize, int 
 	return (int)(fmin + (fmax - fmin) * x);
 }
 
-bool Context::gizmoAxisTranslation_Behvaior(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, Vec3* _out_)
+bool Context::gizmoAxisTranslation_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, Vec3* _out_)
 {
 	Ray ray(m_appData.m_cursorRayOrigin, m_appData.m_cursorRayDirection);
 	Line axisLine(_origin, _axis);
@@ -1938,4 +1938,19 @@ float Im3d::Distance2(const Ray& _ray, const LineSegment& _segment)
 	float tr;
 	Vec3 p = Nearest(_ray, _segment, tr);
 	return Length2(_ray.m_origin + _ray.m_direction * tr - p);
+}
+
+#define IM3D_STATIC_ASSERT(e) { (void)sizeof(char[(e) ? 1 : -1]); }
+static void StaticAsserts()
+{
+	IM3D_STATIC_ASSERT(sizeof (Vec2) == sizeof (float[2]));
+	IM3D_STATIC_ASSERT(alignof(Vec2) == alignof(float[2]));
+	IM3D_STATIC_ASSERT(sizeof (Vec3) == sizeof (float[3]));
+	IM3D_STATIC_ASSERT(alignof(Vec3) == alignof(float[3]));
+	IM3D_STATIC_ASSERT(sizeof (Vec4) == sizeof (float[4]));
+	IM3D_STATIC_ASSERT(alignof(Vec4) == alignof(float[4]));
+	IM3D_STATIC_ASSERT(sizeof (Mat3) == sizeof (float[9]));
+	IM3D_STATIC_ASSERT(alignof(Mat3) == alignof(float[9]));
+	IM3D_STATIC_ASSERT(sizeof (Mat4) == sizeof (float[16]));
+	IM3D_STATIC_ASSERT(alignof(Mat4) == alignof(float[16]));
 }

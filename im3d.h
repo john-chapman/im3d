@@ -35,8 +35,7 @@ extern const Color Color_Magenta;
 extern const Color Color_Yellow;
 extern const Color Color_Cyan;
 
-Context& GetContext();
-void     SetContext(Context& _ctx);
+// Get AppData struct from the current context, fill before calling NewFrame().
 AppData& GetAppData();
 
 // Call at the start of each frame, after filling the AppData struct.
@@ -139,7 +138,9 @@ bool  GizmoScale(const char* _id, const Vec3& _drawAt, float* _vec3_);
 // Unified gizmo, selects local/global, translation/rotation/scale based on the context gizmo state. Return true if the gizmo is active.
 bool  Gizmo(const char* _id, float* _mat4_);
 
-
+// Get/set the current context. All Im3d calls affect the currently bound context.
+Context& GetContext();
+void     SetContext(Context& _ctx);
 
 struct Vec2
 {
@@ -280,7 +281,7 @@ struct Mat4
 };
 struct Color
 {
-	U32 v;
+	U32 v; // rgba8 (MSB = r)
 	Color(): v(0)                                                            {}
 	Color(U32 _rgba): v(_rgba)                                               {}
 	Color(const Vec4& _rgba);
@@ -321,7 +322,7 @@ struct VertexData
 
 enum DrawPrimitiveType
 {
- // determines the order in which unsorted primitives are drawn
+ // order here determines the order in which unsorted primitives are drawn
 	DrawPrimitive_Triangles,
 	DrawPrimitive_Lines,
 	DrawPrimitive_Points,
@@ -485,9 +486,9 @@ public:
 	Context();
 	~Context();
 
- // low-level interface for app-defined gizmos, may be subject to breaking changes
+ // low-level interface for internal and app-defined gizmos, may be subject to breaking changes
 
-	bool gizmoAxisTranslation_Behvaior(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, Vec3* _out_);
+	bool gizmoAxisTranslation_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, Vec3* _out_);
 	void gizmoAxisTranslation_Draw    (Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, Color _color);
 
 	bool gizmoPlaneTranslation_Behavior(Id _id, const Vec3& _origin, const Vec3& _normal, float _worldSize, Vec3* _out_);
@@ -567,8 +568,6 @@ namespace internal {
 	extern Context* g_CurrentContext;
 }
 
-inline Context& GetContext()                                                 { return *internal::g_CurrentContext; }
-inline void     SetContext(Context& _ctx)                                    { internal::g_CurrentContext = &_ctx; }
 inline AppData& GetAppData()                                                 { return GetContext().getAppData();   }
 inline void     NewFrame()                                                   { GetContext().reset();               }
 inline void     Draw()                                                       { GetContext().draw();                }
@@ -628,6 +627,9 @@ inline void  PushId(Id _id)                                                  { G
 inline void  PopId()                                                         { GetContext().popId();                      }
 inline Id    GetId()                                                         { return GetContext().getId();               }
 inline Id    GetActiveId()                                                   { return GetContext().getActiveId();         }
+
+inline Context& GetContext()                                                 { return *internal::g_CurrentContext; }
+inline void     SetContext(Context& _ctx)                                    { internal::g_CurrentContext = &_ctx; }
 
 } // namespac Im3d
 

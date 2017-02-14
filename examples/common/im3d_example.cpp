@@ -1189,7 +1189,7 @@ bool Example::update()
 
 	float kCamSpeed = 2.0f;
 	float kCamSpeedMul = 10.0f;
-	float kCamRotationMul = 0.8f;
+	float kCamRotationMul = 10.0f;
 	m_camWorld = LookAt(m_camPos, m_camPos - m_camDir);
 	m_camView = Inverse(m_camWorld);
 	#if defined(IM3D_PLATFORM_WIN)
@@ -1222,7 +1222,7 @@ bool Example::update()
 			}
 			if (!ImGui::GetIO().WantCaptureMouse) {
 				if (GetAsyncKeyState(VK_RBUTTON) & 0x8000) {
-					Vec2 cursorDelta = (cursorPos - m_prevCursorPos) * m_deltaTime * kCamRotationMul;
+					Vec2 cursorDelta = ((cursorPos - m_prevCursorPos) / Vec2(m_width, m_height)) * kCamRotationMul;
 					m_camDir = Rotation(Vec3(0.0f, 1.0f, 0.0f), -cursorDelta.x) * m_camDir;
 					m_camDir = Rotation(m_camWorld.getCol(0), -cursorDelta.y) * m_camDir;
 				}
