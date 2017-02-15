@@ -37,6 +37,7 @@
 #endif
 
 #ifdef GEOMETRY_SHADER
+ // expand line -> triangle strip
 	layout(lines) in;
 	layout(triangle_strip, max_vertices = 4) out;
 	
@@ -56,6 +57,7 @@
 		vec2 tng1 = tng0 * vData[1].m_size / uViewport;
 		tng0 = tng0 * vData[0].m_size / uViewport;
 		
+	 // line start
 		gl_Position = vec4((pos0 - tng0) * gl_in[0].gl_Position.w, gl_in[0].gl_Position.zw); 
 		vDataOut.m_edgeDistance = -vData[0].m_size;
 		vDataOut.m_size = vData[0].m_size;
@@ -68,6 +70,7 @@
 		vDataOut.m_size = vData[0].m_size;
 		EmitVertex();
 		
+	 // line end
 		gl_Position = vec4((pos1 - tng1) * gl_in[1].gl_Position.w, gl_in[1].gl_Position.zw);
 		vDataOut.m_edgeDistance = -vData[1].m_size;
 		vDataOut.m_size = vData[1].m_size;
