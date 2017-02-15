@@ -1286,6 +1286,7 @@ void Context::gizmoAxislAngle_Draw(Id _id, const Vec3& _origin, const Vec3& _axi
 				Vec3 intersection = ray.m_origin + ray.m_direction * tr;
 				Vec3 delta = Normalize(intersection - _origin);
 			
+				pushAlpha(Remap(fabs(Dot(Normalize(_origin - m_appData.m_viewOrigin), _axis)), 1.0f, 0.99f));
 				pushEnableSorting(false);
 				begin(PrimitiveMode_Lines);
 					vertex(_origin - _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
@@ -1294,6 +1295,7 @@ void Context::gizmoAxislAngle_Draw(Id _id, const Vec3& _origin, const Vec3& _axi
 					vertex(_origin + storedVec * _worldRadius, m_gizmoSizePixels * 0.5f, Color_GizmoHighlight);
 				end();
 				popEnableSorting();
+				popAlpha();
 
 				pushColor(Color_GizmoHighlight);
 				pushSize(m_gizmoSizePixels);
