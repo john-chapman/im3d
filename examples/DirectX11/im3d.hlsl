@@ -8,9 +8,9 @@
 struct VS_OUTPUT
 {
 	linear        float4 m_position     : SV_POSITION;
-	linear        float4 m_color        : COLOR0;
-	linear        float2 m_uv           : TEXCOORD0;
-	noperspective float  m_size         : PSIZE0;
+	linear        float4 m_color        : COLOR;
+	linear        float2 m_uv           : TEXCOORD;
+	noperspective float  m_size         : SIZE;
 	noperspective float  m_edgeDistance : EDGE_DISTANCE;
 };
 

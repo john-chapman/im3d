@@ -12,7 +12,7 @@ using namespace Im3d;
 // call this function multiple times per primtive type.
 // The example below shows the simplest possible draw callback. Variations on this are possible, for example
 // using a depth buffer. See the shader source file for more details.
-// For VR, the simplest option is to call Im3d::Draw() once per eye with the appropriate framebuffer bound,
+// For VR, the easiest option is to call Im3d::Draw() once per eye with the appropriate framebuffer bound,
 // passing the appropriate view-projection matrix. A more efficient scheme would be to render to both eyes
 // inside the draw callback to avoid uploading the vertex data twice.
 // Note that there is no guarantee that the data in _drawList will exist after this function exits.

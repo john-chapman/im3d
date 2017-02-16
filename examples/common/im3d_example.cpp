@@ -41,12 +41,12 @@ static const char* StripPath(const char* _path)
 		IM3D_VERIFY(
 			FormatMessage(
 				FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, 
-				NULL, 
+				nullptr, 
 				_err,
 				MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
 				(LPTSTR)buf, 
 				kErrMsgMax, 
-				NULL
+				nullptr
 			) != 0
 		);
 		return buf;
@@ -64,6 +64,19 @@ static const char* StripPath(const char* _path)
 				im3d->m_width = w;
 				im3d->m_height = h;
 			}
+			#if defined(IM3D_DX11)
+			 // DX requires that we reset the backbuffer when the window resizes
+				if (g_Example->m_d3dRenderTarget) {
+					g_Example->m_d3dRenderTarget->Release();
+					dxAssert(g_Example->m_dxgiSwapChain->ResizeBuffers(0, (UINT)w, (UINT)h, DXGI_FORMAT_UNKNOWN, 0));
+					ID3D11Texture2D* backBuffer;
+					dxAssert(g_Example->m_dxgiSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBuffer));
+					dxAssert(g_Example->m_d3dDevice->CreateRenderTargetView(backBuffer, nullptr, &g_Example->m_d3dRenderTarget));
+					g_Example->m_d3dDeviceCtx->OMSetRenderTargets(1, &g_Example->m_d3dRenderTarget, nullptr);
+					backBuffer->Release();
+				}
+
+			#endif
 			break;
 		}
 		case WM_SIZING: {
@@ -184,10 +197,10 @@ static const char* StripPath(const char* _path)
 			dwStyle, 
 			0, 0, 
 			r.right - r.left, r.bottom - r.top, 
-			NULL, 
-			NULL, 
+			nullptr, 
+			nullptr, 
 			GetModuleHandle(0), 
-			NULL
+			nullptr
 			);
 		IM3D_ASSERT(g_Example->m_hwnd);
 		ShowWindow(g_Example->m_hwnd, SW_SHOW);
@@ -222,7 +235,7 @@ static const char* StripPath(const char* _path)
 				wc.hCursor = LoadCursor(0, IDC_ARROW);
 				winAssert(wndclassex = RegisterClassEx(&wc));
 			}
-			HWND hwndDummy = CreateWindowEx(0, MAKEINTATOM(wndclassex), 0, NULL, 0, 0, 1, 1, NULL, NULL, GetModuleHandle(0), NULL);
+			HWND hwndDummy = CreateWindowEx(0, MAKEINTATOM(wndclassex), 0, nullptr, 0, 0, 1, 1, nullptr, nullptr, GetModuleHandle(0), nullptr);
 			winAssert(hwndDummy);
 			HDC hdcDummy = 0;
 			winAssert(hdcDummy = GetDC(hwndDummy));	
@@ -318,34 +331,31 @@ static const char* StripPath(const char* _path)
 			g_Example->m_d3dDeviceCtx    = nullptr;
 			g_Example->m_d3dRenderTarget = nullptr;
 
-			DXGI_SWAP_CHAIN_DESC swapDesc = {};
-			swapDesc.BufferCount = 2;
-			swapDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-			swapDesc.BufferDesc.Width = 0;
-			swapDesc.BufferDesc.Height = 0;
-			swapDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-			swapDesc.BufferDesc.RefreshRate.Numerator = 60;
-			swapDesc.BufferDesc.RefreshRate.Denominator = 1;
-			swapDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-			swapDesc.OutputWindow = g_Example->m_hwnd;
-			swapDesc.SampleDesc.Count = 1;
-			swapDesc.SampleDesc.Quality = 0;
-			swapDesc.Windowed = TRUE;
-			swapDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+			DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
+			swapChainDesc.OutputWindow = g_Example->m_hwnd;
+			swapChainDesc.Windowed = TRUE;
+			swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+			swapChainDesc.BufferCount = 2;
+			swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+			swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+			swapChainDesc.BufferDesc.RefreshRate.Numerator = 60;
+			swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
+			swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+			swapChainDesc.SampleDesc.Count = 1;
 
 			UINT createDeviceFlags = 0;
 			//createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 			D3D_FEATURE_LEVEL featureLevel;
 			const D3D_FEATURE_LEVEL featureLevelArray[1] = { D3D_FEATURE_LEVEL_11_0, };
 			dxAssert(D3D11CreateDeviceAndSwapChain(
-				NULL, 
+				nullptr, 
 				D3D_DRIVER_TYPE_HARDWARE, 
-				NULL, 
+				nullptr, 
 				createDeviceFlags, 
 				featureLevelArray, 
 				1, 
 				D3D11_SDK_VERSION, 
-				&swapDesc,
+				&swapChainDesc,
 				&g_Example->m_dxgiSwapChain,
 				&g_Example->m_d3dDevice, 
 				&featureLevel, 
@@ -357,34 +367,20 @@ static const char* StripPath(const char* _path)
 			}
 
 			ID3D11Texture2D* backBuffer;
-			D3D11_RENDER_TARGET_VIEW_DESC rtDesc = {};
-			rtDesc.Format = swapDesc.BufferDesc.Format;
-			rtDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-			g_Example->m_dxgiSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBuffer);
-			g_Example->m_d3dDevice->CreateRenderTargetView(backBuffer, &rtDesc, &g_Example->m_d3dRenderTarget);
-			g_Example->m_d3dDeviceCtx->OMSetRenderTargets(1, &g_Example->m_d3dRenderTarget, NULL);
+			dxAssert(g_Example->m_dxgiSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBuffer));
+			dxAssert(g_Example->m_d3dDevice->CreateRenderTargetView(backBuffer, nullptr, &g_Example->m_d3dRenderTarget));
+			g_Example->m_d3dDeviceCtx->OMSetRenderTargets(1, &g_Example->m_d3dRenderTarget, nullptr);
 			backBuffer->Release();
+			
 			return true;
 		}
 		
 		static void ShutdownDx11()
 		{
-			if (g_Example->m_d3dRenderTarget) { 
-				g_Example->m_d3dRenderTarget->Release();
-				g_Example->m_d3dRenderTarget = nullptr;
-			}
-			if (g_Example->m_dxgiSwapChain) {
-				g_Example->m_dxgiSwapChain->Release();
-				g_Example->m_dxgiSwapChain = nullptr;
-			}
-			if (g_Example->m_d3dDeviceCtx) {
-				g_Example->m_d3dDeviceCtx->Release();
-				g_Example->m_d3dDeviceCtx = nullptr;
-			}
-			if (g_Example->m_d3dDevice) {
-				g_Example->m_d3dDevice->Release();
-				g_Example->m_d3dDevice = nullptr;
-			}
+			if (g_Example->m_d3dRenderTarget) g_Example->m_d3dRenderTarget->Release();
+			if (g_Example->m_dxgiSwapChain)   g_Example->m_dxgiSwapChain->Release();
+			if (g_Example->m_d3dDeviceCtx)    g_Example->m_d3dDeviceCtx->Release();
+			if (g_Example->m_d3dDevice)       g_Example->m_d3dDevice->Release();
 		}
 		
 	#endif // graphics
@@ -613,7 +609,7 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 
 	 // D3DCompile is not portable - linking with d3dcompiler.lib introdices a dependency on d3dcompiler_XX.lib
 	 // \todo get a ptr to D3DCompile at runtime via LoadLibrary/GetProcAddress
-		D3DCompile(src.data(), src.size(), NULL, NULL, NULL, "main", _target, flags, 0, &ret, &err);
+		D3DCompile(src.data(), src.size(), nullptr, nullptr, nullptr, "main", _target, flags, 0, &ret, &err);
 		if (ret == nullptr) {
 			fprintf(stderr, "Error compiling '%s':\n\n", _path);
 			if (err) {
@@ -623,6 +619,79 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 		}
 		return ret;
 	}
+
+	ID3D11Buffer* Im3d::CreateBuffer(UINT _size, D3D11_USAGE _usage, UINT _bind, const void* _data)
+	{
+		D3D11_BUFFER_DESC desc = {};
+		desc.ByteWidth = _size;
+		desc.Usage = _usage;
+		desc.BindFlags = _bind;
+		desc.CPUAccessFlags = _usage == D3D11_USAGE_DYNAMIC ? D3D11_CPU_ACCESS_WRITE : 0;
+
+		ID3D11Buffer* ret = nullptr;
+		D3D11_SUBRESOURCE_DATA subRes = {};
+		subRes.pSysMem = _data;
+		dxAssert(g_Example->m_d3dDevice->CreateBuffer(&desc, _data ? &subRes : nullptr, &ret));
+		return ret;
+	}
+	
+	ID3D11Buffer* Im3d::CreateConstantBuffer(UINT _size, D3D11_USAGE _usage, const void* _data)
+	{
+		return CreateBuffer(_size, _usage, D3D11_BIND_CONSTANT_BUFFER, _data);
+	}
+	ID3D11Buffer* Im3d::CreateVertexBuffer(UINT _size, D3D11_USAGE _usage, const void* _data)
+	{
+		return CreateBuffer(_size, _usage, D3D11_BIND_VERTEX_BUFFER, _data);
+	}
+	ID3D11Buffer* Im3d::CreateIndexBuffer(UINT _size, D3D11_USAGE _usage, const void* _data)
+	{
+		return CreateBuffer(_size, _usage, D3D11_BIND_INDEX_BUFFER, _data);
+	}
+
+	void* Im3d::MapBuffer(ID3D11Buffer* _buffer, D3D11_MAP _mapType)
+	{
+		D3D11_MAPPED_SUBRESOURCE subRes;
+		dxAssert(g_Example->m_d3dDeviceCtx->Map(_buffer, 0, _mapType, 0, &subRes));
+		return subRes.pData;
+	}
+	void  Im3d::UnmapBuffer(ID3D11Buffer* _buffer)
+	{
+		g_Example->m_d3dDeviceCtx->Unmap(_buffer, 0);
+	}
+
+	ID3D11Texture2D* Im3d::CreateTexture2D(UINT _width, UINT _height, DXGI_FORMAT _format, ID3D11ShaderResourceView** resView_, const void* _data)
+	{
+		ID3D11Device* d3d = g_Example->m_d3dDevice;
+
+		D3D11_TEXTURE2D_DESC txDesc = {};
+		txDesc.Width = _width;
+		txDesc.Height = _height;
+		txDesc.MipLevels = 1;
+		txDesc.ArraySize = 1;
+		txDesc.Format = _format;
+		txDesc.SampleDesc.Count = 1;
+		txDesc.Usage = D3D11_USAGE_DEFAULT;
+		txDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+		ID3D11Texture2D* ret = nullptr;
+		D3D11_SUBRESOURCE_DATA subRes = {};
+		if (_data) {
+			subRes.pSysMem = _data;
+			subRes.SysMemPitch = _width;
+			switch (_format) {
+				case DXGI_FORMAT_R8_UNORM:       break;
+				case DXGI_FORMAT_R8G8B8A8_UNORM:
+				default:                         subRes.SysMemPitch *= 4;
+			};
+		}
+		dxAssert(d3d->CreateTexture2D(&txDesc, _data ? &subRes : nullptr, &ret));
+
+		if (resView_) {
+			dxAssert(d3d->CreateShaderResourceView(ret, nullptr, resView_));
+		}
+
+		return ret;
+	}
 	
 	void Im3d::DrawNdcQuad()
 	{
@@ -630,6 +699,22 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 	
 	void Im3d::DrawTeapot(const Mat4& _world, const Mat4& _viewProj)
 	{
+		static ID3DBlob*             s_vsBlob;
+		static ID3D11VertexShader*   s_vs;
+		static ID3DBlob*             s_psBlob;
+		static ID3D11PixelShader*    s_ps;
+
+		ID3D11Device* d3d = g_Example->m_d3dDevice;
+		ID3D11DeviceContext* ctx = g_Example->m_d3dDeviceCtx;
+
+		if (s_vsBlob == 0) {
+			s_vsBlob = LoadCompileShader("vs_" IM3D_DX11_VSHADER, "model.hlsl", "VERTEX_SHADER\0");
+			dxAssert(d3d->CreateVertexShader((DWORD*)s_vsBlob->GetBufferPointer(), s_vsBlob->GetBufferSize(), nullptr, &s_vs));
+			s_psBlob = LoadCompileShader("ps_" IM3D_DX11_VSHADER, "model.hlsl", "PIXEL_SHADER\0");
+			dxAssert(d3d->CreatePixelShader((DWORD*)s_psBlob->GetBufferPointer(), s_psBlob->GetBufferSize(), nullptr, &s_ps));
+
+		}
+
 	}
 	
 #endif // graphics
@@ -831,92 +916,73 @@ Color Im3d::RandColor(float _min, float _max)
 		ID3D11Device* d3d = g_Example->m_d3dDevice;
 		ID3D11DeviceContext* ctx = g_Example->m_d3dDeviceCtx;
 
-		{ // (re)alloc vertex/index buffers
-			static int s_vertexBufferSize = 0;
-			if (!g_ImGuiVertexBuffer || s_vertexBufferSize < _drawData->TotalVtxCount) {
-				if (g_ImGuiVertexBuffer) { 
-					g_ImGuiVertexBuffer->Release(); 
-					g_ImGuiVertexBuffer = nullptr;	
-				}
-				s_vertexBufferSize = _drawData->TotalVtxCount;
-				D3D11_BUFFER_DESC desc = {};
-				desc.Usage = D3D11_USAGE_DYNAMIC;
-				desc.ByteWidth = s_vertexBufferSize * sizeof(ImDrawVert);
-				desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-				desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-				dxAssert(d3d->CreateBuffer(&desc, nullptr, &g_ImGuiVertexBuffer));
+	 // (re)alloc vertex/index buffers
+		static int s_vertexBufferSize = 0;
+		if (!g_ImGuiVertexBuffer || s_vertexBufferSize < _drawData->TotalVtxCount) {
+			if (g_ImGuiVertexBuffer) { 
+				g_ImGuiVertexBuffer->Release(); 
+				g_ImGuiVertexBuffer = nullptr;	
 			}
-			static int s_indexBufferSize = 0;
-			if (!g_ImGuiIndexBuffer || s_indexBufferSize < _drawData->TotalIdxCount) {
-				if (g_ImGuiIndexBuffer) { 
-					g_ImGuiIndexBuffer->Release(); 
-					g_ImGuiIndexBuffer = nullptr; 
-				}
-				s_indexBufferSize = _drawData->TotalIdxCount;
-				D3D11_BUFFER_DESC desc = {};
-				desc.Usage = D3D11_USAGE_DYNAMIC;
-				desc.ByteWidth = s_indexBufferSize * sizeof(ImDrawIdx);
-				desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-				desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-				dxAssert(d3d->CreateBuffer(&desc, nullptr, &g_ImGuiIndexBuffer));
+			s_vertexBufferSize = _drawData->TotalVtxCount;
+			g_ImGuiVertexBuffer = CreateVertexBuffer(s_vertexBufferSize * sizeof(ImDrawVert), D3D11_USAGE_DYNAMIC);
+		}
+		static int s_indexBufferSize = 0;
+		if (!g_ImGuiIndexBuffer || s_indexBufferSize < _drawData->TotalIdxCount) {
+			if (g_ImGuiIndexBuffer) { 
+				g_ImGuiIndexBuffer->Release(); 
+				g_ImGuiIndexBuffer = nullptr; 
 			}
+			s_indexBufferSize = _drawData->TotalIdxCount;
+			g_ImGuiIndexBuffer = CreateIndexBuffer(s_indexBufferSize * sizeof(ImDrawIdx), D3D11_USAGE_DYNAMIC);
 		}
 
-		{ // copy and convert all vertices into a single contiguous buffer
-			D3D11_MAPPED_SUBRESOURCE vtxRes, idxRes;
-			dxAssert(ctx->Map(g_ImGuiVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &vtxRes));
-			dxAssert(ctx->Map(g_ImGuiIndexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &idxRes));
-			ImDrawVert* vtxDst = (ImDrawVert*)vtxRes.pData;
-			ImDrawIdx* idxDst = (ImDrawIdx*)idxRes.pData;
-			for (int i = 0; i < _drawData->CmdListsCount; ++i) {
-				const ImDrawList* cmdList = _drawData->CmdLists[i];
-				memcpy(vtxDst, cmdList->VtxBuffer.Data, cmdList->VtxBuffer.Size * sizeof(ImDrawVert));
-				memcpy(idxDst, cmdList->IdxBuffer.Data, cmdList->IdxBuffer.Size * sizeof(ImDrawIdx));
-				vtxDst += cmdList->VtxBuffer.Size;
-				idxDst += cmdList->IdxBuffer.Size;
-			}
-			ctx->Unmap(g_ImGuiVertexBuffer, 0);
-			ctx->Unmap(g_ImGuiIndexBuffer, 0);
+	 // copy and convert all vertices into a single contiguous buffer
+		ImDrawVert* vtxDst = (ImDrawVert*)MapBuffer(g_ImGuiVertexBuffer, D3D11_MAP_WRITE_DISCARD);
+		ImDrawIdx* idxDst = (ImDrawIdx*)MapBuffer(g_ImGuiIndexBuffer, D3D11_MAP_WRITE_DISCARD);
+		for (int i = 0; i < _drawData->CmdListsCount; ++i) {
+			const ImDrawList* cmdList = _drawData->CmdLists[i];
+			memcpy(vtxDst, cmdList->VtxBuffer.Data, cmdList->VtxBuffer.Size * sizeof(ImDrawVert));
+			memcpy(idxDst, cmdList->IdxBuffer.Data, cmdList->IdxBuffer.Size * sizeof(ImDrawIdx));
+			vtxDst += cmdList->VtxBuffer.Size;
+			idxDst += cmdList->IdxBuffer.Size;
 		}
-
-		{ // update constant buffer
-			D3D11_MAPPED_SUBRESOURCE subRes;
-			dxAssert(ctx->Map(g_ImGuiConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subRes));
-			Mat4* ortho = (Mat4*)subRes.pData;
-			*ortho = Mat4(
+		UnmapBuffer(g_ImGuiVertexBuffer);
+		UnmapBuffer(g_ImGuiIndexBuffer);
+		
+	 // update constant buffer
+		*(Mat4*)MapBuffer(g_ImGuiConstantBuffer, D3D11_MAP_WRITE_DISCARD)
+			= Mat4(
 				2.0f/io.DisplaySize.x, 0.0f,                   0.0f, -1.0f,
 				0.0f,                  2.0f/-io.DisplaySize.y, 0.0f,  1.0f,
 				0.0f,                  0.0f,                   1.0f,  0.0f
 				);
-			ctx->Unmap(g_ImGuiConstantBuffer, 0);
-		}
+		UnmapBuffer(g_ImGuiConstantBuffer);
 		
-		{ // set state
-			D3D11_VIEWPORT viewport = {};
-			viewport.Width = ImGui::GetIO().DisplaySize.x;
-			viewport.Height = ImGui::GetIO().DisplaySize.y;
-			viewport.MinDepth = 0.0f;
-			viewport.MaxDepth = 1.0f;
-			viewport.TopLeftX = viewport.TopLeftY = 0.0f;
-			ctx->RSSetViewports(1, &viewport);
+	 // set state
+		D3D11_VIEWPORT viewport = {};
+		viewport.Width = ImGui::GetIO().DisplaySize.x;
+		viewport.Height = ImGui::GetIO().DisplaySize.y;
+		viewport.MinDepth = 0.0f;
+		viewport.MaxDepth = 1.0f;
+		viewport.TopLeftX = viewport.TopLeftY = 0.0f;
+		ctx->RSSetViewports(1, &viewport);
 
-			unsigned int stride = sizeof(ImDrawVert);
-			unsigned int offset = 0;
-			ctx->IASetInputLayout(g_ImGuiInputLayout);
-			ctx->IASetVertexBuffers(0, 1, &g_ImGuiVertexBuffer, &stride, &offset);
-			ctx->IASetIndexBuffer(g_ImGuiIndexBuffer, sizeof(ImDrawIdx) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT, 0);
-			ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-			ctx->VSSetShader(g_ImGuiVertexShader, nullptr, 0);
-			ctx->VSSetConstantBuffers(0, 1, &g_ImGuiConstantBuffer);
-			ctx->PSSetShader(g_ImGuiPixelShader, nullptr, 0);
-			ctx->PSSetSamplers(0, 1, &g_ImGuiFontSampler);
+		unsigned int stride = sizeof(ImDrawVert);
+		unsigned int offset = 0;
+		ctx->IASetInputLayout(g_ImGuiInputLayout);
+		ctx->IASetVertexBuffers(0, 1, &g_ImGuiVertexBuffer, &stride, &offset);
+		ctx->IASetIndexBuffer(g_ImGuiIndexBuffer, sizeof(ImDrawIdx) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT, 0);
+		ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		ctx->VSSetShader(g_ImGuiVertexShader, nullptr, 0);
+		ctx->VSSetConstantBuffers(0, 1, &g_ImGuiConstantBuffer);
+		ctx->PSSetShader(g_ImGuiPixelShader, nullptr, 0);
+		ctx->PSSetSamplers(0, 1, &g_ImGuiFontSampler);
 
-			const float blendFactor[4] = {};
-			ctx->OMSetBlendState(g_ImGuiBlendState, blendFactor, 0xffffffff);
-			ctx->OMSetDepthStencilState(g_ImGuiDepthStencilState, 0);
-			ctx->RSSetState(g_ImGuiRasterizerState);
-		}
-
+		const float blendFactor[4] = {};
+		ctx->OMSetBlendState(g_ImGuiBlendState, blendFactor, 0xffffffff);
+		ctx->OMSetDepthStencilState(g_ImGuiDepthStencilState, 0);
+		ctx->RSSetState(g_ImGuiRasterizerState);
+	
 		int vtxOffset = 0;
 		int idxOffset = 0;
 		for (int i = 0; i < _drawData->CmdListsCount; ++i) {
@@ -946,14 +1012,14 @@ Color Im3d::RandColor(float _min, float _max)
 			if (!g_ImGuiVertexShaderBlob) {
 				return false;
 			}
-			dxAssert(d3d->CreateVertexShader((DWORD*)g_ImGuiVertexShaderBlob->GetBufferPointer(), g_ImGuiVertexShaderBlob->GetBufferSize(), NULL, &g_ImGuiVertexShader));
+			dxAssert(d3d->CreateVertexShader((DWORD*)g_ImGuiVertexShaderBlob->GetBufferPointer(), g_ImGuiVertexShaderBlob->GetBufferSize(), nullptr, &g_ImGuiVertexShader));
 		}
 		{
 			g_ImGuiPixelShaderBlob = LoadCompileShader("ps_4_0", "imgui.hlsl", "PIXEL_SHADER\0");
 			if (!g_ImGuiPixelShaderBlob) {
 				return false;
 			}
-			dxAssert(d3d->CreatePixelShader((DWORD*)g_ImGuiPixelShaderBlob->GetBufferPointer(), g_ImGuiPixelShaderBlob->GetBufferSize(), NULL, &g_ImGuiPixelShader));
+			dxAssert(d3d->CreatePixelShader((DWORD*)g_ImGuiPixelShaderBlob->GetBufferPointer(), g_ImGuiPixelShaderBlob->GetBufferSize(), nullptr, &g_ImGuiPixelShader));
 		}
 		{
 			D3D11_INPUT_ELEMENT_DESC desc[] = {
@@ -963,14 +1029,8 @@ Color Im3d::RandColor(float _min, float _max)
 			};
 			dxAssert(d3d->CreateInputLayout(desc, 3, g_ImGuiVertexShaderBlob->GetBufferPointer(), g_ImGuiVertexShaderBlob->GetBufferSize(), &g_ImGuiInputLayout));
 		}
-		{
-			D3D11_BUFFER_DESC desc = {};
-			desc.ByteWidth = sizeof(Mat4);
-			desc.Usage = D3D11_USAGE_DYNAMIC;
-			desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-			desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-			dxAssert(d3d->CreateBuffer(&desc, NULL, &g_ImGuiConstantBuffer));
-		}
+		g_ImGuiConstantBuffer = CreateConstantBuffer(sizeof(Mat4), D3D11_USAGE_DYNAMIC);
+		
 		{
 			D3D11_RASTERIZER_DESC desc = {};
 			desc.FillMode = D3D11_FILL_SOLID;
@@ -998,46 +1058,11 @@ Color Im3d::RandColor(float _min, float _max)
 			desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 			dxAssert(d3d->CreateBlendState(&desc, &g_ImGuiBlendState));
 		}
-		{
-			unsigned char* txbuf;
-			int txX, txY;
-			io.Fonts->GetTexDataAsAlpha8(&txbuf, &txX, &txY);
 
-			D3D11_TEXTURE2D_DESC txDesc = {};
-			txDesc.Width = txX;
-			txDesc.Height = txY;
-			txDesc.MipLevels = 1;
-			txDesc.ArraySize = 1;
-			txDesc.Format = DXGI_FORMAT_R8_UNORM;
-			txDesc.SampleDesc.Count = 1;
-			txDesc.Usage = D3D11_USAGE_DEFAULT;
-			txDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-
-			ID3D11Texture2D* tx = nullptr;
-			D3D11_SUBRESOURCE_DATA subResource = {};
-			subResource.pSysMem = txbuf;
-			subResource.SysMemPitch = txX;
-			subResource.SysMemSlicePitch = 0;
-			dxAssert(d3d->CreateTexture2D(&txDesc, &subResource, &tx));
-
-			D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-			srvDesc.Format = DXGI_FORMAT_R8_UNORM;
-			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-			srvDesc.Texture2D.MipLevels = txDesc.MipLevels;
-			srvDesc.Texture2D.MostDetailedMip = 0;
-			dxAssert(d3d->CreateShaderResourceView(tx, &srvDesc, &g_ImGuiFontResourceView));
-			tx->Release();
-
-			D3D11_SAMPLER_DESC ssDesc = {};
-			ssDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-			ssDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-			ssDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-			ssDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-			ssDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
-			ssDesc.MinLOD = 0.0f;
-			ssDesc.MaxLOD = 0.0f;
-			ssDesc.MipLODBias = 0.0f;
-		}
+		unsigned char* txbuf;
+		int txX, txY;
+		io.Fonts->GetTexDataAsAlpha8(&txbuf, &txX, &txY);
+		CreateTexture2D(txX, txY, DXGI_FORMAT_R8_UNORM, &g_ImGuiFontResourceView, txbuf)->Release();
 		
 		io.Fonts->TexID = (void*)g_ImGuiFontResourceView;
 		io.RenderDrawListsFn = &ImGui_Draw;
@@ -1050,7 +1075,6 @@ Color Im3d::RandColor(float _min, float _max)
 		if (g_ImGuiConstantBuffer)     g_ImGuiConstantBuffer->Release();
 		if (g_ImGuiVertexBuffer)       g_ImGuiVertexBuffer->Release();
 		if (g_ImGuiIndexBuffer)        g_ImGuiIndexBuffer->Release();
-		if (g_ImGuiFontSampler)        g_ImGuiFontSampler->Release();
 		if (g_ImGuiFontResourceView)   g_ImGuiFontResourceView->Release();
 		if (g_ImGuiBlendState)         g_ImGuiBlendState->Release();
 		if (g_ImGuiDepthStencilState)  g_ImGuiDepthStencilState->Release();
@@ -1103,6 +1127,7 @@ Example* Im3d::g_Example;
 bool Example::init(int _width, int _height, const char* _title)
 {
 	g_Example = this;
+	memset(g_Example, 0, sizeof(Example));
 
 	#if defined(IM3D_PLATFORM_WIN)
 	 // force the current working directory to the exe location

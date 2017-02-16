@@ -63,6 +63,8 @@
  // DirectX 11
 	#include <d3d11.h>
 
+	#define IM3D_DX11_VSHADER "4_0"
+
 	#define dxAssert(call) \
 		do { \
 			HRESULT err = (call); \
@@ -74,7 +76,16 @@
 	
 	namespace Im3d {
 		// Return 0 on failure (prints log info to stderr). _defines is a list of null-separated strings e.g. "DEFINE1 1\0DEFINE2 1\0"
-		ID3D10Blob* LoadCompileShader(const char* _target, const char* _path, const char* _defines = 0);
+		ID3DBlob* LoadCompileShader(const char* _target, const char* _path, const char* _defines = 0);
+
+		// Resource helpers.
+		ID3D11Buffer* CreateBuffer(UINT _size, D3D11_USAGE _usage, UINT _bind, const void* _data = nullptr);
+		ID3D11Buffer* CreateConstantBuffer(UINT _size, D3D11_USAGE _usage, const void* _data = nullptr);
+		ID3D11Buffer* CreateVertexBuffer(UINT _size, D3D11_USAGE _usage, const void* _data = nullptr);
+		ID3D11Buffer* CreateIndexBuffer(UINT _size, D3D11_USAGE _usage, const void* _data = nullptr);
+		void* MapBuffer(ID3D11Buffer* _buffer, D3D11_MAP _mapType);
+		void  UnmapBuffer(ID3D11Buffer* _buffer);
+		ID3D11Texture2D* CreateTexture2D(UINT _width, UINT _height, DXGI_FORMAT _format, ID3D11ShaderResourceView** resView_ = nullptr, const void* _data = nullptr);
 	}
 
 #else
@@ -129,7 +140,6 @@ void  DrawTeapot(const Mat4& _world, const Mat4& _viewProj);
 
 struct Example
 {
-	
 	bool init(int _width, int _height, const char* _title);
 	void shutdown();
 	bool update();

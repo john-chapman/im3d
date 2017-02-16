@@ -1,29 +1,37 @@
+struct VS_OUTPUT
+{
+	linear        float4 m_position     : SV_POSITION;
+	linear        float3 m_normal       : NORMAL;
+};
+
 #ifdef VERTEX_SHADER
-	uniform mat4 uWorldMatrix;
-	uniform mat4 uViewProjMatrix;
-	
-	layout(location=0) in vec3 aPosition;
-	layout(location=1) in vec3 aNormal;
-	
-	smooth out vec3 vNormalW;
-	
-	void main() 
+	cbuffer cbContextData : register(b0)
 	{
-		vNormalW = mat3(uWorldMatrix) * aNormal;
-		gl_Position = uViewProjMatrix * (uWorldMatrix * vec4(aPosition, 1.0));
+		float4x4 uWorldMatrix;
+		float4x4 uViewProjMatrix;
+	};
+	
+	struct VS_INPUT
+	{
+		float3 m_position : POSITION;
+		float3 m_normal   : NORMAL;
+	};
+	
+	VS_OUTPUT main(VS_INPUT _in) 
+	{
+		VS_OUTPUT ret;
+		ret.m_normal = mul(uWorldMatrix, float4(_in.m_normal, 0.0));
+		ret.m_position = mul(uViewProjMatrix, mul(uWorldMatrix, float4(_in.m_position, 1.0)));
+		return ret;
 	}
 #endif
 
-#ifdef FRAGMENT_SHADER
-	smooth in vec3 vNormalW;
-	
-	layout(location=0) out vec3 fResult;
-	
-	void main() 
+#ifdef PIXEL_SHADER
+	float4 main(VS_OUTPUT _in): SV_Target
 	{
-		vec3 nrm = normalize(vNormalW);
-		vec3 ldir = normalize(vec3(1.0));
+		float3 nrm = normalize(_in.m_normal);
+		float3 ldir = normalize(float3(1.0, 1.0, 1.0));
 		float ndotl = max(dot(nrm, ldir), 0.0) * 0.5;
-		fResult = vec3(ndotl);
+		return float4(ndotl, ndotl, ndotl, 1.0);
 	}
 #endif
