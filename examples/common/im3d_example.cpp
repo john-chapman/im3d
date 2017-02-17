@@ -727,14 +727,15 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 	
 	void Im3d::DrawTeapot(const Mat4& _world, const Mat4& _viewProj)
 	{
-		static ID3DBlob*             s_vsBlob;
-		static ID3D11VertexShader*   s_vs;
-		static ID3DBlob*             s_psBlob;
-		static ID3D11PixelShader*    s_ps;
-		static ID3D11InputLayout*    s_inputLayout;
-		static ID3D11Buffer*         s_vb;
-		static ID3D11Buffer*         s_ib;
-		static ID3D11Buffer*         s_cb;
+		static ID3DBlob*              s_vsBlob;
+		static ID3D11VertexShader*    s_vs;
+		static ID3DBlob*              s_psBlob;
+		static ID3D11PixelShader*     s_ps;
+		static ID3D11InputLayout*     s_inputLayout;
+		static ID3D11Buffer*          s_vb;
+		static ID3D11Buffer*          s_ib;
+		static ID3D11Buffer*          s_cb;
+		static ID3D11RasterizerState* s_rasterizerState;
 
 		ID3D11Device* d3d = g_Example->m_d3dDevice;
 		ID3D11DeviceContext* ctx = g_Example->m_d3dDeviceCtx;
@@ -748,13 +749,19 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 			s_vb = CreateVertexBuffer(sizeof(s_teapotVertices), D3D11_USAGE_IMMUTABLE, s_teapotVertices);
 			s_ib = CreateIndexBuffer(sizeof(s_teapotIndices), D3D11_USAGE_IMMUTABLE, s_teapotIndices); 
 		
-			D3D11_INPUT_ELEMENT_DESC desc[] = {
+			D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
 				{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,  0, 0,  D3D11_INPUT_PER_VERTEX_DATA, 0 },
 				{ "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT,  0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
 			};
-			dxAssert(d3d->CreateInputLayout(desc, 2, s_vsBlob->GetBufferPointer(), s_vsBlob->GetBufferSize(), &s_inputLayout));
+			dxAssert(d3d->CreateInputLayout(inputDesc, 2, s_vsBlob->GetBufferPointer(), s_vsBlob->GetBufferSize(), &s_inputLayout));
 		
 			s_cb = CreateConstantBuffer(sizeof(Mat4) * 2, D3D11_USAGE_DYNAMIC);
+
+			D3D11_RASTERIZER_DESC rasterizerDesc = {};
+			rasterizerDesc.FillMode = D3D11_FILL_SOLID;
+			rasterizerDesc.CullMode = D3D11_CULL_BACK;
+			rasterizerDesc.FrontCounterClockwise = true;
+			dxAssert(d3d->CreateRasterizerState(&rasterizerDesc, &s_rasterizerState));
 		}
 
 		Mat4* cbData = (Mat4*)MapBuffer(s_cb, D3D11_MAP_WRITE_DISCARD);
@@ -774,7 +781,7 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 
 		ctx->OMSetBlendState(nullptr, nullptr, 0xffffffff);
 		ctx->OMSetDepthStencilState(nullptr, 0);
-		ctx->RSSetState(nullptr);
+		ctx->RSSetState(s_rasterizerState);
 
 		ctx->DrawIndexed(sizeof(s_teapotIndices) / sizeof(unsigned), 0, 0);
 	}
