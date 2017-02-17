@@ -86,6 +86,7 @@
 		void* MapBuffer(ID3D11Buffer* _buffer, D3D11_MAP _mapType);
 		void  UnmapBuffer(ID3D11Buffer* _buffer);
 		ID3D11Texture2D* CreateTexture2D(UINT _width, UINT _height, DXGI_FORMAT _format, ID3D11ShaderResourceView** resView_ = nullptr, const void* _data = nullptr);
+		ID3D11DepthStencilView* CreateDepthStencil(UINT _width, UINT _height, DXGI_FORMAT _format);
 	}
 
 #else
@@ -179,7 +180,7 @@ struct Example
 			ID3D11DeviceContext*    m_d3dDeviceCtx;
 			IDXGISwapChain*         m_dxgiSwapChain;
 			ID3D11RenderTargetView* m_d3dRenderTarget;
-
+			ID3D11DepthStencilView* m_d3dDepthStencil;
 		#endif
 	#endif
 

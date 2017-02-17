@@ -54,8 +54,7 @@ void Im3d_Draw(const Im3d::DrawList& _drawList)
 		0.0f, 1.0f // MinDepth, MaxDepth
 		};
 	ctx->RSSetViewports(1, &viewport);
-	const float blendFactor[4] = {};
-	ctx->OMSetBlendState(g_Im3dBlendState, blendFactor, 0xffffffff);
+	ctx->OMSetBlendState(g_Im3dBlendState, nullptr, 0xffffffff);
 	ctx->OMSetDepthStencilState(g_Im3dDepthStencilState, 0);
 	ctx->RSSetState(g_Im3dRasterizerState);
 

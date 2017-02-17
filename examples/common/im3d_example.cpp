@@ -68,11 +68,13 @@ static const char* StripPath(const char* _path)
 			 // DX requires that we reset the backbuffer when the window resizes
 				if (g_Example->m_d3dRenderTarget) {
 					g_Example->m_d3dRenderTarget->Release();
+					g_Example->m_d3dDepthStencil->Release();
 					dxAssert(g_Example->m_dxgiSwapChain->ResizeBuffers(0, (UINT)w, (UINT)h, DXGI_FORMAT_UNKNOWN, 0));
 					ID3D11Texture2D* backBuffer;
 					dxAssert(g_Example->m_dxgiSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBuffer));
 					dxAssert(g_Example->m_d3dDevice->CreateRenderTargetView(backBuffer, nullptr, &g_Example->m_d3dRenderTarget));
-					g_Example->m_d3dDeviceCtx->OMSetRenderTargets(1, &g_Example->m_d3dRenderTarget, nullptr);
+					g_Example->m_d3dDepthStencil = CreateDepthStencil((UINT)w, (UINT)h, DXGI_FORMAT_D24_UNORM_S8_UINT);
+					g_Example->m_d3dDeviceCtx->OMSetRenderTargets(1, &g_Example->m_d3dRenderTarget, g_Example->m_d3dDepthStencil);
 					backBuffer->Release();
 				}
 
@@ -330,6 +332,7 @@ static const char* StripPath(const char* _path)
 			g_Example->m_d3dDevice       = nullptr;
 			g_Example->m_d3dDeviceCtx    = nullptr;
 			g_Example->m_d3dRenderTarget = nullptr;
+			g_Example->m_d3dDepthStencil = nullptr;
 
 			DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
 			swapChainDesc.OutputWindow = g_Example->m_hwnd;
@@ -367,9 +370,12 @@ static const char* StripPath(const char* _path)
 			}
 
 			ID3D11Texture2D* backBuffer;
+			D3D11_TEXTURE2D_DESC backBufferDesc;
 			dxAssert(g_Example->m_dxgiSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBuffer));
+			backBuffer->GetDesc(&backBufferDesc);
 			dxAssert(g_Example->m_d3dDevice->CreateRenderTargetView(backBuffer, nullptr, &g_Example->m_d3dRenderTarget));
-			g_Example->m_d3dDeviceCtx->OMSetRenderTargets(1, &g_Example->m_d3dRenderTarget, nullptr);
+			g_Example->m_d3dDepthStencil = CreateDepthStencil(backBufferDesc.Width, backBufferDesc.Height, DXGI_FORMAT_D24_UNORM_S8_UINT);
+			g_Example->m_d3dDeviceCtx->OMSetRenderTargets(1, &g_Example->m_d3dRenderTarget, g_Example->m_d3dDepthStencil);
 			backBuffer->Release();
 			
 			return true;
@@ -377,6 +383,7 @@ static const char* StripPath(const char* _path)
 		
 		static void ShutdownDx11()
 		{
+			if (g_Example->m_d3dDepthStencil) g_Example->m_d3dDepthStencil->Release();
 			if (g_Example->m_d3dRenderTarget) g_Example->m_d3dRenderTarget->Release();
 			if (g_Example->m_dxgiSwapChain)   g_Example->m_dxgiSwapChain->Release();
 			if (g_Example->m_d3dDeviceCtx)    g_Example->m_d3dDeviceCtx->Release();
@@ -692,6 +699,27 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 
 		return ret;
 	}
+
+	ID3D11DepthStencilView* Im3d::CreateDepthStencil(UINT _width, UINT _height, DXGI_FORMAT _format)
+	{
+		ID3D11Device* d3d = g_Example->m_d3dDevice;
+
+		D3D11_TEXTURE2D_DESC txDesc = {};
+		txDesc.Width = _width;
+		txDesc.Height = _height;
+		txDesc.MipLevels = 1;
+		txDesc.ArraySize = 1;
+		txDesc.Format = _format;
+		txDesc.SampleDesc.Count = 1;
+		txDesc.Usage = D3D11_USAGE_DEFAULT;
+		txDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
+		ID3D11Texture2D* tx = nullptr;
+		ID3D11DepthStencilView* ret;
+		dxAssert(d3d->CreateTexture2D(&txDesc, nullptr, &tx));
+		dxAssert(d3d->CreateDepthStencilView(tx, nullptr, &ret));
+		return ret;
+	}
 	
 	void Im3d::DrawNdcQuad()
 	{
@@ -703,6 +731,10 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 		static ID3D11VertexShader*   s_vs;
 		static ID3DBlob*             s_psBlob;
 		static ID3D11PixelShader*    s_ps;
+		static ID3D11InputLayout*    s_inputLayout;
+		static ID3D11Buffer*         s_vb;
+		static ID3D11Buffer*         s_ib;
+		static ID3D11Buffer*         s_cb;
 
 		ID3D11Device* d3d = g_Example->m_d3dDevice;
 		ID3D11DeviceContext* ctx = g_Example->m_d3dDeviceCtx;
@@ -713,8 +745,38 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 			s_psBlob = LoadCompileShader("ps_" IM3D_DX11_VSHADER, "model.hlsl", "PIXEL_SHADER\0");
 			dxAssert(d3d->CreatePixelShader((DWORD*)s_psBlob->GetBufferPointer(), s_psBlob->GetBufferSize(), nullptr, &s_ps));
 
+			s_vb = CreateVertexBuffer(sizeof(s_teapotVertices), D3D11_USAGE_IMMUTABLE, s_teapotVertices);
+			s_ib = CreateIndexBuffer(sizeof(s_teapotIndices), D3D11_USAGE_IMMUTABLE, s_teapotIndices); 
+		
+			D3D11_INPUT_ELEMENT_DESC desc[] = {
+				{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,  0, 0,  D3D11_INPUT_PER_VERTEX_DATA, 0 },
+				{ "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT,  0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+			};
+			dxAssert(d3d->CreateInputLayout(desc, 2, s_vsBlob->GetBufferPointer(), s_vsBlob->GetBufferSize(), &s_inputLayout));
+		
+			s_cb = CreateConstantBuffer(sizeof(Mat4) * 2, D3D11_USAGE_DYNAMIC);
 		}
 
+		Mat4* cbData = (Mat4*)MapBuffer(s_cb, D3D11_MAP_WRITE_DISCARD);
+		cbData[0] = _world;
+		cbData[1] = _viewProj;
+		UnmapBuffer(s_cb);
+
+		unsigned int stride = 4 * 3 * 2;
+		unsigned int offset = 0;
+		ctx->IASetInputLayout(s_inputLayout);
+		ctx->IASetVertexBuffers(0, 1, &s_vb, &stride, &offset);
+		ctx->IASetIndexBuffer(s_ib, DXGI_FORMAT_R32_UINT, 0);
+		ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		ctx->VSSetShader(s_vs, nullptr, 0);
+		ctx->VSSetConstantBuffers(0, 1, &s_cb);
+		ctx->PSSetShader(s_ps, nullptr, 0);
+
+		ctx->OMSetBlendState(nullptr, nullptr, 0xffffffff);
+		ctx->OMSetDepthStencilState(nullptr, 0);
+		ctx->RSSetState(nullptr);
+
+		ctx->DrawIndexed(sizeof(s_teapotIndices) / sizeof(unsigned), 0, 0);
 	}
 	
 #endif // graphics
@@ -978,8 +1040,7 @@ Color Im3d::RandColor(float _min, float _max)
 		ctx->PSSetShader(g_ImGuiPixelShader, nullptr, 0);
 		ctx->PSSetSamplers(0, 1, &g_ImGuiFontSampler);
 
-		const float blendFactor[4] = {};
-		ctx->OMSetBlendState(g_ImGuiBlendState, blendFactor, 0xffffffff);
+		ctx->OMSetBlendState(g_ImGuiBlendState, nullptr, 0xffffffff);
 		ctx->OMSetDepthStencilState(g_ImGuiDepthStencilState, 0);
 		ctx->RSSetState(g_ImGuiRasterizerState);
 	
@@ -1324,7 +1385,7 @@ void Example::draw()
 	
 	#elif defined (IM3D_DX11)
 		m_d3dDeviceCtx->ClearRenderTargetView(m_d3dRenderTarget, kClearColor);
-
+		m_d3dDeviceCtx->ClearDepthStencilView(m_d3dDepthStencil, D3D11_CLEAR_DEPTH, 1.0f, 0xff); 
 	#endif
 }
 
