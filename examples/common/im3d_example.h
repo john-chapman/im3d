@@ -2,6 +2,8 @@
 #ifndef im3d_example_h
 #define im3d_example_h
 
+#include "im3d.h"
+
 // Compiler
 #if defined(__GNUC__)
 	#define IM3D_COMPILER_GNU
@@ -109,6 +111,7 @@
 		} \
 	} while (0)
 
+#undef  IM3D_ASSERT
 #define IM3D_ASSERT(e)                 IM3D_ASSERT_MSG(e, 0, 0)
 #define IM3D_VERIFY_MSG(e, msg, ...)   IM3D_ASSERT_MSG(e, msg, __VA_ARGS__)
 #define IM3D_VERIFY(e)                 IM3D_VERIFY_MSG(e, 0, 0)
@@ -120,7 +123,6 @@
 #define IM3D_TOKEN_CONCATENATE(_t0, _t1)  IM3D_TOKEN_CONCATENATE_(_t0, _t1)
 #define IM3D_UNIQUE_NAME(_base) IM3D_TOKEN_CONCATENATE(_base, __COUNTER__)
 
-#include "im3d.h"
 #include "im3d_math.h"
 
 #include "imgui/imgui.h"

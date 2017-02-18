@@ -237,7 +237,7 @@ static const char* StripPath(const char* _path)
 				wc.hCursor = LoadCursor(0, IDC_ARROW);
 				winAssert(wndclassex = RegisterClassEx(&wc));
 			}
-			HWND hwndDummy = CreateWindowEx(0, MAKEINTATOM(wndclassex), 0, nullptr, 0, 0, 1, 1, nullptr, nullptr, GetModuleHandle(0), nullptr);
+			HWND hwndDummy = CreateWindowEx(0, MAKEINTATOM(wndclassex), 0, 0, 0, 0, 1, 1, nullptr, nullptr, GetModuleHandle(0), nullptr);
 			winAssert(hwndDummy);
 			HDC hdcDummy = 0;
 			winAssert(hdcDummy = GetDC(hwndDummy));	
