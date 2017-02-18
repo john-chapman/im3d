@@ -563,7 +563,7 @@ bool Im3d::GizmoScale(const char* _id, float* _vec3_)
 				Intersect(ray, plane, t0);
 				Vec3 intersection = ray.m_origin + ray.m_direction * t0;
 				float sign = Dot(intersection - origin, storedPosition - origin);
-				float delta = copysign(Length(intersection - origin), sign);
+				float delta = copysignf(Length(intersection - origin), sign);
 				*outVec3 = storedScale * Vec3(Max(1.0f + delta / worldHeight, 1e-4f));
 				ret = true;
 			} else {
@@ -1242,7 +1242,7 @@ bool Context::gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& 
 		if (isKeyDown(Action_Select)) {
 			Vec3 delta = Normalize(intersection - _origin);
 			float sign = Dot(Cross(storedVec, delta), plane.m_normal);
-			*_out_ = storedAngle + copysign(acosf(Clamp(Dot(delta, storedVec), -1.0f, 1.0f)), sign);
+			*_out_ = storedAngle + copysignf(acosf(Clamp(Dot(delta, storedVec), -1.0f, 1.0f)), sign);
 			return true;
 		} else {
 			m_activeId = Id_Invalid;
@@ -1362,7 +1362,7 @@ bool Context::gizmoAxisScale_Behavior(Id _id, const Vec3& _origin, const Vec3& _
 			Vec3 intersection = _axis * tl;
 			Vec3 delta = intersection - storedPosition;
 			float sign = Dot(delta, _axis);
-			*_out_ = storedScale * Max(1.0f + copysign(Length(delta), sign) / _worldHeight, 1e-3f);
+			*_out_ = storedScale * Max(1.0f + copysignf(Length(delta), sign) / _worldHeight, 1e-3f);
 			return true;
 		} else {
 			m_activeId = Id_Invalid;
