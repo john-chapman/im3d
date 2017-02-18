@@ -453,7 +453,7 @@ bool Im3d::GizmoTranslation(const char* _id, float* _vec3_, bool _local)
 	ctx.popId();
 	return ret;
 }
-bool Im3d::GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_, bool _local)
+bool Im3d::GizmoRotation(const char* _id, float* _mat3_, bool _local)
 {
 	Context& ctx = GetContext();
 	Id currentId = ctx.m_activeId; // store currentId to detect if the gizmo becomes active during this call
@@ -463,9 +463,10 @@ bool Im3d::GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_, bo
 	Mat3& storedRotation = ctx.m_gizmoStateMat3;
 	Mat3* outMat3 = (Mat3*)_mat3_;
 	Vec3 euler = ToEulerXYZ(*outMat3);
+	Vec3 origin = ctx.getMatrix().getTranslation();
 
-	float worldRadius = ctx.pixelsToWorldSize(_drawAt, ctx.m_gizmoHeightPixels);
-	float worldSize = ctx.pixelsToWorldSize(_drawAt, ctx.m_gizmoSizePixels);
+	float worldRadius = ctx.pixelsToWorldSize(origin, ctx.m_gizmoHeightPixels);
+	float worldSize = ctx.pixelsToWorldSize(origin, ctx.m_gizmoSizePixels);
 	
 	struct AxisG { Id m_id; Vec3 m_axis; Color m_color; };
 	AxisG axes[] = {
@@ -500,20 +501,20 @@ bool Im3d::GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_, bo
 		}
 		
 		AxisG& axis = axes[i];
-		ctx.gizmoAxislAngle_Draw(axis.m_id, _drawAt, axis.m_axis, worldRadius * 0.9f, euler[i], axis.m_color);
-		if (ctx.gizmoAxislAngle_Behavior(axis.m_id, _drawAt, axis.m_axis, worldRadius * 0.9f, worldSize, &euler[i])) {
+		ctx.gizmoAxislAngle_Draw(axis.m_id, origin, axis.m_axis, worldRadius * 0.9f, euler[i], axis.m_color);
+		if (ctx.gizmoAxislAngle_Behavior(axis.m_id, origin, axis.m_axis, worldRadius * 0.9f, worldSize, &euler[i])) {
 			*outMat3 = Rotation(axis.m_axis, euler[i] - ctx.m_gizmoStateFloat) * storedRotation;
 			ret = true;
 		} 
 	}
 	if (!(ctx.m_activeId == axes[0].m_id || ctx.m_activeId == axes[1].m_id || ctx.m_activeId == axes[2].m_id)) {
-		Vec3 viewNormal = Normalize(_drawAt - ctx.getAppData().m_viewOrigin);
+		Vec3 viewNormal = Normalize(origin - ctx.getAppData().m_viewOrigin);
 		float angle = 0.0f;
-		if (ctx.gizmoAxislAngle_Behavior(viewId, _drawAt, viewNormal, worldRadius, worldSize, &angle)) {
+		if (ctx.gizmoAxislAngle_Behavior(viewId, origin, viewNormal, worldRadius, worldSize, &angle)) {
 			*outMat3 = Rotation(viewNormal, angle) * storedRotation;
 			ret = true;
 		} 
-		ctx.gizmoAxislAngle_Draw(viewId, _drawAt, viewNormal, worldRadius, angle, viewId == ctx.m_activeId ? Color_GizmoHighlight : Color_White);
+		ctx.gizmoAxislAngle_Draw(viewId, origin, viewNormal, worldRadius, angle, viewId == ctx.m_activeId ? Color_GizmoHighlight : Color_White);
 	}
 	ctx.popMatrix();
 
@@ -524,16 +525,17 @@ bool Im3d::GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_, bo
 	ctx.popId();
 	return ret;
 }
-bool Im3d::GizmoScale(const char* _id, const Vec3& _drawAt, float* _vec3_)
+bool Im3d::GizmoScale(const char* _id, float* _vec3_)
 {
 	Context& ctx = GetContext();
 	ctx.pushId(MakeId(_id));
 
 	bool ret = false;
 	Vec3* outVec3 = (Vec3*)_vec3_;
+	Vec3 origin = ctx.getMatrix().getTranslation();
 
-	float worldHeight = ctx.pixelsToWorldSize(_drawAt, ctx.m_gizmoHeightPixels);
-	float worldSize = ctx.pixelsToWorldSize(_drawAt, ctx.m_gizmoSizePixels);	
+	float worldHeight = ctx.pixelsToWorldSize(origin, ctx.m_gizmoHeightPixels);
+	float worldSize = ctx.pixelsToWorldSize(origin, ctx.m_gizmoSizePixels);	
 	float planeSize = worldHeight * (0.5f * 0.5f);
 	float planeOffset = worldHeight * 0.5f;
 	
@@ -549,7 +551,7 @@ bool Im3d::GizmoScale(const char* _id, const Vec3& _drawAt, float* _vec3_)
 	{ // uniform scale
 		const AppData& appData = ctx.getAppData();
 		Id uniformId = MakeId("uniform");
-		Sphere handle(_drawAt, ctx.pixelsToWorldSize(_drawAt, ctx.m_gizmoSizePixels * 4.0f));
+		Sphere handle(origin, ctx.pixelsToWorldSize(origin, ctx.m_gizmoSizePixels * 4.0f));
 		Ray ray(ctx.getAppData().m_cursorRayOrigin, appData.m_cursorRayDirection);
 		float t0, t1;
 		bool intersects = Intersect(ray, handle, t0, t1);
@@ -557,11 +559,11 @@ bool Im3d::GizmoScale(const char* _id, const Vec3& _drawAt, float* _vec3_)
 		Vec3& storedPosition = *((Vec3*)ctx.m_gizmoStateMat3.m);
 		if (uniformId == ctx.m_activeId) {
 			if (ctx.isKeyDown(Action_Select)) {
-				Plane plane(Normalize(_drawAt - appData.m_viewOrigin), _drawAt);
+				Plane plane(Normalize(origin - appData.m_viewOrigin), origin);
 				Intersect(ray, plane, t0);
 				Vec3 intersection = ray.m_origin + ray.m_direction * t0;
-				float sign = Dot(intersection - _drawAt, storedPosition - _drawAt);
-				float delta = copysign(Length(intersection - _drawAt), sign);
+				float sign = Dot(intersection - origin, storedPosition - origin);
+				float delta = copysign(Length(intersection - origin), sign);
 				*outVec3 = storedScale * Vec3(Max(1.0f + delta / worldHeight, 1e-4f));
 				ret = true;
 			} else {
@@ -580,7 +582,7 @@ bool Im3d::GizmoScale(const char* _id, const Vec3& _drawAt, float* _vec3_)
 			}
 
 		} else {
-		 	float depth = Length2(_drawAt - appData.m_viewOrigin);
+		 	float depth = Length2(origin - appData.m_viewOrigin);
 			ctx.makeHot(uniformId, depth, intersects);
 		}
 
@@ -592,22 +594,22 @@ bool Im3d::GizmoScale(const char* _id, const Vec3& _drawAt, float* _vec3_)
 			ctx.pushColor(Color_GizmoHighlight);
 			ctx.pushAlpha(1.0f);
 			ctx.pushSize(2.0f);
-				DrawCircle(_drawAt, Normalize(_drawAt - appData.m_viewOrigin), worldSize * 2.0f);
+				DrawCircle(origin, Normalize(origin - appData.m_viewOrigin), worldSize * 2.0f);
 			ctx.popSize();
 			ctx.popAlpha();
 			ctx.popColor();
 		}
 		ctx.pushAlpha(ctx.m_hotId == uniformId ? 1.0f : ctx.getAlpha());
 		ctx.begin(PrimitiveMode_Points);
-			ctx.vertex(_drawAt, ctx.m_gizmoSizePixels * 2.0f, activeOrHot ? Color_GizmoHighlight : Color_White);
+			ctx.vertex(origin, ctx.m_gizmoSizePixels * 2.0f, activeOrHot ? Color_GizmoHighlight : Color_White);
 		ctx.end();
 		ctx.popAlpha();
 	}
 
 	for (int i = 0; i < 3; ++i) {
 		AxisG& axis = axes[i];
-		ret |= ctx.gizmoAxisScale_Behavior(axis.m_id, _drawAt, axis.m_axis, worldHeight, worldSize, &(*outVec3)[i]);
-		ctx.gizmoAxisScale_Draw(axis.m_id, _drawAt, axis.m_axis, worldHeight, worldSize, axis.m_color);
+		ret |= ctx.gizmoAxisScale_Behavior(axis.m_id, origin, axis.m_axis, worldHeight, worldSize, &(*outVec3)[i]);
+		ctx.gizmoAxisScale_Draw(axis.m_id, origin, axis.m_axis, worldHeight, worldSize, axis.m_color);
 	}
 
 	ctx.popMatrix();
@@ -618,27 +620,10 @@ bool Im3d::GizmoScale(const char* _id, const Vec3& _drawAt, float* _vec3_)
 }
 bool Im3d::Gizmo(const char* _id, float* _mat4_)
 {
- 	Mat4* m4 = (Mat4*)_mat4_;
-	
 	Context& ctx = GetContext();
-	if (ctx.m_gizmoLocal) {
-		ctx.pushMatrix(*m4);
-	}
+ 	Mat4* m4 = (Mat4*)_mat4_;
+	ctx.pushMatrix(*m4);
 	
-	if (ctx.wasKeyPressed(Action_GizmoTranslation)) {
-		ctx.m_gizmoMode = GizmoMode_Translation;
-		ctx.resetId();
-	} else if (ctx.wasKeyPressed(Action_GizmoRotation)) {
-		ctx.m_gizmoMode = GizmoMode_Rotation;
-		ctx.resetId();
-	} else if (ctx.wasKeyPressed(Action_GizmoScale)) {
-		ctx.m_gizmoMode = GizmoMode_Scale;
-		ctx.resetId();
-	}
-	if (ctx.wasKeyPressed(Action_GizmoLocal)) {
-		ctx.m_gizmoLocal = !ctx.m_gizmoLocal;
-	}
-
 	bool ret = false;
 	switch (ctx.m_gizmoMode) {
 		case GizmoMode_Translation: {
@@ -652,7 +637,7 @@ bool Im3d::Gizmo(const char* _id, float* _mat4_)
 		case GizmoMode_Rotation: {
 			Mat3 rotation(*m4);
 			rotation.setScale(Vec3(1.0f));
-			if (GizmoRotation(_id, m4->getCol(3), rotation, ctx.m_gizmoLocal)) {
+			if (GizmoRotation(_id, rotation, ctx.m_gizmoLocal)) {
 				m4->setRotation(rotation);
 				ret = true;
 			}
@@ -660,22 +645,18 @@ bool Im3d::Gizmo(const char* _id, float* _mat4_)
 		}
 		case GizmoMode_Scale: {
 			Vec3 scale = m4->getScale();
-			ctx.pushMatrix(*m4);
-			if (GizmoScale(_id, m4->getCol(3), scale)) {
+			if (GizmoScale(_id, scale)) {
 				m4->setScale(scale);
 				ret = true;
 			}
-			ctx.popMatrix();
 			break;
 		}
 		default:
 			break;
 	};
 
-	if (ctx.m_gizmoLocal) {
-		ctx.popMatrix();
-	}
-
+	ctx.popMatrix();
+	
 	return ret;
 }
 
@@ -873,6 +854,21 @@ void Context::reset()
  // copy keydown array internally so that we can make a delta to detect key presses
 	memcpy(m_keyDownPrev, m_keyDownCurr,       Key_Count); // \todo avoid this copy, use an index
 	memcpy(m_keyDownCurr, m_appData.m_keyDown, Key_Count); // must copy in case m_keyDown is updated after reset (e.g. by an app callback)
+
+ // update gizmo modes
+	if (wasKeyPressed(Action_GizmoTranslation)) {
+		m_gizmoMode = GizmoMode_Translation;
+		resetId();
+	} else if (wasKeyPressed(Action_GizmoRotation)) {
+		m_gizmoMode = GizmoMode_Rotation;
+		resetId();
+	} else if (wasKeyPressed(Action_GizmoScale)) {
+		m_gizmoMode = GizmoMode_Scale;
+		resetId();
+	}
+	if (wasKeyPressed(Action_GizmoLocal)) {
+		m_gizmoLocal = !m_gizmoLocal;
+	}
 }
 
 void Context::draw()
