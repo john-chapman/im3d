@@ -133,9 +133,9 @@ Id    GetActiveId(); // GetActiveId() != Id_Invalid means that a gizmo is in use
 // If _local is true, the Gizmo* functions expect that the local matrix is on the matrix stack; in general the application should
 // push the local matrix before calling any of the following.
 bool  GizmoTranslation(const char* _id, float* _vec3_, bool _local = false);
-bool  GizmoRotation(const char* _id, const Vec3& _drawAt, float* _mat3_, bool _local = false);
-bool  GizmoScale(const char* _id, const Vec3& _drawAt, float* _vec3_);
-// Unified gizmo, selects local/global, translation/rotation/scale based on the context gizmo state. Return true if the gizmo is active.
+bool  GizmoRotation(const char* _id, float* _mat3_, bool _local = false);
+bool  GizmoScale(const char* _id, float* _vec3_); // local scale only
+// Unified gizmo, selects local/global, translation/rotation/scale based on the context-global gizmo modes. Return true if the gizmo is active.
 bool  Gizmo(const char* _id, float* _mat4_);
 
 // Get/set the current context. All Im3d calls affect the currently bound context.
@@ -449,38 +449,36 @@ public:
 	void        draw();
 
 
-	void        pushColor(Color _color)          { m_colorStack.push_back(_color); }
-	void        popColor()                       { m_colorStack.pop_back();        }
 	void        setColor(Color _color)           { m_colorStack.back() = _color;   }
 	Color       getColor() const                 { return m_colorStack.back();     }
-
-	void        pushAlpha(float _alpha)          { m_alphaStack.push_back(_alpha); }
-	void        popAlpha()                       { m_alphaStack.pop_back();        }
+	void        pushColor(Color _color)          { m_colorStack.push_back(_color); }
+	void        popColor()                       { IM3D_ASSERT(m_colorStack.size() > 1); m_colorStack.pop_back(); }
+	
 	void        setAlpha(float _alpha)           { m_alphaStack.back() = _alpha;   }
 	float       getAlpha() const                 { return m_alphaStack.back();     }
-
-	void        pushSize(float _size)            { m_sizeStack.push_back(_size);   }
-	void        popSize()                        { m_sizeStack.pop_back();         }
+	void        pushAlpha(float _alpha)          { m_alphaStack.push_back(_alpha); }
+	void        popAlpha()                       { IM3D_ASSERT(m_alphaStack.size() > 1); m_alphaStack.pop_back(); }
+	
 	void        setSize(float _size)             { m_sizeStack.back() = _size;     }
 	float       getSize() const                  { return m_sizeStack.back();      }
-
-	void        pushEnableSorting(bool _enable);
-	void        popEnableSorting();
+	void        pushSize(float _size)            { m_sizeStack.push_back(_size);   }
+	void        popSize()                        { IM3D_ASSERT(m_sizeStack.size() > 1); m_sizeStack.pop_back(); }
+	
 	void        setEnableSorting(bool _enable);
 	bool        getEnableSorting() const         { return m_enableSortingStack.back(); }
-
-	void        pushMatrix(const Mat4& _mat4)    { m_matrixStack.push_back(_mat4); }
-	void        popMatrix()                      { m_matrixStack.pop_back();       }
+	void        pushEnableSorting(bool _enable);
+	void        popEnableSorting();
+	
 	void        setMatrix(const Mat4& _mat4)     { m_matrixStack.back() = _mat4;   }
 	const Mat4& getMatrix() const                { return m_matrixStack.back();    }
-
-	void        pushId(Id _id)                   { m_idStack.push_back(_id); }
-	void        popId()                          { m_idStack.pop_back();     }
+	void        pushMatrix(const Mat4& _mat4)    { m_matrixStack.push_back(_mat4); }
+	void        popMatrix()                      { IM3D_ASSERT(m_matrixStack.size() > 1); m_matrixStack.pop_back(); }
+	
 	void        setId(Id _id)                    { m_idStack.back() = _id;   }
 	Id          getId() const                    { return m_idStack.back();  }
-	Id          getActiveId() const              { return m_activeId;        }
-	Id          getHotId() const                 { return m_hotId;           }
-	
+	void        pushId(Id _id)                   { m_idStack.push_back(_id); }
+	void        popId()                          { IM3D_ASSERT(m_idStack.size() > 1); m_idStack.pop_back(); }
+
 	AppData&    getAppData()                     { return m_appData; }
 
 	Context();
@@ -626,7 +624,7 @@ inline void  PushId()                                                        { G
 inline void  PushId(Id _id)                                                  { GetContext().pushId(_id);                  }
 inline void  PopId()                                                         { GetContext().popId();                      }
 inline Id    GetId()                                                         { return GetContext().getId();               }
-inline Id    GetActiveId()                                                   { return GetContext().getActiveId();         }
+inline Id    GetActiveId()                                                   { return GetContext().m_activeId;            }
 
 inline Context& GetContext()                                                 { return *internal::g_CurrentContext; }
 inline void     SetContext(Context& _ctx)                                    { internal::g_CurrentContext = &_ctx; }
