@@ -26,7 +26,7 @@ workspace "im3d_opengl3"
 
 	 -- \todo select graphics lib?
 		defines { "IM3D_OPENGL", "GLEW_STATIC" }
-		links { "opengl32" }
+		links { "opengl32", "gdi32" }
 
 	filter { "platforms:Win32" }
 		architecture "x86"

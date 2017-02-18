@@ -106,14 +106,14 @@
 #define IM3D_ASSERT_MSG(e, msg, ...) \
 	do { \
 		if (!(e)) { \
-			Im3d::Assert(#e, __FILE__, __LINE__, msg, __VA_ARGS__); \
+			Im3d::Assert(#e, __FILE__, __LINE__, msg, ## __VA_ARGS__); \
 			IM3D_BREAK(); \
 		} \
 	} while (0)
 
 #undef  IM3D_ASSERT
 #define IM3D_ASSERT(e)                 IM3D_ASSERT_MSG(e, 0, 0)
-#define IM3D_VERIFY_MSG(e, msg, ...)   IM3D_ASSERT_MSG(e, msg, __VA_ARGS__)
+#define IM3D_VERIFY_MSG(e, msg, ...)   IM3D_ASSERT_MSG(e, msg, ## __VA_ARGS__)
 #define IM3D_VERIFY(e)                 IM3D_VERIFY_MSG(e, 0, 0)
 
 #ifndef __COUNTER__

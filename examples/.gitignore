@@ -8,3 +8,6 @@
 !**/vs*/*.sln
 !**/vs*/*.vcxproj
 !**/vs*/*.filters
+
+# GNU Makefiles
+**/gmake/obj/**

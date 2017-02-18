@@ -60,8 +60,9 @@ void Im3d_Draw(const Im3d::DrawList& _drawList)
 
  // upload view-proj matrix/viewport size
 	struct Layout { Mat4 m_viewProj; Vec2 m_viewport; };
-	*(Layout*)MapBuffer(g_Im3dConstantBuffer, D3D11_MAP_WRITE_DISCARD)
-		= { g_Example->m_camViewProj, ad.m_viewportSize };
+	Layout* layout = (Layout*)MapBuffer(g_Im3dConstantBuffer, D3D11_MAP_WRITE_DISCARD);
+	layout->m_viewProj = g_Example->m_camViewProj;
+	layout->m_viewport = ad.m_viewportSize;
 	UnmapBuffer(g_Im3dConstantBuffer);
 
  // upload vertex data

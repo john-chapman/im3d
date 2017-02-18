@@ -379,6 +379,8 @@ struct AppData
 };
 
 // Minimal vector.
+template <typename T> class Vector;
+template <typename T> void swap(Vector<T>& _a_, Vector<T>& _b_);
 template <typename T>
 class Vector
 {
@@ -415,9 +417,9 @@ public:
 	void     reserve(U32 _capacity);
 	void     resize(U32 _size, const T& _val);
 
-	template <typename T>
-	friend void swap(Vector<T>& _a_, Vector<T>& _b_);
+	friend void swap<>(Vector<T>& _a_, Vector<T>& _b_);
 };
+
 
 enum PrimitiveMode
 {
