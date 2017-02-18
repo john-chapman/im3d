@@ -13,20 +13,358 @@ int main(int, char**)
 		Im3d::Context& ctx = Im3d::GetContext();
 		Im3d::AppData& ad  = Im3d::GetAppData();
 
-		ImGui::Begin("Im3d Demo");
-		Im3d::PushDrawState();		
+		ImGui::Begin("Im3d Demo", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+		
 		ImGui::SetNextTreeNodeOpen(true, ImGuiSetCond_Once);
 		if (ImGui::TreeNode("About")) {
 			ImGui::Text("Welcome to the Im3d demo!");
 			ImGui::Spacing();
-			ImGui::Text("WASD = camera position + QE for down/up");
-			ImGui::Text("L Shift = go faster");
-			ImGui::Text("R Mouse + drag = camera orientation");
+			ImGui::Text("WASD   = forward/left/backward/right");
+			ImGui::Text("QE     = down/up");
+			ImGui::Text("RMouse = camera orientation");
+			ImGui::Text("LShift = move faster");
 			ImGui::Spacing();
 
 			ImGui::TreePop();
 		}
 		ImGui::Spacing();
+
+
+		ImGui::SetNextTreeNodeOpen(true, ImGuiSetCond_Once);
+		if (ImGui::TreeNode("Unified Gizmo")) {
+		 // unified gizmo operates directly on a 4x4 matrix using the context-global gizmo modes
+			static Im3d::Mat4 transform(1.0f);
+
+		 // context-global gizmo modes are set via actions in the AppData::m_keyDown but could also be modified via a GUI as follows
+			int gizmoMode = (int)Im3d::GetContext().m_gizmoMode;
+			ImGui::Checkbox("Local (Ctrl+L)", &Im3d::GetContext().m_gizmoLocal);
+			ImGui::SameLine();
+			ImGui::RadioButton("Translate (Ctrl+T)", &gizmoMode, Im3d::GizmoMode_Translation); 
+			ImGui::SameLine();
+			ImGui::RadioButton("Rotate (Ctrl+R)", &gizmoMode, Im3d::GizmoMode_Rotation);
+			ImGui::SameLine();
+			ImGui::RadioButton("Scale (Ctrl+S)", &gizmoMode, Im3d::GizmoMode_Scale);
+			Im3d::GetContext().m_gizmoMode = (Im3d::GizmoMode)gizmoMode;
+
+		 // the ID passed to Gizmo() should be unique during a frame - to create gizmos in a loop us PushId()/PopId()
+			if (Im3d::Gizmo("GizmoUnified", transform)) {
+			 // if Gizmo() returns true, the transform was modified
+				switch (Im3d::GetContext().m_gizmoMode) {
+					case Im3d::GizmoMode_Translation: {
+						Im3d::Vec3 pos = transform.getTranslation();
+						ImGui::Text("Position: %.3f, %.3f, %.3f", pos.x, pos.y, pos.z);
+						break;
+					}
+					case Im3d::GizmoMode_Rotation: {
+						Im3d::Vec3 euler = Im3d::ToEulerXYZ(transform.getRotation());
+						ImGui::Text("Rotation: %.3f, %.3f, %.3f", Im3d::Degrees(euler.x), Im3d::Degrees(euler.y), Im3d::Degrees(euler.z));
+						break;
+					}
+					case Im3d::GizmoMode_Scale: {
+						Im3d::Vec3 scale = transform.getScale();
+						ImGui::Text("Scale: %.3f, %.3f, %.3f", scale.x, scale.y, scale.z);
+						break;
+					}
+					default: break;
+				};
+				
+			}
+
+		 // using the transform for drawing *after* the call to Gizmo() causes a 1 frame lag - this can be avoided if it's 
+		 // possible to issue the draw call *before* calling Gizmo()
+			Im3d::DrawTeapot(transform, example.m_camViewProj);
+
+			ImGui::TreePop();
+		}
+
+
+		if (ImGui::TreeNode("Separate Gizmos")) {
+		 // translation/rotation/scale can be modified separately - useful in cases where only certain transformations are valid
+			static Im3d::Vec3 translation(0.0f);
+			static Im3d::Mat3 rotation(1.0f);
+			static Im3d::Vec3 scale(1.0f);
+
+		 // the separate Gizmo*() functions require the transformation to be pushed on the matrix stack to correctly handle local gizmos
+			Im3d::PushMatrix(Im3d::Mat4(translation, rotation, scale));
+
+			int gizmoMode = (int)Im3d::GetContext().m_gizmoMode;
+			ImGui::Checkbox("Local (Ctrl+L)", &Im3d::GetContext().m_gizmoLocal);
+			ImGui::SameLine();
+			ImGui::RadioButton("Translate (Ctrl+T)", &gizmoMode, Im3d::GizmoMode_Translation); 
+			ImGui::SameLine();
+			ImGui::RadioButton("Rotate (Ctrl+R)", &gizmoMode, Im3d::GizmoMode_Rotation);
+			ImGui::SameLine();
+			ImGui::RadioButton("Scale (Ctrl+S)", &gizmoMode, Im3d::GizmoMode_Scale);
+			Im3d::GetContext().m_gizmoMode = (Im3d::GizmoMode)gizmoMode;
+
+			switch (Im3d::GetContext().m_gizmoMode) {
+				case Im3d::GizmoMode_Translation:
+					if (Im3d::GizmoTranslation("GizmoTranslation", translation, Im3d::GetContext().m_gizmoLocal)) {
+						ImGui::Text("Position: %.3f, %.3f, %.3f", translation.x, translation.y, translation.z);
+					}
+					break;
+				case Im3d::GizmoMode_Rotation: {
+					if (Im3d::GizmoRotation("GizmoRotation", rotation, Im3d::GetContext().m_gizmoLocal)) {
+						Im3d::Vec3 euler = Im3d::ToEulerXYZ(rotation);
+						ImGui::Text("Rotation: %.3f, %.3f, %.3f", Im3d::Degrees(euler.x), Im3d::Degrees(euler.y), Im3d::Degrees(euler.z));
+					}
+					break;
+				}
+				case Im3d::GizmoMode_Scale: {
+					if (Im3d::GizmoScale("GizmoScale", scale)) {
+						ImGui::Text("Scale: %.3f, %.3f, %.3f", scale.x, scale.y, scale.z);
+					}
+					break;
+				}
+				default: break;
+			};
+
+			Im3d::DrawTeapot(Im3d::Mat4(translation, rotation, scale), example.m_camViewProj);
+
+			Im3d::PopMatrix();
+
+			ImGui::TreePop();
+		}
+
+		
+		if (ImGui::TreeNode("Hierarchical Gizmos")) {
+		 // it is often useful to modify a single node in a transformation hierarchy directly, which can be done as follows
+		 // note that scaling the parent is probably undesirable in these cases
+			static Im3d::Mat4 parent(1.0f);
+			static Im3d::Mat4 child(Im3d::Vec3(0.0f, 1.0f, 0.0f), Im3d::Mat3(1.0f), Im3d::Vec3(0.5f));
+
+			Im3d::Gizmo("GizmoParent", parent); // modify parent directly
+			
+			Im3d::Mat4 parentChild = parent * child; // modify the final world space transform
+			if (Im3d::Gizmo("GizmoChild", parentChild)) {
+				child = Im3d::Inverse(parent) * parentChild; // extract the child transform if modified
+			}
+			
+			Im3d::DrawTeapot(parent, example.m_camViewProj);
+			Im3d::DrawTeapot(parent * child, example.m_camViewProj);
+
+			ImGui::TreePop();
+		}
+
+		if (ImGui::TreeNode("Gizmo Appearance")) {
+		 // the size/radius of gizmos can be modified globally
+			static float alpha  = 1.0f;
+			static float size   = Im3d::GetContext().m_gizmoSizePixels;
+			static float height = Im3d::GetContext().m_gizmoHeightPixels; 
+
+			ImGui::SliderFloat("Alpha", &alpha, 0.0f, 1.0f);
+			ImGui::SliderFloat("Height/Radius", &height, 0.0f, 128.0f);
+			ImGui::SliderFloat("Thickness", &size, 0.0f, 16.0f);
+
+			Im3d::PushAlpha(alpha);
+			float storedSize = Im3d::GetContext().m_gizmoSizePixels;			
+			Im3d::GetContext().m_gizmoSizePixels = size;
+			float storedHeight = Im3d::GetContext().m_gizmoHeightPixels;
+			Im3d::GetContext().m_gizmoHeightPixels = height;
+
+			static Im3d::Mat4 transform(1.0f);
+			Im3d::Gizmo("GizmoAppearance", transform);
+			Im3d::DrawTeapot(transform, example.m_camViewProj);
+
+			Im3d::GetContext().m_gizmoHeightPixels = storedHeight;
+			Im3d::GetContext().m_gizmoSizePixels = storedSize;
+			Im3d::PopAlpha();
+
+			ImGui::TreePop();
+		}
+
+		
+		if (ImGui::TreeNode("High Order Shapes")) {
+		 // Im3d provides functions to easily draw high order shapes - these don't strictly require a matrix to be pushed on
+		 // the stack (although this is supported, as below).
+
+			static Im3d::Mat4 transform(1.0f);
+			Im3d::Gizmo("ShapeGizmo", transform);
+
+			enum Shape {
+				Shape_Quad,
+				Shape_Circle,
+				Shape_Sphere,
+				Shape_AlignedBox,
+				Shape_Cylinder,
+				Shape_Capsule,
+				Shape_Prism
+			};
+			static const char* shapeList = 
+				"Quad\0"
+				"Circle\0"
+				"Sphere\0"
+				"AlignedBox\0"
+				"Cylinder\0"
+				"Capsule\0"
+				"Prism\0"
+				;
+			static int currentShape = Shape_Capsule;
+			ImGui::Combo("Shape", &currentShape, shapeList);
+			static Im3d::Vec3 color = Im3d::Vec3(1.0f, 0.0f, 0.6f);
+			ImGui::ColorEdit3("Color", color);
+		
+			static float thickness = 4.0f;
+			ImGui::SliderFloat("Thickness", &thickness, 0.0f, 16.0f);
+			
+			Im3d::PushMatrix(transform);
+			Im3d::PushDrawState();
+			Im3d::SetSize(thickness);
+			Im3d::SetColor(Im3d::Color(color.x, color.y, color.z));
+			
+			switch ((Shape)currentShape) {
+				case Shape_Quad: {
+					static Im3d::Vec2 quadSize(1.0f);
+					ImGui::SliderFloat2("Size", quadSize, 0.0f, 10.0f);
+					Im3d::DrawQuad(Im3d::Vec3(0.0f), Im3d::Vec3(0.0f, 0.0f, 1.0f), quadSize);
+					break;
+				}
+				case Shape_Circle: {
+					static float circleRadius = 1.0f;
+					ImGui::SliderFloat("Radius", &circleRadius, 0.0f, 10.0f);
+					Im3d::DrawCircle(Im3d::Vec3(0.0f), Im3d::Vec3(0.0f, 0.0f, 1.0f), circleRadius);
+					break;
+				}
+				case Shape_Sphere: {
+					static float sphereRadius = 1.0f;
+					ImGui::SliderFloat("Radius", &sphereRadius, 0.0f, 10.0f);
+					Im3d::DrawSphere(Im3d::Vec3(0.0f), sphereRadius);
+					break;
+				}
+				case Shape_AlignedBox: {
+					static Im3d::Vec3 boxSize(1.0f);
+					ImGui::SliderFloat3("Size", boxSize, 0.0f, 10.0f);
+					Im3d::DrawAlignedBox(-boxSize, boxSize);
+					break;
+				}
+				case Shape_Cylinder: {
+					static float cylinderRadius = 1.0f;
+					static float cylinderLength = 1.0f;
+					ImGui::SliderFloat("Radius", &cylinderRadius, 0.0f, 10.0f);
+					ImGui::SliderFloat("Length", &cylinderLength, 0.0f, 10.0f);
+					Im3d::DrawCylinder(Im3d::Vec3(0.0f, -cylinderLength, 0.0f), Im3d::Vec3(0.0f, cylinderLength, 0.0f), cylinderRadius);
+					break;
+				}
+				case Shape_Capsule: {
+					static float capsuleRadius = 0.5f;
+					static float capsuleLength = 1.0f;
+					ImGui::SliderFloat("Radius", &capsuleRadius, 0.0f, 10.0f);
+					ImGui::SliderFloat("Length", &capsuleLength, 0.0f, 10.0f);
+					Im3d::DrawCapsule(Im3d::Vec3(0.0f, -capsuleLength, 0.0f), Im3d::Vec3(0.0f, capsuleLength, 0.0f), capsuleRadius);
+					break;
+				}
+				case Shape_Prism: {
+					static float prismRadius = 1.0f;
+					static float prismLength = 1.0f;
+					static int   prismSides  = 3;
+					ImGui::SliderFloat("Radius", &prismRadius, 0.0f, 10.0f);
+					ImGui::SliderFloat("Length", &prismLength, 0.0f, 10.0f);
+					ImGui::SliderInt("Sides", &prismSides, 3, 16);
+					Im3d::DrawPrism(Im3d::Vec3(0.0f, -prismLength, 0.0f), Im3d::Vec3(0.0f, prismLength, 0.0f), prismRadius, prismSides);
+					break;
+				}
+				default:
+					break;
+			};
+
+			Im3d::PopDrawState();
+			Im3d::PopMatrix();
+
+			ImGui::TreePop();
+		}
+
+		
+		if (ImGui::TreeNode("Basic Perf")) {
+		 // simple perf test: draw a large number of points, enable/disable sorting and the use of the matrix stack
+			static bool enableSorting = false;
+			static bool useMatrix = false; // if the matrix stack size == 1 Im3d assumes it's the default identity matrix and skips the matrix mul
+			static int  primCount = 50000;
+			ImGui::Checkbox("Enable sorting", &enableSorting);
+			ImGui::Checkbox("Use matrix stack", &useMatrix);
+			ImGui::SliderInt("Prim Count", &primCount, 2, 100000);
+			
+			Im3d::PushEnableSorting(enableSorting);
+			Im3d::BeginPoints();
+			if (useMatrix) {
+				Im3d::PushMatrix();
+				for (int i = 0; i < primCount; ++i) {
+					Im3d::Mat4 wm(1.0f);
+					wm.setTranslation(Im3d::RandVec3(-10.0f, 10.0f));
+					Im3d::SetMatrix(wm);
+					Im3d::Vertex(Im3d::Vec3(0.0f), Im3d::RandFloat(2.0f, 16.0f), Im3d::RandColor(0.0f, 1.0f));
+				}
+				Im3d::PopMatrix();
+			} else {
+				for (int i = 0; i < primCount; ++i) {
+					Im3d::Vec3 t = Im3d::RandVec3(-10.0f, 10.0f);
+					Im3d::Vertex(t, Im3d::RandFloat(2.0f, 16.0f), Im3d::RandColor(0.0f, 1.0f));
+				}
+			}
+			Im3d::End();
+			Im3d::PopEnableSorting();
+
+			ImGui::TreePop();
+		}
+
+
+		if (ImGui::TreeNode("Sorting")) {
+		 // if sorting is enabled, primtives are sorted back-to-front for rendering. Lines/triangles use the primitive midpoint, so very long
+		 // lines or big triangles may not sort correctly.
+			static bool enableSorting = true;
+			static int  primCount = 1000;
+			ImGui::Checkbox("Enable sorting", &enableSorting);
+			ImGui::SliderInt("Prim Count", &primCount, 2, 10000);
+
+			Im3d::PushDrawState();
+				Im3d::EnableSorting(enableSorting);
+				Im3d::SetAlpha(0.9f);
+				for (int i = 0; i < primCount / 3; ++i) {
+					Im3d::PushMatrix();
+						Im3d::Mat4 wm(1.0f);
+						wm.setRotation(Im3d::Rotation(Im3d::Normalize(Im3d::RandVec3(-1.0f, 1.0f)), Im3d::RandFloat(0.0f, 6.0f)));
+						wm.setTranslation(Im3d::RandVec3(-10.0f, 10.0f));
+						Im3d::MulMatrix(wm);
+						Im3d::BeginTriangles();
+							Im3d::Vertex(-1.0f,  0.0f, -1.0f, Im3d::Color_Red);
+							Im3d::Vertex( 0.0f,  2.0f, -1.0f, Im3d::Color_Green);
+							Im3d::Vertex( 1.0f,  0.0f, -1.0f, Im3d::Color_Blue);
+						Im3d::End();
+					Im3d::PopMatrix();
+				}
+
+				Im3d::SetAlpha(0.9f);
+				Im3d::SetSize(2.5f);
+				for (int i = 0; i < primCount / 3 / 3; ++i) {
+					Im3d::PushMatrix();
+						Im3d::Mat4 wm(1.0f);
+						wm.setRotation(Im3d::Rotation(Im3d::Normalize(Im3d::RandVec3(-1.0f, 1.0f)), Im3d::RandFloat(0.0f, 6.0f)));
+						wm.setTranslation(Im3d::RandVec3(-10.0f, 10.0f));
+						Im3d::MulMatrix(wm);
+						Im3d::BeginLineLoop();
+							Im3d::Vertex(-1.0f,  0.0f, -1.0f, Im3d::Color_Magenta);
+							Im3d::Vertex( 0.0f,  2.0f, -1.0f, Im3d::Color_Yellow);
+							Im3d::Vertex( 1.0f,  0.0f, -1.0f, Im3d::Color_Cyan);
+						Im3d::End();
+					Im3d::PopMatrix();
+				}
+
+				Im3d::SetAlpha(0.9f);
+				Im3d::SetSize(16.0f);
+				for (int i = 0; i < primCount / 3; ++i) {
+					Im3d::PushMatrix();
+						Im3d::Mat4 wm(1.0f);
+						wm.setTranslation(Im3d::RandVec3(-10.0f, 10.0f));
+						Im3d::MulMatrix(wm);
+						Im3d::BeginPoints();
+							Im3d::Vertex(-1.0f,  0.0f, -1.0f, Im3d::RandColor(0.0f, 1.0f));
+						Im3d::End();
+					Im3d::PopMatrix();
+				}
+			Im3d::PopDrawState();
+
+			ImGui::TreePop();
+		}
+
 
 		ImGui::SetNextTreeNodeOpen(true, ImGuiSetCond_Once);
 		if (ImGui::TreeNode("Grid")) {
@@ -49,183 +387,6 @@ int main(int, char**)
 			ImGui::TreePop();
 		}
 
-		if (ImGui::TreeNode("Intersection")) {
-			Im3d::PushDrawState();
-			Im3d::Ray ray(ad.m_cursorRayOrigin, ad.m_cursorRayDirection);
-			float tr;
-			Im3d::Plane plane(Im3d::Vec3(0.0f, 1.0f, 0.0f), 0.0f);
-			if (Im3d::Intersect(ray, plane, tr)) {
-				Im3d::BeginPoints();
-					Im3d::Vertex(ray.m_origin + ray.m_direction * tr, 8.0f, Im3d::Color_Magenta);
-				Im3d::End();
-			}
-			Im3d::PopDrawState();
-
-			ImGui::TreePop();
-		}
-
-		if (ImGui::TreeNode("Shapes")) {
-			Im3d::PushDrawState();
-
-			static Im3d::Mat4 m(1.0f);
-			Im3d::Gizmo("ShapeGizmo", m);
-			Im3d::PushMatrix(m);
-				Im3d::SetColor(Im3d::Color_Magenta);
-				Im3d::SetSize(4.0f);
-				//Im3d::DrawQuad(Im3d::Vec3(0.0f), Im3d::Vec3(0.0f, 0.0f, 1.0f), Im3d::Vec2(1.0f));
-				Im3d::DrawCapsule(Im3d::Vec3(-1.0f, -1.0f, 0.0f), Im3d::Vec3(1.0f, 1.0f, 0.0f), 1.0f);
-			Im3d::PopMatrix();
-			/*static Im3d::Vec3 position;
-			Im3d::GizmoTranslation("LodPosition", &position.x);
-			static float radius = 1.0f;
-			ImGui::SliderFloat("Radius", &radius, 0.0f, 20.0f); 
-			static int lodMinMax[2] = { 16, 256 };
-			ImGui::SliderInt2("LOD Range", lodMinMax, 3, 256);
-			lodMinMax[0] = Im3d::Min(lodMinMax[0], lodMinMax[1]);
-			lodMinMax[1] = Im3d::Max(lodMinMax[0], lodMinMax[1]);
-			int lod = Im3d::GetContext().estimateLevelOfDetail(position, radius, lodMinMax[0], lodMinMax[1]);
-			ImGui::Text("LOD %d", lod);
-
-			Im3d::PushSize(4.0f);
-			Im3d::PushColor(Im3d::Color(1.0f, 0.4f, 0.0f));
-			Im3d::DrawCylinder(position + Im3d::Vec3(-radius, 0.0f, 0.0f), position + Im3d::Vec3(radius, 0.0f, 0.0f), radius, lod);
-			Im3d::PopColor();
-			Im3d::PopSize();*/
-			
-			Im3d::PopDrawState();
-			ImGui::TreePop();
-		}
-
-		if (ImGui::TreeNode("Gizmo")) {
-			ImGui::Text("Hot ID: 0x%x  Active ID: 0x%x  Hot Depth: %.3f", ctx.m_hotId, ctx.m_activeId, ctx.m_hotDepth);
-			
-			ImGui::Spacing();
-			ImGui::Checkbox("Local", &Im3d::GetContext().m_gizmoLocal);
-			int gizmoMode = (int)Im3d::GetContext().m_gizmoMode;
-			ImGui::RadioButton("Translate (Ctrl+T)", &gizmoMode, Im3d::GizmoMode_Translation); 
-			ImGui::SameLine();
-			ImGui::RadioButton("Rotate (Ctrl+R)", &gizmoMode, Im3d::GizmoMode_Rotation);
-			ImGui::SameLine();
-			ImGui::RadioButton("Scale (Ctrl+S)", &gizmoMode, Im3d::GizmoMode_Scale);
-			Im3d::GetContext().m_gizmoMode = (Im3d::GizmoMode)gizmoMode;
-			
-			ImGui::Spacing();
-			ImGui::SliderFloat("Gizmo Size", &ctx.m_gizmoHeightPixels, 0.0f, 256.0f);
-			ImGui::SliderFloat("Gizmo Thickness", &ctx.m_gizmoSizePixels, 0.0f, 32.0f);
-		
-			static bool first = true;
-			static Im3d::Mat4 transforms[8];
-			if (first) {
-				transforms[0] = Im3d::Mat4(1.0f);
-				for (int i = 1; i < 8; ++i) {
-					transforms[i] = Im3d::Mat4(
-						Im3d::RandVec3(-10.0f, 10.0f),
-						Im3d::RandRotation(),
-						Im3d::Vec3(1.0f)
-						);
-				}
-				first = false;
-			}
-
-			for (int i = 0; i < 8; ++i) {
-			 // drawing the object first avoids 1 frame lag
-				Im3d::DrawTeapot(transforms[i], example.m_camViewProj);
-				Im3d::PushId((Im3d::Id)(i + 1));
-				Im3d::Gizmo("GizmoTest", transforms[i]);
-				Im3d::PopId();
-			}
-			
-			ImGui::TreePop();
-		}
-		
-		if (ImGui::TreeNode("Basic Perf")) {
-			static bool s_enableSorting = false;
-			static bool s_useMatrix = false;
-			static int  s_primCount = 50000;
-			ImGui::Checkbox("Enable sorting", &s_enableSorting);
-			ImGui::Checkbox("Use matrix stack", &s_useMatrix);
-			ImGui::SliderInt("Prim Count", &s_primCount, 2, 50000);
-			
-			Im3d::PushEnableSorting(s_enableSorting);
-			Im3d::BeginPoints();
-			if (s_useMatrix) {
-				Im3d::PushMatrix();
-				for (int i = 0; i < s_primCount; ++i) {
-					Im3d::Mat4 wm(1.0f);
-					wm.setTranslation(Im3d::RandVec3(-10.0f, 10.0f));
-					Im3d::SetMatrix(wm);
-					Im3d::Vertex(Im3d::Vec3(0.0f), Im3d::RandFloat(2.0f, 16.0f), Im3d::RandColor(0.0f, 1.0f));
-				}
-				Im3d::PopMatrix();
-			} else {
-				for (int i = 0; i < s_primCount; ++i) {
-					Im3d::Vec3 t = Im3d::RandVec3(-10.0f, 10.0f);
-					Im3d::Vertex(t, Im3d::RandFloat(2.0f, 16.0f), Im3d::RandColor(0.0f, 1.0f));
-				}
-			}
-			Im3d::End();
-			Im3d::PopEnableSorting();
-
-			ImGui::TreePop();
-		}
-
-		if (ImGui::TreeNode("Sorting")) {
-			static bool s_enableSorting = true;
-			static int  s_primCount = 1000;
-			ImGui::Checkbox("Enable sorting", &s_enableSorting);
-			ImGui::SliderInt("Prim Count", &s_primCount, 2, 10000);
-
-			Im3d::PushDrawState();
-				Im3d::EnableSorting(s_enableSorting);
-				Im3d::SetAlpha(0.9f);
-				for (int i = 0; i < s_primCount / 3; ++i) {
-					Im3d::PushMatrix();
-						Im3d::Mat4 wm(1.0f);
-						wm.setRotation(Im3d::Rotation(Im3d::Normalize(Im3d::RandVec3(-1.0f, 1.0f)), Im3d::RandFloat(0.0f, 6.0f)));
-						wm.setTranslation(Im3d::RandVec3(-10.0f, 10.0f));
-						Im3d::MulMatrix(wm);
-						Im3d::BeginTriangles();
-							Im3d::Vertex(-1.0f,  0.0f, -1.0f, Im3d::Color_Red);
-							Im3d::Vertex( 0.0f,  2.0f, -1.0f, Im3d::Color_Green);
-							Im3d::Vertex( 1.0f,  0.0f, -1.0f, Im3d::Color_Blue);
-						Im3d::End();
-					Im3d::PopMatrix();
-				}
-
-				Im3d::SetAlpha(0.9f);
-				Im3d::SetSize(2.5f);
-				for (int i = 0; i < s_primCount / 3 / 3; ++i) {
-					Im3d::PushMatrix();
-						Im3d::Mat4 wm(1.0f);
-						wm.setRotation(Im3d::Rotation(Im3d::Normalize(Im3d::RandVec3(-1.0f, 1.0f)), Im3d::RandFloat(0.0f, 6.0f)));
-						wm.setTranslation(Im3d::RandVec3(-10.0f, 10.0f));
-						Im3d::MulMatrix(wm);
-						Im3d::BeginLineLoop();
-							Im3d::Vertex(-1.0f,  0.0f, -1.0f, Im3d::Color_Magenta);
-							Im3d::Vertex( 0.0f,  2.0f, -1.0f, Im3d::Color_Yellow);
-							Im3d::Vertex( 1.0f,  0.0f, -1.0f, Im3d::Color_Cyan);
-						Im3d::End();
-					Im3d::PopMatrix();
-				}
-
-				Im3d::SetAlpha(0.9f);
-				Im3d::SetSize(16.0f);
-				for (int i = 0; i < s_primCount / 3; ++i) {
-					Im3d::PushMatrix();
-						Im3d::Mat4 wm(1.0f);
-						wm.setTranslation(Im3d::RandVec3(-10.0f, 10.0f));
-						Im3d::MulMatrix(wm);
-						Im3d::BeginPoints();
-							Im3d::Vertex(-1.0f,  0.0f, -1.0f, Im3d::RandColor(0.0f, 1.0f));
-						Im3d::End();
-					Im3d::PopMatrix();
-				}
-			Im3d::PopDrawState();
-
-			ImGui::TreePop();
-		}
-
-		Im3d::PopDrawState();
 		ImGui::End();
 
 		example.draw();
