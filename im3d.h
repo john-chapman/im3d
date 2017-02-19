@@ -43,7 +43,7 @@ void  NewFrame();
 // Call after all Im3d calls have been made for the current frame.
 void  Draw();
 
-// Begin/end primitive. End() *must* be called before starting each new primitive type.
+// Begin/end primitive. End() must be called before starting each new primitive type.
 void  BeginPoints();
 void  BeginLines();
 void  BeginLineLoop();
@@ -70,7 +70,7 @@ void  SetColor(Color _color);
 void  SetColor(float _r, float _g, float _b, float _a = 1.0f);
 Color GetColor();
 
-// Alpha draw state, multiplies the color draw state's alpha (per vertex).
+// Alpha draw state, multiplies the alpha set by the color draw state (per vertex).
 void  PushAlpha(); // push the stack top
 void  PushAlpha(float _alpha);
 void  PopAlpha();
@@ -105,7 +105,7 @@ void  Translate(float _x, float _y, float _z);
 void  Rotate(const Vec3& _axis, float _angle);
 void  Scale(float _x, float _y, float _z);
 
-// High order shapes. Where _detail = -1, an automatic level of detail is chosen.
+// High order shapes. Where _detail = -1, an automatic level of detail is chosen based on the distance to the view origin.
 void  DrawXyzAxes();
 void  DrawQuad(const Vec3& _a, const Vec3& _b, const Vec3& _c, const Vec3& _d);
 void  DrawQuad(const Vec3& _origin, const Vec3& _normal, const Vec2& _size);
@@ -119,14 +119,17 @@ void  DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int _deta
 void  DrawPrism(const Vec3& _start, const Vec3& _end, float _radius, int _sides);
 void  DrawArrow(const Vec3& _start, const Vec3& _end, float _headFraction);
 
-
+// Ids are used to uniquely identify gizmos. Each gizmo should have a unique Id during a frame.
 Id    MakeId(const char* _str);
 Id    MakeId(const void* _ptr);
+Id    MakeId(int _i);
 
+// PushId()/PopId() affect the result of subsequent calls to MakeId(), use when creating gizmos in a loop.
 void  PushId(); // push stack top
 void  PushId(Id _id);
 void  PushId(const char* _str);
 void  PushId(const void* _ptr);
+void  PushId(int _i);
 void  PopId();
 Id    GetId();
 Id    GetActiveId(); // GetActiveId() != Id_Invalid means that a gizmo is in use
@@ -139,7 +142,7 @@ bool  GizmoTranslation(const char* _id, float _translation_[3], bool _local = fa
 bool  GizmoRotation(const char* _id, float _rotation_[3*3], bool _local = false);
 bool  GizmoScale(const char* _id, float _scale_[3]); // local scale only
 // Unified gizmo, selects local/global, translation/rotation/scale based on the context-global gizmo modes. Return true if the gizmo is active.
-bool  Gizmo(const char* _id, float _translation_[3], float _rotation_[3*3], float _scale_[3]);
+bool  Gizmo(const char* _id, float _translation_[3], float _rotation_[3*3], float _scale_[3]); // any of _translation_/_rotation_/_scale_ may be null.
 bool  Gizmo(const char* _id, float _transform_[4*4]);
 
 // Get/set the current context. All Im3d calls affect the currently bound context.
@@ -188,7 +191,7 @@ struct Vec4
 };
 struct Mat3
 {
-	float m[9]; // column-major unless IM3D_MATRIX_ROW_MAJOR defined
+	float m[3*3]; // column-major unless IM3D_MATRIX_ROW_MAJOR defined
 	Mat3()                                                                   {}
 	Mat3(float _diagonal);
 	Mat3(
@@ -234,13 +237,13 @@ struct Mat3
 };
 struct Mat4
 {
-	float m[16]; // column-major unless IM3D_MATRIX_ROW_MAJOR defined
+	float m[4*4]; // column-major unless IM3D_MATRIX_ROW_MAJOR defined
 	Mat4()                                                                   {}
 	Mat4(float _diagonal);
 	Mat4(
-		float m00, float m01, float m02, float m03,
-		float m10, float m11, float m12, float m13,
-		float m20, float m21, float m22, float m23,
+		float m00,        float m01,        float m02,        float m03,
+		float m10,        float m11,        float m12,        float m13,
+		float m20,        float m21,        float m22,        float m23,
 		float m30 = 0.0f, float m31 = 0.0f, float m32 = 0.0f, float m33 = 1.0f
 		);
 	Mat4(const Mat3& _mat3);
@@ -381,12 +384,10 @@ struct AppData
 	float m_deltaTime;           // Time since previous frame (seconds).
 	void* m_appData;             // App-specific data (useful for passing app context to drawCallback).
 
-	DrawPrimitivesCallback* drawCallback;
+	DrawPrimitivesCallback* drawCallback; // e.g. void Im3d_Draw(const DrawList& _drawList)
 };
 
 // Minimal vector.
-template <typename T> class Vector;
-template <typename T> void swap(Vector<T>& _a_, Vector<T>& _b_);
 template <typename T>
 class Vector
 {
@@ -423,7 +424,7 @@ public:
 	void     reserve(U32 _capacity);
 	void     resize(U32 _size, const T& _val);
 
-	friend void swap<>(Vector<T>& _a_, Vector<T>& _b_);
+	static void swap(Vector<T>& _a_, Vector<T>& _b_);
 };
 
 
@@ -521,8 +522,8 @@ public:
 	bool wasKeyPressed(Key _key) const { return m_keyDownCurr[_key] && !m_keyDownPrev[_key]; }
 
  // gizmo state
-	bool               m_gizmoLocal;
-	GizmoMode          m_gizmoMode;                // Global mode selection for gizmos.
+	bool               m_gizmoLocal;               // Global mode selection for gizmos.
+	GizmoMode          m_gizmoMode;                //               "
 	Id                 m_activeId;                 // Currently active gizmo. If set, this is the same as m_hotId.
 	Id                 m_hotId;
 	float              m_hotDepth;                 // Depth of the current hot gizmo, for handling occlusion.
@@ -632,6 +633,7 @@ inline void  PushId()                                                        { G
 inline void  PushId(Id _id)                                                  { GetContext().pushId(_id);                  }
 inline void  PushId(const char* _str)                                        { GetContext().pushId(MakeId(_str));         }
 inline void  PushId(const void* _ptr)                                        { GetContext().pushId(MakeId(_ptr));         }
+inline void  PushId(int _i)                                                  { GetContext().pushId(MakeId(_i));           }
 inline void  PopId()                                                         { GetContext().popId();                      }
 inline Id    GetId()                                                         { return GetContext().getId();               }
 inline Id    GetActiveId()                                                   { return GetContext().m_activeId;            }
