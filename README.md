@@ -38,7 +38,7 @@ See [here](https://github.com/john-chapman/im3d/blob/master/examples/common/main
 Integration is fairly straightforward: copy the files from the root of this repo and add them to the application project. The application should then proceed as follows:
 
 - At startup, load the graphics resources (shaders, etc.) required to actually draw the Im3d vertex buffers.
-- Each frame, the fill the `Im3d::AppData` struct, providing user input and other relevant context data, then call `Im3d::NewFrame()`.
+- Each frame, fill the `Im3d::AppData` struct, providing user input and other context data, then call `Im3d::NewFrame()`.
 - Towards the end of the frame, call `Im3d::Draw()` once for each view/projection to be rendered. Im3d calls an application-defined callback to actually execute rendering commands and draw the points/lines/triangles pushed during the frame.
 
 More detailed and API-specific integration examples are available in [examples/](https://github.com/john-chapman/im3d/tree/master/examples).

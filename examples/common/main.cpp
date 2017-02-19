@@ -46,7 +46,7 @@ int main(int, char**)
 			ImGui::RadioButton("Scale (Ctrl+S)", &gizmoMode, Im3d::GizmoMode_Scale);
 			Im3d::GetContext().m_gizmoMode = (Im3d::GizmoMode)gizmoMode;
 
-		 // the ID passed to Gizmo() should be unique during a frame - to create gizmos in a loop us PushId()/PopId()
+		 // the ID passed to Gizmo() should be unique during a frame - to create gizmos in a loop use PushId()/PopId()
 			if (Im3d::Gizmo("GizmoUnified", transform)) {
 			 // if Gizmo() returns true, the transform was modified
 				switch (Im3d::GetContext().m_gizmoMode) {
@@ -70,8 +70,8 @@ int main(int, char**)
 				
 			}
 
-		 // using the transform for drawing *after* the call to Gizmo() causes a 1 frame lag - this can be avoided if it's 
-		 // possible to issue the draw call *before* calling Gizmo()
+		 // using the transform for drawing *after* the call to Gizmo() causes a 1 frame lag between the gizmo position and the output
+		 // matrix - this can be avoided if it's possible to issue the draw call *before* calling Gizmo()
 			Im3d::DrawTeapot(transform, example.m_camViewProj);
 
 			ImGui::TreePop();
@@ -277,7 +277,7 @@ int main(int, char**)
 		if (ImGui::TreeNode("Basic Perf")) {
 		 // simple perf test: draw a large number of points, enable/disable sorting and the use of the matrix stack
 			static bool enableSorting = false;
-			static bool useMatrix = false; // if the matrix stack size == 1 Im3d assumes it's the default identity matrix and skips the matrix mul
+			static bool useMatrix = false; // if the matrix stack size == 1 Im3d assumes it's the identity matrix and skips the matrix mul
 			static int  primCount = 50000;
 			ImGui::Checkbox("Enable sorting", &enableSorting);
 			ImGui::Checkbox("Use matrix stack", &useMatrix);
@@ -308,8 +308,8 @@ int main(int, char**)
 
 
 		if (ImGui::TreeNode("Sorting")) {
-		 // if sorting is enabled, primtives are sorted back-to-front for rendering. Lines/triangles use the primitive midpoint, so very long
-		 // lines or big triangles may not sort correctly.
+		 // if sorting is enabled, primitives are sorted back-to-front for rendering. Lines/triangles use the primitive midpoint, so very long
+		 // lines or large triangles may not sort correctly.
 			static bool enableSorting = true;
 			static int  primCount = 1000;
 			ImGui::Checkbox("Enable sorting", &enableSorting);

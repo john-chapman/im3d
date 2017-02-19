@@ -10,10 +10,10 @@ using namespace Im3d;
 
 // The draw callback is where Im3d draw lists are rendered by the application. Im3d::Draw can potentially
 // call this function multiple times per primtive type.
-// The example below shows the simplest possible draw callback. Variations on this are possible, for example
+// The example below shows the simplest type of draw callback. Variations on this are possible, for example
 // using a depth buffer. See the shader source file for more details.
 // For VR, the easiest option is to call Im3d::Draw() once per eye with the appropriate framebuffer bound,
-// passing the appropriate view-projection matrix. A more efficient scheme would be to render to both eyes
+// passing the eye view-projection matrix. A more efficient scheme would be to render to both eyes
 // inside the draw callback to avoid uploading the vertex data twice.
 // Note that there is no guarantee that the data in _drawList will exist after this function exits.
 void Im3d_Draw(const Im3d::DrawList& _drawList)
@@ -60,7 +60,7 @@ void Im3d_Draw(const Im3d::DrawList& _drawList)
 	glAssert(glDrawArrays(prim, 0, (GLsizei)_drawList.m_vertexCount));
 }
 
-// At the top of each frame, the application must fill the Im3d::AppData struct and then call Im3d::NewFrame.
+// At the top of each frame, the application must fill the Im3d::AppData struct and then call Im3d::NewFrame().
 // The example below shows how to do this, in particular how to generate the 'cursor ray' from a mouse position
 // which is necessary for interacting with gizmos.
 void Im3d_Update()
@@ -71,7 +71,7 @@ void Im3d_Update()
 	ad.m_tanHalfFov = tanf(g_Example->m_camFovRad * 0.5f); // vertical fov
 	ad.m_viewOrigin = g_Example->m_camPos; // for VR use the head position
 
- // Cursor ray from mouse position; for VR this might be the position/orientation of the HMD or a tracked controller
+ // Cursor ray from mouse position; for VR this might be the position/orientation of the HMD or a tracked controller.
 	Vec2 cursorPos = g_Example->getWindowRelativeCursor();
 	cursorPos = (cursorPos / ad.m_viewportSize) * 2.0f - 1.0f;
 	cursorPos.y = -cursorPos.y; // window origin is top-left, ndc is bottom-left
