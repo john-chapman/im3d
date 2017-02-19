@@ -120,10 +120,13 @@ void  DrawPrism(const Vec3& _start, const Vec3& _end, float _radius, int _sides)
 void  DrawArrow(const Vec3& _start, const Vec3& _end, float _headFraction);
 
 
-// Generate an Id from a null-terminated string.
 Id    MakeId(const char* _str);
+Id    MakeId(const void* _ptr);
+
 void  PushId(); // push stack top
 void  PushId(Id _id);
+void  PushId(const char* _str);
+void  PushId(const void* _ptr);
 void  PopId();
 Id    GetId();
 Id    GetActiveId(); // GetActiveId() != Id_Invalid means that a gizmo is in use
@@ -132,11 +135,12 @@ Id    GetActiveId(); // GetActiveId() != Id_Invalid means that a gizmo is in use
 // Manipulate translation/rotation/scale via a gizmo. Return true if the gizmo is 'active' (if it modified the output parameter).
 // If _local is true, the Gizmo* functions expect that the local matrix is on the matrix stack; in general the application should
 // push the local matrix before calling any of the following.
-bool  GizmoTranslation(const char* _id, float* _vec3_, bool _local = false);
-bool  GizmoRotation(const char* _id, float* _mat3_, bool _local = false);
-bool  GizmoScale(const char* _id, float* _vec3_); // local scale only
+bool  GizmoTranslation(const char* _id, float _translation_[3], bool _local = false);
+bool  GizmoRotation(const char* _id, float _rotation_[3*3], bool _local = false);
+bool  GizmoScale(const char* _id, float _scale_[3]); // local scale only
 // Unified gizmo, selects local/global, translation/rotation/scale based on the context-global gizmo modes. Return true if the gizmo is active.
-bool  Gizmo(const char* _id, float* _mat4_);
+bool  Gizmo(const char* _id, float _translation_[3], float _rotation_[3*3], float _scale_[3]);
+bool  Gizmo(const char* _id, float _transform_[4*4]);
 
 // Get/set the current context. All Im3d calls affect the currently bound context.
 Context& GetContext();
@@ -150,8 +154,8 @@ struct Vec2
 	Vec2(float _x, float _y): x(_x), y(_y)                                   {}
 	operator float*()                                                        { return &x; }
 	operator const float*() const                                            { return &x; }
-	#ifdef IM3D_VEC2_USER
-		IM3D_VEC2_USER
+	#ifdef IM3D_VEC2_APP
+		IM3D_VEC2_APP
 	#endif
 };
 struct Vec3
@@ -164,8 +168,8 @@ struct Vec3
 	Vec3(const Vec4& _v); // discards w
 	operator float*()                                                        { return &x; }
 	operator const float*() const                                            { return &x; }
-	#ifdef IM3D_VEC3_USER
-		IM3D_VEC3_USER
+	#ifdef IM3D_VEC3_APP
+		IM3D_VEC3_APP
 	#endif
 };
 struct Vec4
@@ -178,8 +182,8 @@ struct Vec4
 	Vec4(Color _rgba);
 	operator float*()                                                        { return &x; }
 	operator const float*() const                                            { return &x; }
-	#ifdef IM3D_VEC4_USER
-		IM3D_VEC4_USER
+	#ifdef IM3D_VEC4_APP
+		IM3D_VEC4_APP
 	#endif
 };
 struct Mat3
@@ -224,8 +228,8 @@ struct Mat3
 		return m[i];
 	}
 	
-	#ifdef IM3D_MAT3_USER
-		IM3D_MAT3_USER
+	#ifdef IM3D_MAT3_APP
+		IM3D_MAT3_APP
 	#endif
 };
 struct Mat4
@@ -275,8 +279,8 @@ struct Mat4
 		return m[i];
 	}
 	
-	#ifdef IM3D_MAT4_USER
-		IM3D_MAT4_USER
+	#ifdef IM3D_MAT4_APP
+		IM3D_MAT4_APP
 	#endif
 };
 struct Color
@@ -349,18 +353,20 @@ enum Key
 {
 	Mouse_Left,
 	Key_L,
-	Key_T,
 	Key_R,
 	Key_S,
+	Key_T,
 
 	Key_Count,
 
- // the following map keys -> 'action' states which may be more intuitive, especially for VR
+// the following map keys -> 'action' states which may be more intuitive
 	Action_Select           = Mouse_Left,
 	Action_GizmoLocal       = Key_L,
-	Action_GizmoTranslation = Key_T,
 	Action_GizmoRotation    = Key_R,
-	Action_GizmoScale       = Key_S
+	Action_GizmoScale       = Key_S,
+	Action_GizmoTranslation = Key_T,
+
+	Action_Count
 };
 struct AppData
 {
@@ -373,7 +379,7 @@ struct AppData
 	Vec2  m_viewportSize;        // Viewport size (pixels).
 	float m_tanHalfFov;          // tan(fov/2); fov = vertical field of view of the current projection.
 	float m_deltaTime;           // Time since previous frame (seconds).
-	void* m_userData;            // App-specific data (useful for passing app context to drawCallback).
+	void* m_appData;             // App-specific data (useful for passing app context to drawCallback).
 
 	DrawPrimitivesCallback* drawCallback;
 };
@@ -624,6 +630,8 @@ inline void  SetIdentity()                                                   { G
 
 inline void  PushId()                                                        { GetContext().pushId(GetContext().getId()); }
 inline void  PushId(Id _id)                                                  { GetContext().pushId(_id);                  }
+inline void  PushId(const char* _str)                                        { GetContext().pushId(MakeId(_str));         }
+inline void  PushId(const void* _ptr)                                        { GetContext().pushId(MakeId(_ptr));         }
 inline void  PopId()                                                         { GetContext().popId();                      }
 inline Id    GetId()                                                         { return GetContext().getId();               }
 inline Id    GetActiveId()                                                   { return GetContext().m_activeId;            }

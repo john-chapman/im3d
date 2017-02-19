@@ -338,20 +338,38 @@ void Im3d::DrawArrow(const Vec3& _start, const Vec3& _end, float _headFraction)
 }
 
 
-Im3d::Id Im3d::MakeId(const char* _str)
+static const U32 kFnv1aPrime32 = 0x01000193u;
+static U32 Hash(const char* _buf, int _buflen, U32 _base)
 {
-	static const U32 kFnv1aPrime32 = 0x01000193u;
+	IM3D_ASSERT(_buf);
+	U32 ret = _base;
+	const char* lim = _buf + _buflen;
+	while (_buf < lim) {
+		ret ^= (U32)*_buf++;
+		ret *= kFnv1aPrime32;
+	}
+	return ret;
+}
+static U32 HashStr(const char* _str, U32 _base)
+{
 	IM3D_ASSERT(_str);
-	U32 ret = (U32)GetContext().getId(); // top of Id stack
+	U32 ret = _base;
 	while (*_str) {
 		ret ^= (U32)*_str++;
 		ret *= kFnv1aPrime32;
 	}
-	return (Id)ret;
+	return ret;
+}
+Im3d::Id Im3d::MakeId(const char* _str)
+{
+	return HashStr(_str, GetContext().getId());
+}
+Im3d::Id Im3d::MakeId(const void* _ptr)
+{
+	return Hash((const char*)&_ptr, sizeof(void*), GetContext().getId());
 }
 
-
-bool Im3d::GizmoTranslation(const char* _id, float* _vec3_, bool _local)
+bool Im3d::GizmoTranslation(const char* _id, float _translation_[3], bool _local)
 {
 	Context& ctx = GetContext();
 	ctx.pushId(MakeId(_id));
@@ -363,7 +381,7 @@ bool Im3d::GizmoTranslation(const char* _id, float* _vec3_, bool _local)
 	}
 	
 	bool ret = false;
-	Vec3* outVec3 = (Vec3*)_vec3_;
+	Vec3* outVec3 = (Vec3*)_translation_;
 	Vec3 drawAt = *outVec3;
 
 	float worldHeight = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoHeightPixels);
@@ -453,7 +471,7 @@ bool Im3d::GizmoTranslation(const char* _id, float* _vec3_, bool _local)
 	ctx.popId();
 	return ret;
 }
-bool Im3d::GizmoRotation(const char* _id, float* _mat3_, bool _local)
+bool Im3d::GizmoRotation(const char* _id, float _rotation_[3*3], bool _local)
 {
 	Context& ctx = GetContext();
 	Id currentId = ctx.m_activeId; // store currentId to detect if the gizmo becomes active during this call
@@ -461,7 +479,7 @@ bool Im3d::GizmoRotation(const char* _id, float* _mat3_, bool _local)
 	
 	bool ret = false;
 	Mat3& storedRotation = ctx.m_gizmoStateMat3;
-	Mat3* outMat3 = (Mat3*)_mat3_;
+	Mat3* outMat3 = (Mat3*)_rotation_;
 	Vec3 euler = ToEulerXYZ(*outMat3);
 	Vec3 origin = ctx.getMatrix().getTranslation();
 
@@ -525,13 +543,13 @@ bool Im3d::GizmoRotation(const char* _id, float* _mat3_, bool _local)
 	ctx.popId();
 	return ret;
 }
-bool Im3d::GizmoScale(const char* _id, float* _vec3_)
+bool Im3d::GizmoScale(const char* _id, float _scale_[3])
 {
 	Context& ctx = GetContext();
 	ctx.pushId(MakeId(_id));
 
 	bool ret = false;
-	Vec3* outVec3 = (Vec3*)_vec3_;
+	Vec3* outVec3 = (Vec3*)_scale_;
 	Vec3 origin = ctx.getMatrix().getTranslation();
 
 	float worldHeight = ctx.pixelsToWorldSize(origin, ctx.m_gizmoHeightPixels);
@@ -618,39 +636,81 @@ bool Im3d::GizmoScale(const char* _id, float* _vec3_)
 	ctx.popId();
 	return ret;
 }
-bool Im3d::Gizmo(const char* _id, float* _mat4_)
+bool Im3d::Gizmo(const char* _id, float _transform_[4*4])
 {
 	Context& ctx = GetContext();
- 	Mat4* m4 = (Mat4*)_mat4_;
-	ctx.pushMatrix(*m4);
+ 	Mat4* outMat4 = (Mat4*)_transform_;
+	ctx.pushMatrix(*outMat4);
 	
 	bool ret = false;
 	switch (ctx.m_gizmoMode) {
 		case GizmoMode_Translation: {
-			Vec3 translation = m4->getCol(3);
+			Vec3 translation = outMat4->getTranslation();
 			if (GizmoTranslation(_id, translation, ctx.m_gizmoLocal)) {
-				m4->setTranslation(translation);
+				outMat4->setTranslation(translation);
 				ret = true;
 			}
 			break;
 		}
 		case GizmoMode_Rotation: {
-			Mat3 rotation(*m4);
-			rotation.setScale(Vec3(1.0f));
+			Mat3 rotation = outMat4->getRotation();
 			if (GizmoRotation(_id, rotation, ctx.m_gizmoLocal)) {
-				m4->setRotation(rotation);
+				outMat4->setRotation(rotation);
 				ret = true;
 			}
 			break;
 		}
 		case GizmoMode_Scale: {
-			Vec3 scale = m4->getScale();
+			Vec3 scale = outMat4->getScale();
 			if (GizmoScale(_id, scale)) {
-				m4->setScale(scale);
+				outMat4->setScale(scale);
 				ret = true;
 			}
 			break;
 		}
+		default:
+			break;
+	};
+
+	ctx.popMatrix();
+	
+	return ret;
+}
+
+bool Im3d::Gizmo(const char* _id, float _translation_[3], float _rotation_[3*3], float _scale_[3])
+{
+	Context& ctx = GetContext();
+ 	
+	Mat4 transform(
+		_translation_ ? *((Vec3*)_translation_) : Vec3(0.0f), 
+		_rotation_    ? *((Mat3*)_rotation_)    : Mat3(1.0f),
+		_scale_       ? *((Vec3*)_scale_)       : Vec3(1.0f)
+		);
+	ctx.pushMatrix(transform);
+	
+	bool ret = false;
+	switch (ctx.m_gizmoMode) {
+		case GizmoMode_Translation: 
+			if (_translation_) {
+				if (GizmoTranslation(_id, _translation_, ctx.m_gizmoLocal)) {
+					ret = true;
+				}
+			}
+			break;
+		case GizmoMode_Rotation: 
+			if (_rotation_) {
+				if (GizmoRotation(_id, _rotation_, ctx.m_gizmoLocal)) {
+					ret = true;
+				}
+			}
+			break;
+		case GizmoMode_Scale: 
+			if (_scale_) {
+				if (GizmoScale(_id, _scale_)) {
+					ret = true;
+				}
+			}
+			break;
 		default:
 			break;
 	};
