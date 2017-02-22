@@ -90,6 +90,11 @@ void Im3d::Rotate(const Vec3& _axis, float _angle)
 	Context& ctx = GetContext();
 	ctx.setMatrix(ctx.getMatrix() * Mat4(Rotation(_axis, _angle)));
 }
+void Im3d::Rotate(const Mat3& _rotation)
+{
+	Context& ctx = GetContext();
+	ctx.setMatrix(ctx.getMatrix() * Mat4(_rotation));
+}
 void Im3d::Scale(float _x, float _y, float _z)
 {
 	Context& ctx = GetContext();
@@ -1805,11 +1810,11 @@ Mat4 Im3d::AlignZ(const Vec3& _axis, const Vec3& _up)
 	Vec3 x, y;
 	y = _up - _axis * Dot(_up, _axis);
 	float ylen = Length(y);
-	if_unlikely (!(ylen > 0.0f)) {
+	if_unlikely (ylen < FLT_EPSILON) {
 		Vec3 k = Vec3(1.0f, 0.0f, 0.0f);
 		y = k - _axis * Dot(k, _axis);
 		ylen = Length(y);
-		if_unlikely (!(ylen > 0.0f)) {
+		if_unlikely (ylen < FLT_EPSILON) {
 			k = Vec3(0.0f, 0.0f, 1.0f);
 			y = k - _axis * Dot(k, _axis);
 			ylen = Length(y);
@@ -1817,17 +1822,6 @@ Mat4 Im3d::AlignZ(const Vec3& _axis, const Vec3& _up)
 	}
 	y = y / ylen;
 	x = Cross(y, _axis);
-
-	//Vec3 x, y;
-	//y = _up - _axis * Dot(_up, _axis);
-	//float ylen = Length(y);
-	//if_unlikely (!(ylen > FLT_EPSILON)) {
-	//	Vec3 k = _up + Vec3(FLT_EPSILON);
-	//	y = k - _axis * Dot(k, _axis);
-	//	ylen = Length(y);
-	//}
-	//y = y / ylen;
-	//x = Cross(y, _axis);
 
 	return Mat4(
 		x.x,    y.x,    _axis.x,    0.0f,

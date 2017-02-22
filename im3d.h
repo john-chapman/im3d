@@ -103,6 +103,7 @@ void  SetIdentity();
 void  MulMatrix(const Mat4& _mat4);
 void  Translate(float _x, float _y, float _z);
 void  Rotate(const Vec3& _axis, float _angle);
+void  Rotate(const Mat3& _rotation);
 void  Scale(float _x, float _y, float _z);
 
 // High order shapes. Where _detail = -1, an automatic level of detail is chosen based on the distance to the view origin.
