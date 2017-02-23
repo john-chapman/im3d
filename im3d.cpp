@@ -1,3 +1,7 @@
+/*  CHANGE LOG
+	==========
+	2017-02-23 (v1.01) - Removed AppData::m_tanHalfFov, replaced with AppData::m_projScaleY. Added AppData::m_projOrtho.
+*/
 #include "im3d.h"
 #include "im3d_math.h"
 
@@ -907,7 +911,6 @@ void Context::reset()
 	IM3D_ASSERT(m_matrixStack.size() == 1);
 	IM3D_ASSERT(m_idStack.size() == 1);
 	
-	
 	IM3D_ASSERT(m_primMode == PrimitiveMode_None);
 	m_primMode = PrimitiveMode_None;
 
@@ -1131,8 +1134,8 @@ void Context::sort()
 
 float Context::pixelsToWorldSize(const Vec3& _position, float _pixels)
 {
-	float d = Length(_position - m_appData.m_viewOrigin);
-	return m_appData.m_tanHalfFov * 2.0f * d * (_pixels / m_appData.m_viewportSize.y);
+	float d = m_appData.m_projOrtho ? 1.0f : Length(_position - m_appData.m_viewOrigin);
+	return m_appData.m_projScaleY * d * (_pixels / m_appData.m_viewportSize.y);
 }
 
 int Context::estimateLevelOfDetail(const Vec3& _position, float _worldSize, int _min, int _max)

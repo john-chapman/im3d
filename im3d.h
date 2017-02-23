@@ -4,7 +4,7 @@
 
 #include "im3d_config.h"
 
-#define IM3D_VERSION "1.0"
+#define IM3D_VERSION "1.01"
 
 #ifndef IM3D_ASSERT
 	#include <cassert>
@@ -381,7 +381,8 @@ struct AppData
 	Vec3  m_worldUp;             // World space 'up' vector.
 	Vec3  m_viewOrigin;          // World space render origin (camera position).
 	Vec2  m_viewportSize;        // Viewport size (pixels).
-	float m_tanHalfFov;          // tan(fov/2); fov = vertical field of view of the current projection.
+	float m_projScaleY;          // Scale factor used to convert from pixel size -> world scale; use tan(fov) for perspective projections, far plane height for ortho.
+	bool  m_projOrtho;           // If the projection matrix is orthographic.
 	float m_deltaTime;           // Time since previous frame (seconds).
 	void* m_appData;             // App-specific data (useful for passing app context to drawCallback).
 

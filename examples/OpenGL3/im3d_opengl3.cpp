@@ -68,7 +68,8 @@ void Im3d_Update()
 	AppData& ad = GetAppData();
 	ad.m_deltaTime = g_Example->m_deltaTime;
 	ad.m_viewportSize = Vec2((float)g_Example->m_width, (float)g_Example->m_height);
-	ad.m_tanHalfFov = tanf(g_Example->m_camFovRad * 0.5f); // vertical fov
+	ad.m_projScaleY = tanf(g_Example->m_camFovRad * 0.5f) * 2.0f; // vertical fov, or far plane height for an ortho projection
+	ad.m_projOrtho = false; // whether the projection matrix used for drawing is orthographic
 	ad.m_viewOrigin = g_Example->m_camPos; // for VR use the head position
 
  // Cursor ray from mouse position; for VR this might be the position/orientation of the HMD or a tracked controller.
@@ -77,7 +78,7 @@ void Im3d_Update()
 	cursorPos.y = -cursorPos.y; // window origin is top-left, ndc is bottom-left
 	ad.m_cursorRayOrigin = ad.m_viewOrigin;
 	float aspect = ad.m_viewportSize.x / ad.m_viewportSize.y;
-	ad.m_cursorRayDirection = g_Example->m_camWorld * Normalize(Vec4(cursorPos.x * ad.m_tanHalfFov * aspect, cursorPos.y * ad.m_tanHalfFov, -1.0f, 0.0f));
+	ad.m_cursorRayDirection = g_Example->m_camWorld * Normalize(Vec4(cursorPos.x * ad.m_projScaleY * 0.5f * aspect, cursorPos.y * ad.m_projScaleY * 0.5f, -1.0f, 0.0f));
 	ad.m_worldUp = Vec3(0.0f, 1.0f, 0.0f); // used internally for generating orthonormal bases
 
  // Fill the key state array; using GetAsyncKeyState here but this could equally well be done via the window proc.
