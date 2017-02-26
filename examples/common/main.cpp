@@ -387,6 +387,20 @@ int main(int, char**)
 			ImGui::TreePop();
 		}
 
+		if (ImGui::TreeNode("Camera")) {
+			ImGui::Checkbox("Ortho", &example.m_camOrtho);
+
+			float t0;
+			Im3d::Plane pl(Im3d::Vec3(0.0f, 1.0f, 0.0f), Im3d::Vec3(0.0f));
+			Im3d::Ray ry(Im3d::GetAppData().m_cursorRayOrigin, Im3d::GetAppData().m_cursorRayDirection);
+			Im3d::Intersect(ry, pl, t0);
+			Im3d::BeginPoints();
+				Im3d::Vertex(ry.m_origin + ry.m_direction * t0, 12.0f, Im3d::Color_Magenta);
+			Im3d::End();
+
+			ImGui::TreePop();
+		}
+
 		ImGui::End();
 
 		example.draw();

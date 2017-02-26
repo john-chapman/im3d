@@ -1,4 +1,4 @@
-/*  CHANGE LOG
+/*	CHANGE LOG
 	==========
 	2017-02-23 (v1.01) - Removed AppData::m_tanHalfFov, replaced with AppData::m_projScaleY. Added AppData::m_projOrtho.
 */

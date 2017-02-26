@@ -1234,6 +1234,7 @@ bool Example::init(int _width, int _height, const char* _title)
 		goto Example_init_fail;
 	}
 
+	m_camOrtho = false;
 	m_camPos = Vec3(0.0f, 2.0f, 3.0f);
 	m_camDir = Normalize(Vec3(0.0f, -0.5f, -1.0f));
 	m_camFovDeg = 50.0f;
@@ -1326,20 +1327,36 @@ bool Example::update()
 
 	m_camFovRad = Im3d::Radians(m_camFovDeg);
 	float n = 0.1f;
-	float f = 10000.0f;
+	float f = 500.0f;
 	float a = (float)m_width / (float)m_height;
 	float scale = tanf(m_camFovRad * 0.5f) * n;
-	float r = a * scale;
-	float l = -r;
-	float t = scale;
-	float b = -t;
+	
+	if (m_camOrtho) {
+		n = -500.0f;
+		scale = 5.0f;
+		float r = scale * a;
+		float l = -scale * a;
+		float t = scale;
+		float b = -scale;
+		m_camProj = Mat4(
+			2.0f / (r - l),      0.0f,                 0.0f,               -(r + l) / (r - l),
+			0.0f,                2.0f / (t - b),       0.0f,               -(t + b) / (t - b),
+			0.0f,                0.0f,                -2.0f / (f - n),     -(f + n) / (f - n),
+			0.0f,                0.0f,                 0.0f,               1.0f
+			);
+	} else {
+		float r = a * scale;
+		float l = -r;
+		float t = scale;
+		float b = -t;
 
-	m_camProj = Mat4(
-		2.0f * n / (r - l),  0.0f,                 (r + l) / (r - l),   0.0f,
-		0.0f,                2.0f * n / (t - b),   (t + b) / (t - b),   0.0f,
-		0.0f,                0.0f,                -(f + n) / (f - n),  -2.0f * f * n / (f - n),
-		0.0f,                0.0f,                -1.0f,                0.0f
-		);
+		m_camProj = Mat4(
+			2.0f * n / (r - l),  0.0f,                 (r + l) / (r - l),   0.0f,
+			0.0f,                2.0f * n / (t - b),   (t + b) / (t - b),   0.0f,
+			0.0f,                0.0f,                -1.0f,               -2.0f * n,
+			0.0f,                0.0f,                -1.0f,                0.0f
+			);
+	}
 
 	m_camWorld = LookAt(m_camPos, m_camPos - m_camDir);
 	m_camView  = Inverse(m_camWorld);

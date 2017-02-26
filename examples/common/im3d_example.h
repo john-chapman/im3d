@@ -157,6 +157,7 @@ struct Example
 	Vec2 getWindowRelativeCursor() const;
 	
  // 3d camera
+	bool  m_camOrtho;
     Vec3  m_camPos;
 	Vec3  m_camDir;
 	float m_camFovDeg;

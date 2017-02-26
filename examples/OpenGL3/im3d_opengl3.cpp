@@ -21,7 +21,7 @@ void Im3d_Draw(const Im3d::DrawList& _drawList)
 	AppData& ad = GetAppData();
 
  // setting the framebuffer, viewport and pipeline states can (and should) be done prior to calling Im3d::Draw
-	glAssert(glViewport(0, 0, (GLsizei)ad.m_viewportSize.x, (GLsizei)ad.m_viewportSize.y));
+	glAssert(glViewport(0, 0, (GLsizei)g_Example->m_width, (GLsizei)g_Example->m_height));
 	glAssert(glEnable(GL_BLEND));
 	glAssert(glBlendEquation(GL_FUNC_ADD));
 	glAssert(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
@@ -66,20 +66,40 @@ void Im3d_Draw(const Im3d::DrawList& _drawList)
 void Im3d_Update()
 {
 	AppData& ad = GetAppData();
-	ad.m_deltaTime = g_Example->m_deltaTime;
-	ad.m_viewportSize = Vec2((float)g_Example->m_width, (float)g_Example->m_height);
-	ad.m_projScaleY = tanf(g_Example->m_camFovRad * 0.5f) * 2.0f; // vertical fov, or far plane height for an ortho projection
-	ad.m_projOrtho = false; // whether the projection matrix used for drawing is orthographic
-	ad.m_viewOrigin = g_Example->m_camPos; // for VR use the head position
 
- // Cursor ray from mouse position; for VR this might be the position/orientation of the HMD or a tracked controller.
+	ad.m_deltaTime    = g_Example->m_deltaTime;
+	ad.m_viewportSize = Vec2((float)g_Example->m_width, (float)g_Example->m_height);
+	ad.m_viewOrigin   = g_Example->m_camPos; // for VR use the head position
+	ad.m_worldUp      = Vec3(0.0f, 1.0f, 0.0f); // used internally for generating orthonormal bases
+	ad.m_projOrtho    = g_Example->m_camOrtho; 
+	
+ // m_projScaleY controls how gizmos are scaled in world space to maintain a constant screen height
+	ad.m_projScaleY   = g_Example->m_camOrtho
+		? 2.0f / g_Example->m_camProj(1, 1) // use far plane height for an ortho projection
+		: tanf(g_Example->m_camFovRad * 0.5f) * 2.0f // or vertical fov for a perspective projection
+		;  
+
+ // World space cursor ray from mouse position; for VR this might be the position/orientation of the HMD or a tracked controller.
 	Vec2 cursorPos = g_Example->getWindowRelativeCursor();
 	cursorPos = (cursorPos / ad.m_viewportSize) * 2.0f - 1.0f;
 	cursorPos.y = -cursorPos.y; // window origin is top-left, ndc is bottom-left
-	ad.m_cursorRayOrigin = ad.m_viewOrigin;
-	float aspect = ad.m_viewportSize.x / ad.m_viewportSize.y;
-	ad.m_cursorRayDirection = g_Example->m_camWorld * Normalize(Vec4(cursorPos.x * ad.m_projScaleY * 0.5f * aspect, cursorPos.y * ad.m_projScaleY * 0.5f, -1.0f, 0.0f));
-	ad.m_worldUp = Vec3(0.0f, 1.0f, 0.0f); // used internally for generating orthonormal bases
+	Vec3 rayOrigin, rayDirection;
+	if (g_Example->m_camOrtho) {
+		rayOrigin.x  = cursorPos.x / g_Example->m_camProj(0, 0);
+		rayOrigin.y  = cursorPos.y / g_Example->m_camProj(1, 1);
+		rayOrigin.z  = 0.0f;
+		rayOrigin    = g_Example->m_camWorld * Vec4(rayOrigin, 1.0f);
+		rayDirection = g_Example->m_camWorld * Vec4(0.0f, 0.0f, -1.0f, 0.0f);
+		 
+	} else {
+		rayOrigin = ad.m_viewOrigin;
+		rayDirection.x  = cursorPos.x / g_Example->m_camProj(0, 0);
+		rayDirection.y  = cursorPos.y / g_Example->m_camProj(1, 1);
+		rayDirection.z  = -1.0f;
+		rayDirection    = g_Example->m_camWorld * Vec4(Normalize(rayDirection), 0.0f);
+	}
+	ad.m_cursorRayOrigin = rayOrigin;
+	ad.m_cursorRayDirection = rayDirection;
 
  // Fill the key state array; using GetAsyncKeyState here but this could equally well be done via the window proc.
  // All key states have an equivalent (and more descriptive) 'Action_' enum.
