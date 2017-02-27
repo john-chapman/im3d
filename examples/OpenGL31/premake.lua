@@ -15,7 +15,7 @@ filter { "action:vs*" }
 	defines { "_CRT_SECURE_NO_WARNINGS", "_SCL_SECURE_NO_WARNINGS" }
 	characterset "MBCS" -- force Win32 API to use *A variants (i.e. can pass char* for strings)
 
-workspace "im3d_opengl3"
+workspace "im3d_opengl31"
 	location(_ACTION)
 	configurations { "Debug", "Release" }
 	platforms { "Win32", "Win64" }
@@ -47,11 +47,12 @@ workspace "im3d_opengl3"
 		IM3D_DIR .. "*.cpp",
 		})
 	
-	project "im3d_opengl3"
+	project "im3d_opengl31"
 		kind "ConsoleApp"
 		language "C++"
 		targetdir ""
 	
+		defines { "IM3D_OPENGL_VMAJ=3", "IM3D_OPENGL_VMIN=1", "IM3D_OPENGL_VSHADER=140" }
 		
 		includedirs({
 			IM3D_DIR,
