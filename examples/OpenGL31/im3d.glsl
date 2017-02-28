@@ -19,12 +19,17 @@
 	};
 
 	uniform mat4 uViewProjMatrix;
+	uniform vec2 uViewport;
 	
 	in vec4 aPosition;
 	
-	noperspective out  float vEdgeDistance;
-	noperspective out  float vSize;
-	smooth out         vec4  vColor;
+	#if   defined(POINTS)
+		noperspective out vec2 vUv;
+	#elif defined(LINES)
+		noperspective out float vEdgeDistance;
+	#endif
+	noperspective out float vSize;
+	smooth out        vec4  vColor;
 	
 	vec4 UintToRgba(uint _u)
 	{
@@ -38,31 +43,53 @@
 	
 	void main() 
 	{
-		int vid = gl_InstanceID;
 		#if   defined(POINTS)
+			int vid = gl_InstanceID;
+			
+			vSize = max(uVertexData[vid].m_positionSize.w, kAntialiasing);
+			vColor = UintToRgba(uVertexData[vid].m_color);
+			vColor.a *= smoothstep(0.0, 1.0, vSize / kAntialiasing);
+		
+			gl_Position = uViewProjMatrix * vec4(uVertexData[vid].m_positionSize.xyz, 1.0);
+			vec2 scale = 1.0 / uViewport * vSize;
+			gl_Position.xy += aPosition.xy * scale * gl_Position.w;
+			vUv = aPosition.xy * 0.5 + 0.5;
+			
 		#elif defined(LINES)
-			vid = vid * 2 + gl_VertexID;
+			int   vid0  = gl_InstanceID * 2;
+			int   vid1  = vid0 + 1;
+			int   vid   = (gl_VertexID % 2 == 0) ? vid0 : vid1;
+			
+			vColor = UintToRgba(uVertexData[vid].m_color);
+			vSize = uVertexData[vid].m_positionSize.w;
+			vColor.a *= smoothstep(0.0, 1.0, vSize / kAntialiasing);
+			vSize = max(vSize, kAntialiasing);
+			vEdgeDistance = vSize * aPosition.y;
+			
+			vec4  pos0  = uViewProjMatrix * vec4(uVertexData[vid0].m_positionSize.xyz, 1.0);
+			vec4  pos1  = uViewProjMatrix * vec4(uVertexData[vid1].m_positionSize.xyz, 1.0);
+			vec2 dir = (pos0.xy / pos0.w) - (pos1.xy / pos1.w);
+			dir = normalize(vec2(dir.x, dir.y * uViewport.y / uViewport.x)); // correct for aspect ratio
+			vec2 tng = vec2(-dir.y, dir.x) * vSize / uViewport;
+			
+			gl_Position = (gl_VertexID % 2 == 0) ? pos0 : pos1;
+			gl_Position.xy += tng * aPosition.y * gl_Position.w;
+			
 		#elif defined(TRIANGLES)
-			vid = vid * 3 + gl_VertexID;
-		#endif
-	
-		float size = uVertexData[vid].m_positionSize.w;
-		vSize = max(size, kAntialiasing);
-		vColor = UintToRgba(uVertexData[vid].m_color);
-		#if !defined(TRIANGLES)
-			vColor.a *= smoothstep(0.0, 1.0, size / kAntialiasing);
-		#endif
-		
-		gl_Position = uViewProjMatrix * vec4(uVertexData[vid].m_positionSize.xyz, 1.0);
-		
-		#if defined(POINTS) || defined(LINES)
-			gl_Position.xy += aPosition.xy * 0.03;
+			int vid = gl_InstanceID * 3 + gl_VertexID;
+			vColor = UintToRgba(uVertexData[vid].m_color);
+			gl_Position = uViewProjMatrix * vec4(uVertexData[vid].m_positionSize.xyz, 1.0);
+			
 		#endif
 	}
 #endif
 
 #ifdef FRAGMENT_SHADER
-	noperspective in float vEdgeDistance;
+	#if   defined(POINTS)
+		noperspective in vec2 vUv;
+	#elif defined(LINES)
+		noperspective in float vEdgeDistance;
+	#endif
 	noperspective in float vSize;
 	smooth        in vec4  vColor;
 	
@@ -71,16 +98,14 @@
 	void main() 
 	{
 		fResult = vColor;
-		/*#if   defined(LINES)
+		#if   defined(LINES)
 			float d = abs(vEdgeDistance) / vSize;
 			d = smoothstep(1.0, 1.0 - (kAntialiasing / vSize), d);
 			fResult.a *= d;
-			
 		#elif defined(POINTS)
-			float d = length(gl_PointCoord.xy - vec2(0.5));
+			float d = length(vUv - vec2(0.5));
 			d = smoothstep(0.5, 0.5 - (kAntialiasing / vSize), d);
 			fResult.a *= d;
-			
-		#endif	*/
+		#endif
 	}
 #endif

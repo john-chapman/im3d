@@ -24,7 +24,6 @@ using namespace Im3d;
 void Im3d_Draw(const Im3d::DrawList& _drawList)
 {
 	AppData& ad = GetAppData();
-
  // setting the framebuffer, viewport and pipeline states can (and should) be done prior to calling Im3d::Draw
 	glAssert(glViewport(0, 0, (GLsizei)g_Example->m_width, (GLsizei)g_Example->m_height));
 	glAssert(glEnable(GL_BLEND));
@@ -66,8 +65,6 @@ void Im3d_Draw(const Im3d::DrawList& _drawList)
 	glAssert(glUniformMatrix4fv(glGetUniformLocation(sh, "uViewProjMatrix"), 1, false, (const GLfloat*)g_Example->m_camViewProj));
 	glAssert(glDrawArrays(prim, 0, (GLsizei)_drawList.m_vertexCount));
 
-if (prim != GL_TRIANGLES) return;
-
  // Uniform buffers have a size limit; split the vertex data into several passes.
  // Padding is also required to match alignment requirements.
 	struct PaddedVertex { Im3d::VertexData m_vertexData; Im3d::U32 _pad[3]; };
@@ -81,7 +78,7 @@ if (prim != GL_TRIANGLES) return;
 		int passPrimCount = remainingPrimCount < kPrimsPerPass ? remainingPrimCount : kPrimsPerPass;
 		int passVertexCount = passPrimCount * primVertexCount;
 
-	 // copy + pad vertex data into a local buffer, then upload to the gpu buffer
+	 // copy + pad vertex data into a local buffer, upload to the gpu buffer
 		for (int i = 0; i < passVertexCount; ++i) {
 			paddedVertexData[i].m_vertexData = vertexData[i];
 		}
@@ -90,7 +87,7 @@ if (prim != GL_TRIANGLES) return;
 		
 	 // instanced draw call, 1 instance per prim
 		glAssert(glBindBufferBase(GL_UNIFORM_BUFFER, 0, g_Im3dUniformBuffer));
-		glDrawArraysInstanced(prim, 0, prim == GL_TRIANGLES ? 3 : 4, passPrimCount);
+		glDrawArraysInstanced(prim, 0, prim == GL_TRIANGLES ? 3 : 4, passPrimCount); // for triangles just use the first 3 verts of the strip
 
 		vertexData += passVertexCount;
 		remainingPrimCount -= passPrimCount;

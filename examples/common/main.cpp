@@ -30,7 +30,7 @@ int main(int, char**)
 		ImGui::Spacing();
 
 
-		//ImGui::SetNextTreeNodeOpen(true, ImGuiSetCond_Once);
+		ImGui::SetNextTreeNodeOpen(true, ImGuiSetCond_Once);
 		if (ImGui::TreeNode("Unified Gizmo")) {
 		 // unified gizmo operates directly on a 4x4 matrix using the context-global gizmo modes
 			static Im3d::Mat4 transform(1.0f);
@@ -332,7 +332,7 @@ int main(int, char**)
 					Im3d::PopMatrix();
 				}
 
-				/*Im3d::SetAlpha(0.9f);
+				Im3d::SetAlpha(0.9f);
 				Im3d::SetSize(2.5f);
 				for (int i = 0; i < primCount / 3 / 3; ++i) {
 					Im3d::PushMatrix();
@@ -359,14 +359,14 @@ int main(int, char**)
 							Im3d::Vertex(-1.0f,  0.0f, -1.0f, Im3d::RandColor(0.0f, 1.0f));
 						Im3d::End();
 					Im3d::PopMatrix();
-				}*/
+				}
 			Im3d::PopDrawState();
 
 			ImGui::TreePop();
 		}
 
 
-		//ImGui::SetNextTreeNodeOpen(true, ImGuiSetCond_Once);
+		ImGui::SetNextTreeNodeOpen(true, ImGuiSetCond_Once);
 		if (ImGui::TreeNode("Grid")) {
 			static int gridSize = 20;
 			ImGui::SliderInt("Grid Size", &gridSize, 1, 50);
