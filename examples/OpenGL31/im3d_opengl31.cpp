@@ -66,22 +66,34 @@ void Im3d_Draw(const Im3d::DrawList& _drawList)
 	glAssert(glUniformMatrix4fv(glGetUniformLocation(sh, "uViewProjMatrix"), 1, false, (const GLfloat*)g_Example->m_camViewProj));
 	glAssert(glDrawArrays(prim, 0, (GLsizei)_drawList.m_vertexCount));
 
+if (prim != GL_TRIANGLES) return;
+
+ // Uniform buffers have a size limit; split the vertex data into several passes.
+ // Padding is also required to match alignment requirements.
+	struct PaddedVertex { Im3d::VertexData m_vertexData; Im3d::U32 _pad[3]; };
 	const int kMaxBufferSize = 64 * 1024; // assuming a 64kb max uniform buffer size
-	const int kVerticesPerPass = kMaxBufferSize / 32;//sizeof(Im3d::VertexData);
-	int passCount = (_drawList.m_vertexCount + kVerticesPerPass - 1) / kVerticesPerPass;
-	int remainingVertexCount = _drawList.m_vertexCount;
+	const int kPrimsPerPass = kMaxBufferSize / (sizeof(PaddedVertex) * primVertexCount);
+	PaddedVertex paddedVertexData[kMaxBufferSize / sizeof(PaddedVertex)];
+
+	int remainingPrimCount = _drawList.m_vertexCount / primVertexCount;
 	const Im3d::VertexData* vertexData = _drawList.m_vertexData;
-	for (int i = 0; i < passCount; ++i) {
-		int passVertexCount = remainingVertexCount < kVerticesPerPass ? remainingVertexCount : kVerticesPerPass;
+	while (remainingPrimCount > 0) {
+		int passPrimCount = remainingPrimCount < kPrimsPerPass ? remainingPrimCount : kPrimsPerPass;
+		int passVertexCount = passPrimCount * primVertexCount;
 
+	 // copy + pad vertex data into a local buffer, then upload to the gpu buffer
+		for (int i = 0; i < passVertexCount; ++i) {
+			paddedVertexData[i].m_vertexData = vertexData[i];
+		}
 		glAssert(glBindBuffer(GL_UNIFORM_BUFFER, g_Im3dUniformBuffer));
-		glAssert(glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr)passVertexCount * sizeof(Im3d::VertexData), (GLvoid*)vertexData, GL_STREAM_DRAW));
-
+		glAssert(glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr)passVertexCount * sizeof(PaddedVertex), (GLvoid*)paddedVertexData, GL_DYNAMIC_DRAW));
+		
+	 // instanced draw call, 1 instance per prim
 		glAssert(glBindBufferBase(GL_UNIFORM_BUFFER, 0, g_Im3dUniformBuffer));
-		glDrawArraysInstanced(prim, 0, prim == GL_TRIANGLES ? 3 : 4, passVertexCount / primVertexCount);
+		glDrawArraysInstanced(prim, 0, prim == GL_TRIANGLES ? 3 : 4, passPrimCount);
 
 		vertexData += passVertexCount;
-		remainingVertexCount -= passVertexCount;
+		remainingPrimCount -= passPrimCount;
 	}
 
 }
@@ -221,9 +233,7 @@ bool Im3d_Init()
 	glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_Im3dVertexBuffer));
 	glAssert(glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), (GLvoid*)vertexData, GL_STATIC_DRAW));
 	glAssert(glEnableVertexAttribArray(0));
-	glAssert(glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(Im3d::VertexData), (GLvoid*)offsetof(Im3d::VertexData, m_positionSize)));
-	glAssert(glEnableVertexAttribArray(1));
-	glAssert(glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Im3d::VertexData), (GLvoid*)offsetof(Im3d::VertexData, m_color)));
+	glAssert(glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(Im3d::Vec4), (GLvoid*)0));
 	glAssert(glBindVertexArray(0));
 
 	glAssert(glCreateBuffers(1, &g_Im3dUniformBuffer));
