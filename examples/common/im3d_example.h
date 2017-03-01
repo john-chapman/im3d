@@ -36,9 +36,9 @@
 // Graphics API
 #if defined(IM3D_OPENGL)
  // OpenGL
-	#define IM3D_OPENGL_VMAJ    3
-	#define IM3D_OPENGL_VMIN    3
-	#define IM3D_OPENGL_VSHADER "#version 330"
+	//#define IM3D_OPENGL_VMAJ    3
+	//#define IM3D_OPENGL_VMIN    3
+	//#define IM3D_OPENGL_VSHADER "#version 150"
  
 	#include "GL/glew.h"
 	#define glAssert(call) \
@@ -122,6 +122,8 @@
 #define IM3D_TOKEN_CONCATENATE_(_t0, _t1) _t0 ## _t1
 #define IM3D_TOKEN_CONCATENATE(_t0, _t1)  IM3D_TOKEN_CONCATENATE_(_t0, _t1)
 #define IM3D_UNIQUE_NAME(_base) IM3D_TOKEN_CONCATENATE(_base, __COUNTER__)
+#define IM3D_STRINGIFY_(_t) #_t
+#define IM3D_STRINGIFY(_t) IM3D_STRINGIFY_(_t)
 
 #include "im3d_math.h"
 

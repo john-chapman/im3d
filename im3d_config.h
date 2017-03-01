@@ -12,6 +12,9 @@
 // Use row-major internal matrix layout. 
 //#define IM3D_MATRIX_ROW_MAJOR 1
 
+// Force vertex data alignment (default is 4 bytes).
+//#define IM3D_VERTEX_ALIGNEMENT 4
+
 // Conversion to/from application math types.
 //#define IM3D_VEC2_APP \
 //	Vec2(const glm::vec2& _v)          { x = _v.x; y = _v.y;     } \

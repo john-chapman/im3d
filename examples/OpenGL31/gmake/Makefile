@@ -11,32 +11,32 @@ ifndef verbose
 endif
 
 ifeq ($(config),debug_win32)
-  im3d_opengl3_config = debug_win32
+  im3d_opengl31_config = debug_win32
 endif
 ifeq ($(config),debug_win64)
-  im3d_opengl3_config = debug_win64
+  im3d_opengl31_config = debug_win64
 endif
 ifeq ($(config),release_win32)
-  im3d_opengl3_config = release_win32
+  im3d_opengl31_config = release_win32
 endif
 ifeq ($(config),release_win64)
-  im3d_opengl3_config = release_win64
+  im3d_opengl31_config = release_win64
 endif
 
-PROJECTS := im3d_opengl3
+PROJECTS := im3d_opengl31
 
 .PHONY: all clean help $(PROJECTS) 
 
 all: $(PROJECTS)
 
-im3d_opengl3:
-ifneq (,$(im3d_opengl3_config))
-	@echo "==== Building im3d_opengl3 ($(im3d_opengl3_config)) ===="
-	@${MAKE} --no-print-directory -C . -f im3d_opengl3.make config=$(im3d_opengl3_config)
+im3d_opengl31:
+ifneq (,$(im3d_opengl31_config))
+	@echo "==== Building im3d_opengl31 ($(im3d_opengl31_config)) ===="
+	@${MAKE} --no-print-directory -C . -f im3d_opengl31.make config=$(im3d_opengl31_config)
 endif
 
 clean:
-	@${MAKE} --no-print-directory -C . -f im3d_opengl3.make clean
+	@${MAKE} --no-print-directory -C . -f im3d_opengl31.make clean
 
 help:
 	@echo "Usage: make [config=name] [target]"
@@ -50,6 +50,6 @@ help:
 	@echo "TARGETS:"
 	@echo "   all (default)"
 	@echo "   clean"
-	@echo "   im3d_opengl3"
+	@echo "   im3d_opengl31"
 	@echo ""
 	@echo "For more information, see http://industriousone.com/premake/quick-start"

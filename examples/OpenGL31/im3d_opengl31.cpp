@@ -1,7 +1,13 @@
+/*	OpenGL 3.1 example
+	This example demonstrates a method for integrating Im3d without geometry shaders, instead using the 
+	vertex shader to expand points/lines into triangle strips. This works by uploading Im3d vertex data
+	to a uniform buffer and fetching manually in the vertex shader.
+*/
 #include "im3d_example.h"
 
 static GLuint g_Im3dVertexArray;
 static GLuint g_Im3dVertexBuffer;
+static GLuint g_Im3dUniformBuffer;
 static GLuint g_Im3dShaderPoints;
 static GLuint g_Im3dShaderLines;
 static GLuint g_Im3dShaderTriangles;
@@ -19,29 +25,31 @@ using namespace Im3d;
 void Im3d_Draw(const Im3d::DrawList& _drawList)
 {
 	AppData& ad = GetAppData();
-
  // setting the framebuffer, viewport and pipeline states can (and should) be done prior to calling Im3d::Draw
 	glAssert(glViewport(0, 0, (GLsizei)g_Example->m_width, (GLsizei)g_Example->m_height));
 	glAssert(glEnable(GL_BLEND));
 	glAssert(glBlendEquation(GL_FUNC_ADD));
 	glAssert(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
-	glAssert(glEnable(GL_PROGRAM_POINT_SIZE));
 	
 	GLenum prim;
 	GLuint sh;
+	int primVertexCount;
 	switch (_drawList.m_primType) {
 		case Im3d::DrawPrimitive_Points:
-			prim = GL_POINTS;
+			prim = GL_TRIANGLE_STRIP;
+			primVertexCount = 1;
 			sh = g_Im3dShaderPoints;
 			glAssert(glDisable(GL_CULL_FACE)); // points are view-aligned
 			break;
 		case Im3d::DrawPrimitive_Lines:
-			prim = GL_LINES;
+			prim = GL_TRIANGLE_STRIP;
+			primVertexCount = 2;
 			sh = g_Im3dShaderLines;
 			glAssert(glDisable(GL_CULL_FACE)); // lines are view-aligned
 			break;
 		case Im3d::DrawPrimitive_Triangles:
 			prim = GL_TRIANGLES;
+			primVertexCount = 3;
 			sh = g_Im3dShaderTriangles;
 			//glAssert(glEnable(GL_CULL_FACE)); // culling valid for triangles, but optional
 			break;
@@ -52,12 +60,31 @@ void Im3d_Draw(const Im3d::DrawList& _drawList)
 
 	glAssert(glBindVertexArray(g_Im3dVertexArray));
 	glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_Im3dVertexBuffer));
-	glAssert(glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)_drawList.m_vertexCount * sizeof(Im3d::VertexData), (GLvoid*)_drawList.m_vertexData, GL_STREAM_DRAW));
-
+	
 	glAssert(glUseProgram(sh));
 	glAssert(glUniform2f(glGetUniformLocation(sh, "uViewport"), ad.m_viewportSize.x, ad.m_viewportSize.y));
 	glAssert(glUniformMatrix4fv(glGetUniformLocation(sh, "uViewProjMatrix"), 1, false, (const GLfloat*)g_Example->m_camViewProj));
-	glAssert(glDrawArrays(prim, 0, (GLsizei)_drawList.m_vertexCount));
+
+ // Uniform buffers have a size limit; split the vertex data into several passes.
+	const int kMaxBufferSize = 64 * 1024; // assuming 64kb here but the application should check the implementation limit
+ 	const int kPrimsPerPass = kMaxBufferSize / (sizeof (Im3d::VertexData) * primVertexCount);
+
+	int remainingPrimCount = _drawList.m_vertexCount / primVertexCount;
+	const Im3d::VertexData* vertexData = _drawList.m_vertexData;
+	while (remainingPrimCount > 0) {
+		int passPrimCount = remainingPrimCount < kPrimsPerPass ? remainingPrimCount : kPrimsPerPass;
+		int passVertexCount = passPrimCount * primVertexCount;
+
+		glAssert(glBindBuffer(GL_UNIFORM_BUFFER, g_Im3dUniformBuffer));
+		glAssert(glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr)passVertexCount * sizeof(Im3d::VertexData), (GLvoid*)vertexData, GL_DYNAMIC_DRAW));
+		
+	 // instanced draw call, 1 instance per prim
+		glAssert(glBindBufferBase(GL_UNIFORM_BUFFER, 0, g_Im3dUniformBuffer));
+		glDrawArraysInstanced(prim, 0, prim == GL_TRIANGLES ? 3 : 4, passPrimCount); // for triangles just use the first 3 verts of the strip
+
+		vertexData += passVertexCount;
+		remainingPrimCount -= passPrimCount;
+	}
 }
 
 // At the top of each frame, the application must fill the Im3d::AppData struct and then call Im3d::NewFrame().
@@ -120,6 +147,10 @@ void Im3d_Update()
 // draw primitive types (points, lines, triangles), plus some number of vertex buffers.
 bool Im3d_Init()
 {
+ // OpenGL uniform buffers require 16 byte alignment for structs - set IM3D_VERTEX_ALIGNMENT in im3d_config.h
+	IM3D_ASSERT(sizeof(Im3d::VertexData) % 16 == 0);
+
+
 	{
 		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0POINTS\0");
 		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "im3d.glsl", "FRAGMENT_SHADER\0POINTS\0");
@@ -136,19 +167,19 @@ bool Im3d_Init()
 		} else {
 			return false;
 		}
+		GLuint blockIndex;
+		glAssert(blockIndex = glGetUniformBlockIndex(g_Im3dShaderPoints, "VertexDataBlock"));
+		glAssert(glUniformBlockBinding(g_Im3dShaderPoints, blockIndex, 0));
 	}
 	{
 		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0LINES\0");
-		GLuint gs = LoadCompileShader(GL_GEOMETRY_SHADER, "im3d.glsl", "GEOMETRY_SHADER\0LINES\0");
 		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "im3d.glsl", "FRAGMENT_SHADER\0LINES\0");
-		if (vs && gs && fs) {
+		if (vs && fs) {
 			glAssert(g_Im3dShaderLines = glCreateProgram());
 			glAssert(glAttachShader(g_Im3dShaderLines, vs));
-			glAssert(glAttachShader(g_Im3dShaderLines, gs));
 			glAssert(glAttachShader(g_Im3dShaderLines, fs));
 			bool ret = LinkShaderProgram(g_Im3dShaderLines);
 			glAssert(glDeleteShader(vs));
-			glAssert(glDeleteShader(gs));
 			glAssert(glDeleteShader(fs));
 			if (!ret) {
 				return false;
@@ -156,6 +187,9 @@ bool Im3d_Init()
 		} else {
 			return false;
 		}
+		GLuint blockIndex;
+		glAssert(blockIndex = glGetUniformBlockIndex(g_Im3dShaderLines, "VertexDataBlock"));
+		glAssert(glUniformBlockBinding(g_Im3dShaderLines, blockIndex, 0));
 	}
 	{
 		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0TRIANGLES\0");
@@ -173,17 +207,30 @@ bool Im3d_Init()
 		} else {
 			return false;
 		}
+		GLuint blockIndex;
+		glAssert(blockIndex = glGetUniformBlockIndex(g_Im3dShaderTriangles, "VertexDataBlock"));
+		glAssert(glUniformBlockBinding(g_Im3dShaderTriangles, blockIndex, 0));
 	}
 
+ // in this example we're using a static buffer as the vertex source with a uniform buffer to provide
+ // the shader with the Im3d vertex data
+	Im3d::Vec4 vertexData[] = {
+		Im3d::Vec4(-1.0f, -1.0f, 0.0f, 1.0f),
+		Im3d::Vec4( 1.0f, -1.0f, 0.0f, 1.0f),
+		Im3d::Vec4(-1.0f,  1.0f, 0.0f, 1.0f),
+		Im3d::Vec4( 1.0f,  1.0f, 0.0f, 1.0f)
+	};
 	glAssert(glCreateBuffers(1, &g_Im3dVertexBuffer));;
 	glAssert(glCreateVertexArrays(1, &g_Im3dVertexArray));	
 	glAssert(glBindVertexArray(g_Im3dVertexArray));
 	glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_Im3dVertexBuffer));
+	glAssert(glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), (GLvoid*)vertexData, GL_STATIC_DRAW));
 	glAssert(glEnableVertexAttribArray(0));
-	glAssert(glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(Im3d::VertexData), (GLvoid*)offsetof(Im3d::VertexData, m_positionSize)));
-	glAssert(glEnableVertexAttribArray(1));
-	glAssert(glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Im3d::VertexData), (GLvoid*)offsetof(Im3d::VertexData, m_color)));
+	glAssert(glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(Im3d::Vec4), (GLvoid*)0));
 	glAssert(glBindVertexArray(0));
+
+	glAssert(glCreateBuffers(1, &g_Im3dUniformBuffer));
+	
 
 	GetAppData().drawCallback = &Im3d_Draw;
 
@@ -193,6 +240,7 @@ bool Im3d_Init()
 void Im3d_Shutdown()
 {
 	glAssert(glDeleteVertexArrays(1, &g_Im3dVertexArray));
+	glAssert(glDeleteBuffers(1, &g_Im3dUniformBuffer));
 	glAssert(glDeleteBuffers(1, &g_Im3dVertexBuffer));
 	glAssert(glDeleteProgram(g_Im3dShaderPoints));
 	glAssert(glDeleteProgram(g_Im3dShaderLines));

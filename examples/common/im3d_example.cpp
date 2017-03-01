@@ -313,6 +313,18 @@ static const char* StripPath(const char* _path)
 				GlGetString(GL_VENDOR),
 				GlGetString(GL_RENDERER)
 				);
+
+			if (_vmaj == 3 && _vmin == 1) {
+			 // check that the uniform blocks size is at least 64kb
+				GLint maxUniformBlockSize; 
+				glAssert(glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &maxUniformBlockSize));
+				if (maxUniformBlockSize < (64 * 1024)) {
+					IM3D_ASSERT(false);
+					fprintf(stderr, "GL_MAX_UNIFORM_BLOCK_SIZE is less than 64kb (%dkb)", maxUniformBlockSize / 1024);
+					return false;
+				}
+			}
+
 			return true;
 		}
 		
@@ -449,7 +461,7 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 	GLuint Im3d::LoadCompileShader(GLenum _stage, const char* _path, const char* _defines)
 	{
 		Vector<char> src;
-		AppendLine(IM3D_OPENGL_VSHADER, src);
+		AppendLine("#version " IM3D_STRINGIFY(IM3D_OPENGL_VSHADER), src);
 		if (!LoadShader(_path, _defines, src)) {
 			return 0;
 		}

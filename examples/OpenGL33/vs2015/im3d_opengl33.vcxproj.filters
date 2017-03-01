@@ -83,6 +83,6 @@
     <ClCompile Include="..\..\common\main.cpp">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\im3d_opengl3.cpp" />
+    <ClCompile Include="..\im3d_opengl33.cpp" />
   </ItemGroup>
 </Project>

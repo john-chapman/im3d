@@ -35,10 +35,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{692A369D-558D-C541-FE12-FEF7EA5491C4}</ProjectGuid>
+    <ProjectGuid>{BA77FB43-2638-777A-EF72-C0F75BF2BB56}</ProjectGuid>
     <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>im3d_opengl3</RootNamespace>
+    <RootNamespace>im3d_opengl31</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -85,35 +85,35 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\</OutDir>
     <IntDir>obj\Win32\Debug\</IntDir>
-    <TargetName>im3d_opengl3_debug</TargetName>
+    <TargetName>im3d_opengl31_debug</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug Win64|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\</OutDir>
     <IntDir>obj\Win64\Debug\</IntDir>
-    <TargetName>im3d_opengl3_debug</TargetName>
+    <TargetName>im3d_opengl31_debug</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\</OutDir>
     <IntDir>obj\Win32\Release\</IntDir>
-    <TargetName>im3d_opengl3</TargetName>
+    <TargetName>im3d_opengl31</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release Win64|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\</OutDir>
     <IntDir>obj\Win64\Release\</IntDir>
-    <TargetName>im3d_opengl3</TargetName>
+    <TargetName>im3d_opengl31</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>IM3D_DEBUG;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>IM3D_DEBUG;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;IM3D_OPENGL_VMAJ=3;IM3D_OPENGL_VMIN=1;IM3D_OPENGL_VSHADER=140;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\..;..\..\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
@@ -130,7 +130,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>IM3D_DEBUG;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>IM3D_DEBUG;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;IM3D_OPENGL_VMAJ=3;IM3D_OPENGL_VMIN=1;IM3D_OPENGL_VSHADER=140;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\..;..\..\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
@@ -147,7 +147,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;IM3D_OPENGL_VMAJ=3;IM3D_OPENGL_VMIN=1;IM3D_OPENGL_VSHADER=140;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\..;..\..\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Full</Optimization>
@@ -170,7 +170,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;IM3D_OPENGL_VMAJ=3;IM3D_OPENGL_VMIN=1;IM3D_OPENGL_VSHADER=140;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\..;..\..\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Full</Optimization>
@@ -213,7 +213,7 @@
     <ClCompile Include="..\..\common\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\..\common\imgui\imgui_draw.cpp" />
     <ClCompile Include="..\..\common\main.cpp" />
-    <ClCompile Include="..\im3d_opengl3.cpp" />
+    <ClCompile Include="..\im3d_opengl31.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
