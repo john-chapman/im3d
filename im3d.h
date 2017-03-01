@@ -4,11 +4,15 @@
 
 #include "im3d_config.h"
 
-#define IM3D_VERSION "1.01"
+#define IM3D_VERSION "1.02"
 
 #ifndef IM3D_ASSERT
 	#include <cassert>
 	#define IM3D_ASSERT(e) assert(e)
+#endif
+
+#ifndef IM3D_VERTEX_ALIGNEMENT
+	#define IM3D_VERTEX_ALIGNEMENT 4
 #endif
 
 namespace Im3d {
@@ -319,7 +323,7 @@ struct Color
 	float getA() const                                                       { return get(0); }
 };
 
-struct VertexData
+struct alignas(IM3D_VERTEX_ALIGNEMENT) VertexData
 {
 	Vec4   m_positionSize; // xyz = position, w = size
 	Color  m_color;        // rgba8 (MSB = r)
@@ -406,7 +410,7 @@ public:
 	T*       data()                               { return m_data; }
 	const T* data() const                         { return m_data; }
 
-	void     push_back(T _v)                      { if (m_size == m_capacity) { reserve(m_capacity + m_capacity / 2); } m_data[m_size++] = _v;}
+	void     push_back(const T& _v)               { T tmp = _v; if (m_size == m_capacity) { reserve(m_capacity + m_capacity / 2); } m_data[m_size++] = tmp; }
 	void     pop_back()                           { IM3D_ASSERT(m_size > 0); --m_size; }
 
 	T*       begin()                              { return m_data; }

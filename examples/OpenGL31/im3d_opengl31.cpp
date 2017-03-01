@@ -66,16 +66,7 @@ void Im3d_Draw(const Im3d::DrawList& _drawList)
 
  // Uniform buffers have a size limit; split the vertex data into several passes.
 	const int kMaxBufferSize = 64 * 1024; // assuming 64kb here but the application should check the implementation limit
-
- // Padding may be required in order to match buffer data alignment rules.
-	const int kRequiredAlignment = 16;
-	char paddedVertexData[kMaxBufferSize];
-	int padding = 0;
-	if (sizeof(Im3d::VertexData) % kRequiredAlignment != 0) {
-		padding = kRequiredAlignment - sizeof(Im3d::VertexData) % kRequiredAlignment;
-	}
-	const int kPaddedSize = sizeof(Im3d::VertexData) + padding;
-	const int kPrimsPerPass = kMaxBufferSize / (kPaddedSize * primVertexCount);
+ 	const int kPrimsPerPass = kMaxBufferSize / (sizeof (Im3d::VertexData) * primVertexCount);
 
 	int remainingPrimCount = _drawList.m_vertexCount / primVertexCount;
 	const Im3d::VertexData* vertexData = _drawList.m_vertexData;
@@ -83,18 +74,8 @@ void Im3d_Draw(const Im3d::DrawList& _drawList)
 		int passPrimCount = remainingPrimCount < kPrimsPerPass ? remainingPrimCount : kPrimsPerPass;
 		int passVertexCount = passPrimCount * primVertexCount;
 
-	 // pad 
-		char* srcBuffer = (char*)vertexData;
-		if (padding > 0) {
-			srcBuffer = paddedVertexData;
-			for (int i = 0; i < passVertexCount; ++i) {
-				memcpy(srcBuffer, &vertexData[i], sizeof(Im3d::VertexData));
-				srcBuffer += kPaddedSize;
-			}
-			srcBuffer = paddedVertexData; // reset srcBuffer to point at the data start
-		}
 		glAssert(glBindBuffer(GL_UNIFORM_BUFFER, g_Im3dUniformBuffer));
-		glAssert(glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr)passVertexCount * kPaddedSize, (GLvoid*)srcBuffer, GL_DYNAMIC_DRAW));
+		glAssert(glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr)passVertexCount * sizeof(Im3d::VertexData), (GLvoid*)vertexData, GL_DYNAMIC_DRAW));
 		
 	 // instanced draw call, 1 instance per prim
 		glAssert(glBindBufferBase(GL_UNIFORM_BUFFER, 0, g_Im3dUniformBuffer));
@@ -165,6 +146,8 @@ void Im3d_Update()
 // draw primitive types (points, lines, triangles), plus some number of vertex buffers.
 bool Im3d_Init()
 {
+ // OpenGL uniform buffers require 16 byte alignment for structs - set IM3D_VERTEX_ALIGNMENT in im3d_config.h
+	IM3D_ASSERT(sizeof(Im3d::VertexData) % 16 == 0); 
 	{
 		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0POINTS\0");
 		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "im3d.glsl", "FRAGMENT_SHADER\0POINTS\0");

@@ -1,5 +1,6 @@
 /*	CHANGE LOG
 	==========
+	2017-03-01 (v1.02) - Configurable VertexData alignment (IM3D_VERTEX_ALIGNMENT).
 	2017-02-23 (v1.01) - Removed AppData::m_tanHalfFov, replaced with AppData::m_projScaleY. Added AppData::m_projOrtho.
 */
 #include "im3d.h"
@@ -741,11 +742,33 @@ bool Im3d::Gizmo(const char* _id, float _translation_[3], float _rotation_[3*3],
 
 *******************************************************************************/
 
+static void* AlignedMalloc(size_t _size, size_t _align)
+{
+	IM3D_ASSERT(_size > 0);
+	IM3D_ASSERT(_align > 0);
+	size_t grow = (_align - 1) + sizeof(void*);
+	size_t mem = (size_t)IM3D_MALLOC(_size + grow);
+	if (mem) {
+		size_t ret = (mem + grow) / _align * _align;
+		IM3D_ASSERT(ret % _align == 0); // aligned correctly
+		IM3D_ASSERT(ret >= mem + sizeof(void*)); // header large enough to store a ptr
+		*((void**)(ret - sizeof(void*))) = (void*)mem;
+		return (void*)ret;
+	} else {
+		return nullptr;
+	}
+}
+static void AlignedFree(void* _ptr_)
+{
+	void* mem = *((void**)((size_t)_ptr_ - sizeof(void*)));
+	IM3D_FREE(mem);
+}
+
 template <typename T>
 Vector<T>::~Vector()
 {
 	if (m_data) {
-		IM3D_FREE(m_data);
+		AlignedFree(m_data);
 		m_data = 0;
 	}
 }
@@ -757,10 +780,10 @@ void Vector<T>::reserve(U32 _capacity)
 	if (_capacity < m_capacity) {
 		return;
 	}
-	T* data = (T*)IM3D_MALLOC(sizeof(T) * _capacity);
+	T* data = (T*)AlignedMalloc(sizeof(T) * _capacity, alignof(T));
 	if (m_data) {
 		memcpy(data, m_data, sizeof(T) * m_size);
-		IM3D_FREE(m_data);
+		AlignedFree(m_data);;
 	}
 	m_data = data;
 	m_capacity = _capacity;
