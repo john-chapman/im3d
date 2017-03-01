@@ -1,6 +1,6 @@
 /*	OpenGL 3.3 example
-	This is the standard 'modern' example which implements line expansion via a geometry shader.
-	See examples/OpenGL31 for a reference which doesn't require a geometry shader.
+	This is a standard 'modern' example which implements line expansion via a geometry shader.
+	See examples/OpenGL31 for a reference which doesn't require geometry shaders.
 */
 #include "im3d_example.h"
 

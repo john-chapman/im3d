@@ -1,3 +1,7 @@
+/*	DirectX 11 example
+	This is a standard 'modern' example which implements point/line expansion via a geometry shader.
+	See examples/OpenGL31 for a reference which doesn't require geometry shaders.
+*/
 #include "im3d_example.h"
 
 struct D3DShader

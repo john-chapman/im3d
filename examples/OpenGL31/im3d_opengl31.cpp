@@ -1,6 +1,7 @@
 /*	OpenGL 3.1 example
 	This example demonstrates a method for integrating Im3d without geometry shaders, instead using the 
-	vertex shader to expand points/lines into triangle strips.
+	vertex shader to expand points/lines into triangle strips. This works by uploading Im3d vertex data
+	to a uniform buffer and fetching manually in the vertex shader.
 */
 #include "im3d_example.h"
 
@@ -147,7 +148,9 @@ void Im3d_Update()
 bool Im3d_Init()
 {
  // OpenGL uniform buffers require 16 byte alignment for structs - set IM3D_VERTEX_ALIGNMENT in im3d_config.h
-	IM3D_ASSERT(sizeof(Im3d::VertexData) % 16 == 0); 
+	IM3D_ASSERT(sizeof(Im3d::VertexData) % 16 == 0);
+
+
 	{
 		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0POINTS\0");
 		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "im3d.glsl", "FRAGMENT_SHADER\0POINTS\0");
