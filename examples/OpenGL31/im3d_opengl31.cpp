@@ -63,7 +63,6 @@ void Im3d_Draw(const Im3d::DrawList& _drawList)
 	glAssert(glUseProgram(sh));
 	glAssert(glUniform2f(glGetUniformLocation(sh, "uViewport"), ad.m_viewportSize.x, ad.m_viewportSize.y));
 	glAssert(glUniformMatrix4fv(glGetUniformLocation(sh, "uViewProjMatrix"), 1, false, (const GLfloat*)g_Example->m_camViewProj));
-	glAssert(glDrawArrays(prim, 0, (GLsizei)_drawList.m_vertexCount));
 
  // Uniform buffers have a size limit; split the vertex data into several passes.
  // Padding is also required to match alignment requirements.
@@ -92,7 +91,6 @@ void Im3d_Draw(const Im3d::DrawList& _drawList)
 		vertexData += passVertexCount;
 		remainingPrimCount -= passPrimCount;
 	}
-
 }
 
 // At the top of each frame, the application must fill the Im3d::AppData struct and then call Im3d::NewFrame().
