@@ -55,7 +55,7 @@ More detailed and API-specific integration examples are available in [examples/]
 **Where is the documentation?**
 
 - [im3d.h](https://github.com/john-chapman/im3d/tree/master/im3d.h) contains the main API documentation.
-- [examples/common/main.cpp](https://github.com/john-chapman/im3d/tree/master/examples/common/main.cpp) contains usage examples for most features, especially how to use the `Gizmo*()` API effectively.
+- [examples/common/main.cpp](https://github.com/john-chapman/im3d/tree/master/examples/common/main.cpp) contains usage examples for most features, especially how to use the `Gizmo*()` API.
 - [examples/](https://github.com/john-chapman/im3d/tree/master/examples) contain reference implementations with lots of comments.
 
 
