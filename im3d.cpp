@@ -483,6 +483,7 @@ bool Im3d::GizmoTranslation(const char* _id, float _translation_[3], bool _local
 	}
 	
 	ctx.popId();
+
 	return ret;
 }
 bool Im3d::GizmoRotation(const char* _id, float _rotation_[3*3], bool _local)
@@ -1170,6 +1171,15 @@ int Context::estimateLevelOfDetail(const Vec3& _position, float _worldSize, int 
 	return (int)(fmin + (fmax - fmin) * x);
 }
 
+
+inline static float Snap(float _val, float _snap)
+{
+	if (_snap > 0.0f) {
+		return floorf(_val / _snap) * _snap;
+	}
+	return _val;
+}
+
 bool Context::gizmoAxisTranslation_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, Vec3* _out_)
 {
 	Ray ray(m_appData.m_cursorRayOrigin, m_appData.m_cursorRayDirection);
@@ -1193,6 +1203,7 @@ bool Context::gizmoAxisTranslation_Behavior(Id _id, const Vec3& _origin, const V
 		if (isKeyDown(Action_Select)) {
 			float tr, tl;
 			Nearest(ray, axisLine, tr, tl);
+			tl = Snap(tl, m_appData.m_snapTranslation);
 			*_out_ = *_out_ + _axis * tl - storedPosition;
 			return true;
 		} else {
@@ -1204,6 +1215,7 @@ bool Context::gizmoAxisTranslation_Behavior(Id _id, const Vec3& _origin, const V
 				m_activeId = _id;
 				float tr, tl;
 				Nearest(ray, axisLine, tr, tl);
+				tl = Snap(tl, m_appData.m_snapTranslation);
 				storedPosition = _axis * tl;
 			}
 		} else {
@@ -1230,6 +1242,16 @@ void Context::gizmoAxisTranslation_Draw(Id _id, const Vec3& _origin, const Vec3&
 			vertex(_origin - _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
 			vertex(_origin + _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
 		end();
+		if (m_appData.m_snapTranslation > 0.0f) {
+			int snapCount = 5;
+			begin(PrimitiveMode_Points);
+				for (int i = -snapCount; i < snapCount; ++i) {
+					Color color = _color;
+					color.setA(1.0f - ((float)abs(i) / (float)snapCount));
+					vertex(_origin + _axis * ((float)i * m_appData.m_snapTranslation), m_gizmoSizePixels * 1.5f, color);
+				}
+			end();
+		}
 		popEnableSorting();
 	} else if (_id == m_hotId) {
 		color = Color_GizmoHighlight;
@@ -1337,7 +1359,8 @@ bool Context::gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& 
 		if (isKeyDown(Action_Select)) {
 			Vec3 delta = Normalize(intersection - _origin);
 			float sign = Dot(Cross(storedVec, delta), plane.m_normal);
-			*_out_ = storedAngle + copysignf(acosf(Clamp(Dot(delta, storedVec), -1.0f, 1.0f)), sign);
+			float angle = acosf(Clamp(Dot(delta, storedVec), -1.0f, 1.0f));
+			*_out_ = storedAngle + copysignf(Snap(angle, m_appData.m_snapRotation), sign);
 			return true;
 		} else {
 			m_activeId = Id_Invalid;
@@ -1348,7 +1371,7 @@ bool Context::gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& 
 			if (isKeyDown(Action_Select)) {
 				m_activeId = _id;
 				storedVec = Normalize(intersection - _origin);
-				storedAngle = *_out_;
+				storedAngle = Snap(*_out_, m_appData.m_snapRotation);
 			}
 		} else {
 			resetId();

@@ -29,6 +29,21 @@ int main(int, char**)
 		}
 		ImGui::Spacing();
 
+		
+		if (ImGui::TreeNode("Gizmo Snap")) {
+			static float snapTranslation = 0.1f;
+			ImGui::SliderFloat("Translation Snap", &snapTranslation, 0.0f, 2.0f);
+			ad.m_snapTranslation = snapTranslation;
+
+			static float snapRotation = 45.0f;
+			ImGui::SliderFloat("Rotation Snap", &snapRotation, 0.0f, 180.0f);
+			ad.m_snapRotation = Im3d::Radians(snapRotation);
+			
+			ImGui::TreePop();
+		} else {
+			ad.m_snapTranslation = 0.0f;
+			ad.m_snapRotation = 0.0f;
+		}
 
 		ImGui::SetNextTreeNodeOpen(true, ImGuiSetCond_Once);
 		if (ImGui::TreeNode("Unified Gizmo")) {
@@ -45,7 +60,7 @@ int main(int, char**)
 			ImGui::SameLine();
 			ImGui::RadioButton("Scale (Ctrl+S)", &gizmoMode, Im3d::GizmoMode_Scale);
 			Im3d::GetContext().m_gizmoMode = (Im3d::GizmoMode)gizmoMode;
-
+	
 		 // the ID passed to Gizmo() should be unique during a frame - to create gizmos in a loop use PushId()/PopId()
 			if (Im3d::Gizmo("GizmoUnified", transform)) {
 			 // if Gizmo() returns true, the transform was modified

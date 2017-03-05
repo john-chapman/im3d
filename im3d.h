@@ -378,17 +378,19 @@ enum Key
 };
 struct AppData
 {
-	bool  m_keyDown[Key_Count];  // Application-provided key states.
+	bool   m_keyDown[Key_Count];  // Application-provided key states.
 
-	Vec3  m_cursorRayOrigin;     // World space cursor ray origin.
-	Vec3  m_cursorRayDirection;  // World space cursor ray direction.
-	Vec3  m_worldUp;             // World space 'up' vector.
-	Vec3  m_viewOrigin;          // World space render origin (camera position).
-	Vec2  m_viewportSize;        // Viewport size (pixels).
-	float m_projScaleY;          // Scale factor used to convert from pixel size -> world scale; use tan(fov) for perspective projections, far plane height for ortho.
-	bool  m_projOrtho;           // If the projection matrix is orthographic.
-	float m_deltaTime;           // Time since previous frame (seconds).
-	void* m_appData;             // App-specific data (useful for passing app context to drawCallback).
+	Vec3   m_cursorRayOrigin;     // World space cursor ray origin.
+	Vec3   m_cursorRayDirection;  // World space cursor ray direction.
+	Vec3   m_worldUp;             // World space 'up' vector.
+	Vec3   m_viewOrigin;          // World space render origin (camera position).
+	Vec2   m_viewportSize;        // Viewport size (pixels).
+	float  m_projScaleY;          // Scale factor used to convert from pixel size -> world scale; use tan(fov) for perspective projections, far plane height for ortho.
+	bool   m_projOrtho;           // If the projection matrix is orthographic.
+	float  m_deltaTime;           // Time since previous frame (seconds).
+	float  m_snapTranslation;     // World space snapping for translation gizmos. 0 = disabled.
+	float  m_snapRotation;        // Snapping for rotation gizmos (radians). 0 = disabled.
+	void*  m_appData;             // App-specific data (useful for passing app context to drawCallback).
 
 	DrawPrimitivesCallback* drawCallback; // e.g. void Im3d_Draw(const DrawList& _drawList)
 };
