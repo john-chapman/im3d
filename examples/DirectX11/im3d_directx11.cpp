@@ -172,6 +172,11 @@ void Im3d_Update()
 	ad.m_keyDown[Im3d::Key_T/*Action_GizmoTranslation*/] = ctrlDown && (GetAsyncKeyState(0x54) & 0x8000) != 0;
 	ad.m_keyDown[Im3d::Key_R/*Action_GizmoRotation*/]    = ctrlDown && (GetAsyncKeyState(0x52) & 0x8000) != 0;
 	ad.m_keyDown[Im3d::Key_S/*Action_GizmoScale*/]       = ctrlDown && (GetAsyncKeyState(0x53) & 0x8000) != 0;
+	
+ // Enable gizmo snapping by setting the translation/rotation/scale increments to be > 0
+	ad.m_snapTranslation = ctrlDown ? 0.1f : 0.0f;
+	ad.m_snapRotation    = ctrlDown ? Im3d::Radians(15.0f) : 0.0f;
+	ad.m_snapScale       = ctrlDown ? 0.5f : 0.0f;
 
 	Im3d::NewFrame();
 }

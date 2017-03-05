@@ -29,7 +29,6 @@ int main(int, char**)
 		}
 		ImGui::Spacing();
 
-
 		ImGui::SetNextTreeNodeOpen(true, ImGuiSetCond_Once);
 		if (ImGui::TreeNode("Unified Gizmo")) {
 		 // unified gizmo operates directly on a 4x4 matrix using the context-global gizmo modes
@@ -45,7 +44,7 @@ int main(int, char**)
 			ImGui::SameLine();
 			ImGui::RadioButton("Scale (Ctrl+S)", &gizmoMode, Im3d::GizmoMode_Scale);
 			Im3d::GetContext().m_gizmoMode = (Im3d::GizmoMode)gizmoMode;
-
+	
 		 // the ID passed to Gizmo() should be unique during a frame - to create gizmos in a loop use PushId()/PopId()
 			if (Im3d::Gizmo("GizmoUnified", transform)) {
 			 // if Gizmo() returns true, the transform was modified
@@ -389,14 +388,6 @@ int main(int, char**)
 
 		if (ImGui::TreeNode("Camera")) {
 			ImGui::Checkbox("Ortho", &example.m_camOrtho);
-
-			float t0;
-			Im3d::Plane pl(Im3d::Vec3(0.0f, 1.0f, 0.0f), Im3d::Vec3(0.0f));
-			Im3d::Ray ry(Im3d::GetAppData().m_cursorRayOrigin, Im3d::GetAppData().m_cursorRayDirection);
-			Im3d::Intersect(ry, pl, t0);
-			Im3d::BeginPoints();
-				Im3d::Vertex(ry.m_origin + ry.m_direction * t0, 12.0f, Im3d::Color_Magenta);
-			Im3d::End();
 
 			ImGui::TreePop();
 		}

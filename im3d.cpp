@@ -383,6 +383,49 @@ Im3d::Id Im3d::MakeId(int _i)
 	return Hash((const char*)&_i, sizeof(int), GetContext().getId());
 }
 
+
+inline static float Snap(float _val, float _snap)
+{
+	if (_snap > 0.0f) {
+		return floorf(_val / _snap) * _snap;
+	}
+	return _val;
+}
+
+inline static Vec3 Snap(const Vec3& _val, float _snap) {
+	if (_snap > 0.0f) {
+		return Vec3(floorf(_val.x / _snap) * _snap, floorf(_val.y / _snap) * _snap, floorf(_val.z / _snap) * _snap);
+	}
+	return _val;
+}
+
+inline static Vec3 Snap(const Vec3& _pos, const Plane& _plane, float _snap)
+{
+	if (_snap > 0.0f) {
+	 // get basis vectors on the plane
+		Mat3 basis = AlignZ(_plane.m_normal);
+		Vec3 i = basis.getCol(0);
+		Vec3 j = basis.getCol(1);
+
+	 // decompose _pos in terms of the basis vectors
+		i = i * Dot(_pos, i);
+		j = j * Dot(_pos, j);
+
+	 // snap the vector lengths
+		float ilen = Length(i);
+		i = i / ilen;
+		ilen = floorf(ilen / _snap) * _snap;
+		i = i * ilen;
+		float jlen = Length(j);
+		j = j / jlen;
+		jlen = floorf(jlen / _snap) * _snap;
+		j = j * jlen;
+
+		return i + j;
+	}
+	return _pos;
+}
+
 bool Im3d::GizmoTranslation(const char* _id, float _translation_[3], bool _local)
 {
 	Context& ctx = GetContext();
@@ -483,6 +526,7 @@ bool Im3d::GizmoTranslation(const char* _id, float _translation_[3], bool _local
 	}
 	
 	ctx.popId();
+
 	return ret;
 }
 bool Im3d::GizmoRotation(const char* _id, float _rotation_[3*3], bool _local)
@@ -595,8 +639,9 @@ bool Im3d::GizmoScale(const char* _id, float _scale_[3])
 				Intersect(ray, plane, t0);
 				Vec3 intersection = ray.m_origin + ray.m_direction * t0;
 				float sign = Dot(intersection - origin, storedPosition - origin);
-				float delta = copysignf(Length(intersection - origin), sign);
-				*outVec3 = storedScale * Vec3(Max(1.0f + delta / worldHeight, 1e-4f));
+				float scale= copysignf(Length(intersection - origin), sign) / worldHeight;
+				scale = Snap(scale, ctx.getAppData().m_snapScale);
+				*outVec3 = storedScale * Vec3(Max(1.0f + copysignf(scale, sign), 1e-4f));
 				ret = true;
 			} else {
 				ctx.m_activeId = Id_Invalid;
@@ -1193,7 +1238,9 @@ bool Context::gizmoAxisTranslation_Behavior(Id _id, const Vec3& _origin, const V
 		if (isKeyDown(Action_Select)) {
 			float tr, tl;
 			Nearest(ray, axisLine, tr, tl);
-			*_out_ = *_out_ + _axis * tl - storedPosition;
+			tl = Snap(tl, m_appData.m_snapTranslation);
+			Vec3 snappedOrigin = Snap(storedPosition, m_appData.m_snapTranslation); // always snap the origin = prevent issues when enabling snap after the gizmo became hot
+			*_out_ = *_out_ + _axis * tl - snappedOrigin;
 			return true;
 		} else {
 			m_activeId = Id_Invalid;
@@ -1274,7 +1321,8 @@ bool Context::gizmoPlaneTranslation_Behavior(Id _id, const Vec3& _origin, const 
 		return false;
 	}
 	Vec3 intersection = ray.m_origin + ray.m_direction * tr;
-	intersects &= AllLess(Abs(intersection - _origin), Vec3(_worldSize));	
+	intersects &= AllLess(Abs(intersection - _origin), Vec3(_worldSize));
+	intersection = Snap(intersection, plane, m_appData.m_snapTranslation);
 	
 	Vec3& storedPosition = m_gizmoStateVec3;
 	
@@ -1337,7 +1385,8 @@ bool Context::gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& 
 		if (isKeyDown(Action_Select)) {
 			Vec3 delta = Normalize(intersection - _origin);
 			float sign = Dot(Cross(storedVec, delta), plane.m_normal);
-			*_out_ = storedAngle + copysignf(acosf(Clamp(Dot(delta, storedVec), -1.0f, 1.0f)), sign);
+			float angle = acosf(Clamp(Dot(delta, storedVec), -1.0f, 1.0f));
+			*_out_ = storedAngle + copysignf(Snap(angle, m_appData.m_snapRotation), sign);
 			return true;
 		} else {
 			m_activeId = Id_Invalid;
@@ -1348,7 +1397,7 @@ bool Context::gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& 
 			if (isKeyDown(Action_Select)) {
 				m_activeId = _id;
 				storedVec = Normalize(intersection - _origin);
-				storedAngle = *_out_;
+				storedAngle = Snap(*_out_, m_appData.m_snapRotation);
 			}
 		} else {
 			resetId();
@@ -1456,8 +1505,9 @@ bool Context::gizmoAxisScale_Behavior(Id _id, const Vec3& _origin, const Vec3& _
 			Nearest(ray, axisLine, tr, tl);
 			Vec3 intersection = _axis * tl;
 			Vec3 delta = intersection - storedPosition;
+			float scale = Snap(Length(delta) / _worldHeight, m_appData.m_snapTranslation);
 			float sign = Dot(delta, _axis);
-			*_out_ = storedScale * Max(1.0f + copysignf(Length(delta), sign) / _worldHeight, 1e-3f);
+			*_out_ = storedScale * Max(1.0f + copysignf(scale, sign), 1e-3f);
 			return true;
 		} else {
 			m_activeId = Id_Invalid;
@@ -1776,7 +1826,7 @@ void Mat4::setScale(const Vec3& _scale)
 	setCol(1, getCol(1) * scale.y);
 	setCol(2, getCol(2) * scale.z);
 }
-static inline float Determinant(const Mat4& _m)
+inline static float Determinant(const Mat4& _m)
 {
 	return 
 		_m(0, 3) * _m(1, 2) * _m(2, 1) * _m(3, 0) - _m(0, 2) * _m(1, 3) * _m(2, 1) * _m(3, 0) - _m(0, 3) * _m(1, 1) * _m(2, 2) * _m(3, 0) + _m(0, 1) * _m(1, 3) * _m(2, 2) * _m(3, 0) +
