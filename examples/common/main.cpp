@@ -29,22 +29,6 @@ int main(int, char**)
 		}
 		ImGui::Spacing();
 
-		
-		if (ImGui::TreeNode("Gizmo Snap")) {
-			static float snapTranslation = 0.1f;
-			ImGui::SliderFloat("Translation Snap", &snapTranslation, 0.0f, 2.0f);
-			ad.m_snapTranslation = snapTranslation;
-
-			static float snapRotation = 45.0f;
-			ImGui::SliderFloat("Rotation Snap", &snapRotation, 0.0f, 180.0f);
-			ad.m_snapRotation = Im3d::Radians(snapRotation);
-			
-			ImGui::TreePop();
-		} else {
-			ad.m_snapTranslation = 0.0f;
-			ad.m_snapRotation = 0.0f;
-		}
-
 		ImGui::SetNextTreeNodeOpen(true, ImGuiSetCond_Once);
 		if (ImGui::TreeNode("Unified Gizmo")) {
 		 // unified gizmo operates directly on a 4x4 matrix using the context-global gizmo modes
@@ -404,14 +388,6 @@ int main(int, char**)
 
 		if (ImGui::TreeNode("Camera")) {
 			ImGui::Checkbox("Ortho", &example.m_camOrtho);
-
-			float t0;
-			Im3d::Plane pl(Im3d::Vec3(0.0f, 1.0f, 0.0f), Im3d::Vec3(0.0f));
-			Im3d::Ray ry(Im3d::GetAppData().m_cursorRayOrigin, Im3d::GetAppData().m_cursorRayDirection);
-			Im3d::Intersect(ry, pl, t0);
-			Im3d::BeginPoints();
-				Im3d::Vertex(ry.m_origin + ry.m_direction * t0, 12.0f, Im3d::Color_Magenta);
-			Im3d::End();
 
 			ImGui::TreePop();
 		}

@@ -4,7 +4,7 @@
 
 #include "im3d_config.h"
 
-#define IM3D_VERSION "1.02"
+#define IM3D_VERSION "1.03"
 
 #ifndef IM3D_ASSERT
 	#include <cassert>
@@ -388,8 +388,9 @@ struct AppData
 	float  m_projScaleY;          // Scale factor used to convert from pixel size -> world scale; use tan(fov) for perspective projections, far plane height for ortho.
 	bool   m_projOrtho;           // If the projection matrix is orthographic.
 	float  m_deltaTime;           // Time since previous frame (seconds).
-	float  m_snapTranslation;     // World space snapping for translation gizmos. 0 = disabled.
-	float  m_snapRotation;        // Snapping for rotation gizmos (radians). 0 = disabled.
+	float  m_snapTranslation;     // Snap value for translation gizmos (world units). 0 = disabled.
+	float  m_snapRotation;        // Snap value for rotation gizmos (radians). 0 = disabled.
+	float  m_snapScale;           // Snap value for scale gizmos. 0 = disabled.
 	void*  m_appData;             // App-specific data (useful for passing app context to drawCallback).
 
 	DrawPrimitivesCallback* drawCallback; // e.g. void Im3d_Draw(const DrawList& _drawList)
