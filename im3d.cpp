@@ -1257,9 +1257,9 @@ bool Context::gizmoAxisTranslation_Behavior(Id _id, const Vec3& _origin, const V
 			resetId();
 		}
 	} else {
-		float depth = Length2(axisCapsule.m_end - m_appData.m_viewOrigin);
-		bool intersects = Intersects(ray, axisCapsule);
-		makeHot(_id, depth, intersects);
+		float t0, t1;
+		bool intersects = Intersect(ray, axisCapsule, t0, t1);
+		makeHot(_id, t0, intersects);
 	}
 
 	return false;
@@ -1343,8 +1343,7 @@ bool Context::gizmoPlaneTranslation_Behavior(Id _id, const Vec3& _origin, const 
 			resetId();
 		}
 	} else {
-		float depth = Length2(_origin - m_appData.m_viewOrigin);
-		makeHot(_id, depth, intersects);
+		makeHot(_id, tr, intersects);
 	}
 
 	return false;
@@ -1403,8 +1402,7 @@ bool Context::gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& 
 			resetId();
 		}
 	} else {
-	 	float depth = Length2(intersection - m_appData.m_viewOrigin);
-		makeHot(_id, depth, intersects);
+		makeHot(_id, tr, intersects);
 	}
 	return false;
 }
@@ -1526,9 +1524,9 @@ bool Context::gizmoAxisScale_Behavior(Id _id, const Vec3& _origin, const Vec3& _
 			resetId();
 		}
 	} else {
-	 	float depth = Length2(axisCapsule.m_end - m_appData.m_viewOrigin);
-		bool intersects = Intersects(ray, axisCapsule);
-		makeHot(_id, depth, intersects);
+	 	float t0, t1;
+		bool intersects = Intersect(ray, axisCapsule, t0, t1);
+		makeHot(_id, t0, intersects);
 	}
 
 	return false;
@@ -1995,8 +1993,8 @@ bool Im3d::Intersects(const Ray& _ray, const Capsule& _capsule)
 }
 bool Im3d::Intersect(const Ray& _ray, const Capsule& _capsule, float& t0_, float& t1_)
 {
-	IM3D_ASSERT(false); // \todo implement
-	return false;
+	//IM3D_ASSERT(false); // \todo implement
+	return Intersects(_ray, _capsule);
 }
 
 void Im3d::Nearest(const Line& _line0, const Line& _line1, float& t0_, float& t1_)

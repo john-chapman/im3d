@@ -172,6 +172,23 @@ int main(int, char**)
 			ImGui::TreePop();
 		}
 
+		if (ImGui::TreeNode("Cursor Ray Intersection")) {
+		 // context exposes the 'hot depth' along the cursor ray which intersects with the current hot gizmo - this is useful
+		 // when drawing the cursor ray.
+			float depth = FLT_MAX;
+			depth = Im3d::Min(depth, Im3d::GetContext().m_hotDepth);
+			float size = Im3d::Clamp(32.0f / depth, 4.0f, 32.0f);
+			
+			ImGui::Text("Depth: %f", depth);
+			Im3d::PushEnableSorting(true);
+			Im3d::BeginPoints();
+				Im3d::Vertex(ad.m_cursorRayOrigin + ad.m_cursorRayDirection * depth * 0.99f, size, Im3d::Color_Magenta);
+			Im3d::End();
+			Im3d::PopEnableSorting();
+		
+			ImGui::TreePop();
+		}
+
 		
 		if (ImGui::TreeNode("High Order Shapes")) {
 		 // Im3d provides functions to easily draw high order shapes - these don't strictly require a matrix to be pushed on

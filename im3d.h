@@ -535,7 +535,7 @@ public:
 	GizmoMode          m_gizmoMode;                //               "
 	Id                 m_activeId;                 // Currently active gizmo. If set, this is the same as m_hotId.
 	Id                 m_hotId;
-	float              m_hotDepth;                 // Depth of the current hot gizmo, for handling occlusion.
+	float              m_hotDepth;                 // Depth of the current hot gizmo along the cursor ray, for handling occlusion.
 	Vec3               m_gizmoStateVec3;           // Stored state for the active gizmo.
 	Mat3               m_gizmoStateMat3;           //               "
 	float              m_gizmoStateFloat;          //               "
