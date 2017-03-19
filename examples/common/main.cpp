@@ -199,7 +199,9 @@ int main(int, char**)
 
 			enum Shape {
 				Shape_Quad,
+				Shape_QuadFilled,
 				Shape_Circle,
+				Shape_CircleFilled,
 				Shape_Sphere,
 				Shape_AlignedBox,
 				Shape_Cylinder,
@@ -208,7 +210,9 @@ int main(int, char**)
 			};
 			static const char* shapeList = 
 				"Quad\0"
+				"Quad Filled\0"
 				"Circle\0"
+				"Circle Filled\0"
 				"Sphere\0"
 				"AlignedBox\0"
 				"Cylinder\0"
@@ -217,28 +221,38 @@ int main(int, char**)
 				;
 			static int currentShape = Shape_Capsule;
 			ImGui::Combo("Shape", &currentShape, shapeList);
-			static Im3d::Vec3 color = Im3d::Vec3(1.0f, 0.0f, 0.6f);
-			ImGui::ColorEdit3("Color", color);
-		
+			static Im3d::Vec4 color = Im3d::Vec4(1.0f, 0.0f, 0.6f, 1.0f);
+			ImGui::ColorEdit4("Color", color);
+			
 			static float thickness = 4.0f;
 			ImGui::SliderFloat("Thickness", &thickness, 0.0f, 16.0f);
 			
 			Im3d::PushMatrix(transform);
 			Im3d::PushDrawState();
 			Im3d::SetSize(thickness);
-			Im3d::SetColor(Im3d::Color(color.x, color.y, color.z));
-			
+			Im3d::SetColor(Im3d::Color(color.x, color.y, color.z, color.w));
+
 			switch ((Shape)currentShape) {
-				case Shape_Quad: {
+				case Shape_Quad: 
+				case Shape_QuadFilled: {
 					static Im3d::Vec2 quadSize(1.0f);
 					ImGui::SliderFloat2("Size", quadSize, 0.0f, 10.0f);
-					Im3d::DrawQuad(Im3d::Vec3(0.0f), Im3d::Vec3(0.0f, 0.0f, 1.0f), quadSize);
+					if (currentShape == Shape_Quad) {
+						Im3d::DrawQuad(Im3d::Vec3(0.0f), Im3d::Vec3(0.0f, 0.0f, 1.0f), quadSize);
+					} else {
+						Im3d::DrawQuadFilled(Im3d::Vec3(0.0f), Im3d::Vec3(0.0f, 0.0f, 1.0f), quadSize);
+					}
 					break;
 				}
-				case Shape_Circle: {
+				case Shape_Circle: 
+				case Shape_CircleFilled: {
 					static float circleRadius = 1.0f;
 					ImGui::SliderFloat("Radius", &circleRadius, 0.0f, 10.0f);
-					Im3d::DrawCircle(Im3d::Vec3(0.0f), Im3d::Vec3(0.0f, 0.0f, 1.0f), circleRadius);
+					if (currentShape == Shape_Circle) {
+						Im3d::DrawCircle(Im3d::Vec3(0.0f), Im3d::Vec3(0.0f, 0.0f, 1.0f), circleRadius);
+					} else if (currentShape = Shape_CircleFilled) {
+						Im3d::DrawCircleFilled(Im3d::Vec3(0.0f), Im3d::Vec3(0.0f, 0.0f, 1.0f), circleRadius);
+					}
 					break;
 				}
 				case Shape_Sphere: {

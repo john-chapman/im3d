@@ -112,11 +112,14 @@ void  Scale(float _x, float _y, float _z);
 
 // High order shapes. Where _detail = -1, an automatic level of detail is chosen based on the distance to the view origin.
 void  DrawXyzAxes();
+void  DrawPoint(const Vec3& _position, float _size, Color _color);
+void  DrawLine(const Vec3& _a, const Vec3& _b, float _size, Color _color);
 void  DrawQuad(const Vec3& _a, const Vec3& _b, const Vec3& _c, const Vec3& _d);
 void  DrawQuad(const Vec3& _origin, const Vec3& _normal, const Vec2& _size);
 void  DrawQuadFilled(const Vec3& _a, const Vec3& _b, const Vec3& _c, const Vec3& _d);
 void  DrawQuadFilled(const Vec3& _origin, const Vec3& _normal, const Vec2& _size);
 void  DrawCircle(const Vec3& _origin, const Vec3& _normal, float _radius, int _detail = -1);
+void  DrawCircleFilled(const Vec3& _origin, const Vec3& _normal, float _radius, int _detail = -1);
 void  DrawSphere(const Vec3& _origin, float _radius, int _detail = -1);
 void  DrawAlignedBox(const Vec3& _min, const Vec3& _max);
 void  DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, int _detail = -1);

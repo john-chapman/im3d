@@ -122,6 +122,21 @@ void Im3d::DrawXyzAxes()
 	ctx.popColor();
 
 }
+void Im3d::DrawPoint(const Vec3& _position, float _size, Color _color)
+{
+	Context& ctx = GetContext();
+	ctx.begin(PrimitiveMode_Points);
+		ctx.vertex(_position, _size, _color);
+	ctx.end();
+}
+void Im3d::DrawLine(const Vec3& _a, const Vec3& _b, float _size, Color _color)
+{
+	Context& ctx = GetContext();
+	ctx.begin(PrimitiveMode_Lines);
+		ctx.vertex(_a, _size, _color);
+		ctx.vertex(_b, _size, _color);
+	ctx.end();
+}
 void Im3d::DrawQuad(const Vec3& _a, const Vec3& _b, const Vec3& _c, const Vec3& _d)
 {
 	Context& ctx = GetContext();
@@ -179,6 +194,29 @@ void Im3d::DrawCircle(const Vec3& _origin, const Vec3& _normal, float _radius, i
 		for (int i = 0; i < _detail; ++i) {
 			float rad = TwoPi * ((float)i / (float)_detail);
 			ctx.vertex(Vec3(cosf(rad) * _radius, sinf(rad) * _radius, 0.0f));
+		}
+	ctx.end();
+	ctx.popMatrix();
+}
+void Im3d::DrawCircleFilled(const Vec3& _origin, const Vec3& _normal, float _radius, int _detail)
+{
+	Context& ctx = GetContext();
+	if (_detail < 0) {
+		_detail = ctx.estimateLevelOfDetail(_origin, _radius);
+	}
+ 	ctx.pushMatrix(ctx.getMatrix() * LookAt(_origin, _origin + _normal, ctx.getAppData().m_worldUp));
+	ctx.begin(PrimitiveMode_Triangles);
+		float cp = cosf(0.0f) * _radius;
+		float sp = sinf(0.0f) * _radius;
+		for (int i = 1; i <= _detail; ++i) {
+			ctx.vertex(_origin);
+			ctx.vertex(Vec3(cp, sp, 0.0f));
+			float rad = TwoPi * ((float)i / (float)_detail);
+			float c = cosf(rad) * _radius;
+			float s = sinf(rad) * _radius;
+			ctx.vertex(Vec3(c, s, 0.0f));
+			cp = c;
+			sp = s;
 		}
 	ctx.end();
 	ctx.popMatrix();
