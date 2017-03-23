@@ -402,7 +402,6 @@ void Im3d::DrawArrow(const Vec3& _start, const Vec3& _end, float _headLength, fl
 static const U32 kFnv1aPrime32 = 0x01000193u;
 static U32 Hash(const char* _buf, int _buflen, U32 _base)
 {
-	IM3D_ASSERT(_buf);
 	U32 ret = _base;
 	const char* lim = _buf + _buflen;
 	while (_buf < lim) {
@@ -413,7 +412,6 @@ static U32 Hash(const char* _buf, int _buflen, U32 _base)
 }
 static U32 HashStr(const char* _str, U32 _base)
 {
-	IM3D_ASSERT(_str);
 	U32 ret = _base;
 	while (*_str) {
 		ret ^= (U32)*_str++;
