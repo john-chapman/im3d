@@ -4,7 +4,7 @@
 
 #include "im3d_config.h"
 
-#define IM3D_VERSION "1.03"
+#define IM3D_VERSION "1.04"
 
 #ifndef IM3D_ASSERT
 	#include <cassert>
@@ -125,7 +125,7 @@ void  DrawAlignedBox(const Vec3& _min, const Vec3& _max);
 void  DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, int _detail = -1);
 void  DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int _detail = -1);
 void  DrawPrism(const Vec3& _start, const Vec3& _end, float _radius, int _sides);
-void  DrawArrow(const Vec3& _start, const Vec3& _end, float _headFraction);
+void  DrawArrow(const Vec3& _start, const Vec3& _end, float _headLength = -1.0f, float _headThickness = -1.0f);
 
 // Ids are used to uniquely identify gizmos. Each gizmo should have a unique Id during a frame.
 Id    MakeId(const char* _str);
@@ -521,6 +521,8 @@ public:
 
 	// Convert pixels -> world space size based on distance between _position and view origin.
 	float pixelsToWorldSize(const Vec3& _position, float _pixels);
+	// Convert world space size -> pixels based on distance between _position and view origin.
+	float worldSizeToPixels(const Vec3& _position, float _pixels);
 	// Blend between _min and _max based on distance betwen _position and view origin.
 	int estimateLevelOfDetail(const Vec3& _position, float _worldSize, int _min = 16, int _max = 256);
 	

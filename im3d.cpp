@@ -1,5 +1,6 @@
 /*	CHANGE LOG
 	==========
+	2017-03-24 (v1.04) - DrawArrow() interface changed (world space length/pixel thickness instead of head fraction).
 	2017-03-01 (v1.02) - Configurable VertexData alignment (IM3D_VERTEX_ALIGNMENT).
 	2017-02-23 (v1.01) - Removed AppData::m_tanHalfFov, replaced with AppData::m_projScaleY. Added AppData::m_projOrtho.
 */
@@ -373,15 +374,27 @@ void Im3d::DrawPrism(const Vec3& _start, const Vec3& _end, float _radius, int _s
 	ctx.end();
 	ctx.popMatrix();
 }
-void Im3d::DrawArrow(const Vec3& _start, const Vec3& _end, float _headFraction)
+void Im3d::DrawArrow(const Vec3& _start, const Vec3& _end, float _headLength, float _headThickness)
 {
 	Context& ctx = GetContext();
-	Vec3 head = _start + (_end - _start) * (1.0f - _headFraction);
+	
+	if (_headThickness < 0.0f) {
+		_headThickness = ctx.getSize() * 2.0f;
+	}
+
+	Vec3 dir = _end - _start;
+	float dirlen = Length(dir);
+	if (_headLength < 0.0f) {
+		_headLength = Min(dirlen / 2.0f, ctx.pixelsToWorldSize(_end, _headThickness * 2.0f));
+	}
+	dir = dir / dirlen;
+
+	Vec3 head = _end - dir * _headLength;
 	ctx.begin(PrimitiveMode_Lines);
 		ctx.vertex(_start);
 		ctx.vertex(head);
-		ctx.vertex(head, Max(ctx.getSize() * 2.0f, 4.0f), ctx.getColor());
-		ctx.vertex(_end, 2.0f, ctx.getColor());
+		ctx.vertex(head, _headThickness, ctx.getColor());
+		ctx.vertex(_end, 2.0f, ctx.getColor()); // \hack \todo 2.0f here compensates for the shader antialiasing (which reduces alpha when size < 2)
 	ctx.end();
 }
 
@@ -1244,6 +1257,12 @@ float Context::pixelsToWorldSize(const Vec3& _position, float _pixels)
 	return m_appData.m_projScaleY * d * (_pixels / m_appData.m_viewportSize.y);
 }
 
+float Context::worldSizeToPixels(const Vec3& _position, float _size)
+{
+	float d = m_appData.m_projOrtho ? 1.0f : Length(_position - m_appData.m_viewOrigin);
+	return (_size * m_appData.m_viewportSize.y) / d / m_appData.m_projScaleY;
+}
+
 int Context::estimateLevelOfDetail(const Vec3& _position, float _worldSize, int _min, int _max)
 {
 	float d = Length(_position - m_appData.m_viewOrigin);
@@ -1325,8 +1344,7 @@ void Context::gizmoAxisTranslation_Draw(Id _id, const Vec3& _origin, const Vec3&
 	pushSize(m_gizmoSizePixels);
 		DrawArrow(
 			_origin + _axis * (0.2f * _worldHeight), 
-			_origin + _axis * _worldHeight, 
-			0.3f
+			_origin + _axis * _worldHeight
 			);
 	popSize();
 	popColor();
@@ -1475,7 +1493,7 @@ void Context::gizmoAxislAngle_Draw(Id _id, const Vec3& _origin, const Vec3& _axi
 
 				pushColor(Color_GizmoHighlight);
 				pushSize(m_gizmoSizePixels);
-					DrawArrow(_origin, _origin + delta * _worldRadius, 0.3f);
+					DrawArrow(_origin, _origin + delta * _worldRadius);
 				popSize();
 				popColor();
 				begin(PrimitiveMode_Points);

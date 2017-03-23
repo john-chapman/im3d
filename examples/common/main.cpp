@@ -206,7 +206,8 @@ int main(int, char**)
 				Shape_AlignedBox,
 				Shape_Cylinder,
 				Shape_Capsule,
-				Shape_Prism
+				Shape_Prism,
+				Shape_Arrow
 			};
 			static const char* shapeList = 
 				"Quad\0"
@@ -218,6 +219,7 @@ int main(int, char**)
 				"Cylinder\0"
 				"Capsule\0"
 				"Prism\0"
+				"Arrow\0"
 				;
 			static int currentShape = Shape_Capsule;
 			ImGui::Combo("Shape", &currentShape, shapeList);
@@ -291,6 +293,16 @@ int main(int, char**)
 					ImGui::SliderFloat("Length", &prismLength, 0.0f, 10.0f);
 					ImGui::SliderInt("Sides", &prismSides, 3, 16);
 					Im3d::DrawPrism(Im3d::Vec3(0.0f, -prismLength, 0.0f), Im3d::Vec3(0.0f, prismLength, 0.0f), prismRadius, prismSides);
+					break;
+				}
+				case Shape_Arrow: {
+					static float arrowLength   = 1.0f;
+					static float headLength    = -1.0f;
+					static float headThickness = -1.0f;
+					ImGui::SliderFloat("Length",          &arrowLength,   0.0f, 10.0f);
+					ImGui::SliderFloat("Head Length",     &headLength,    0.0f, 1.0f);
+					ImGui::SliderFloat("Head Thickness",  &headThickness, 0.0f, 1.0f);
+					Im3d::DrawArrow(Im3d::Vec3(0.0f), Im3d::Vec3(0.0f, arrowLength, 0.0f), headLength, headThickness);
 					break;
 				}
 				default:
