@@ -4,7 +4,7 @@
 
 #include "im3d_config.h"
 
-#define IM3D_VERSION "1.04"
+#define IM3D_VERSION "1.05"
 
 #ifndef IM3D_ASSERT
 	#include <cassert>
@@ -141,7 +141,7 @@ void  PushId(int _i);
 void  PopId();
 Id    GetId();
 Id    GetActiveId(); // GetActiveId() != Id_Invalid means that a gizmo is in use
-
+Id    GetHotId();
 
 // Manipulate translation/rotation/scale via a gizmo. Return true if the gizmo is 'active' (if it modified the output parameter).
 // If _local is true, the Gizmo* functions expect that the local matrix is on the matrix stack; in general the application should
@@ -152,6 +152,13 @@ bool  GizmoScale(const char* _id, float _scale_[3]); // local scale only
 // Unified gizmo, selects local/global, translation/rotation/scale based on the context-global gizmo modes. Return true if the gizmo is active.
 bool  Gizmo(const char* _id, float _translation_[3], float _rotation_[3*3], float _scale_[3]); // any of _translation_/_rotation_/_scale_ may be null.
 bool  Gizmo(const char* _id, float _transform_[4*4]);
+
+// Gizmo* overloads which take an Id directly. In some cases the app may want to call MakeId() separately, usually to change the gizmo appearance if hot/active.
+bool  GizmoTranslation(Id _id, float _translation_[3], bool _local = false);
+bool  GizmoRotation(Id _id, float _rotation_[3*3], bool _local = false);
+bool  GizmoScale(Id _id, float _scale_[3]);
+bool  Gizmo(Id _id, float _transform_[4*4]);
+bool  Gizmo(Id _id, float _translation_[3], float _rotation_[3*3], float _scale_[3]);
 
 // Get/set the current context. All Im3d calls affect the currently bound context.
 Context& GetContext();
@@ -528,6 +535,8 @@ public:
 	
 	// Make _id hot if _depth < m_hotDepth && _intersects.
 	bool makeHot(Id _id, float _depth, bool _intersects);
+	// Make _id active.
+	void makeActive(Id _id);
 	// Reset the acive/hot ids and the hot depth.
 	void resetId();
 
@@ -540,6 +549,9 @@ public:
 	GizmoMode          m_gizmoMode;                //               "
 	Id                 m_activeId;                 // Currently active gizmo. If set, this is the same as m_hotId.
 	Id                 m_hotId;
+	Id                 m_appId;
+	Id                 m_appActiveId;
+	Id                 m_appHotId;
 	float              m_hotDepth;                 // Depth of the current hot gizmo along the cursor ray, for handling occlusion.
 	Vec3               m_gizmoStateVec3;           // Stored state for the active gizmo.
 	Mat3               m_gizmoStateMat3;           //               "
@@ -650,7 +662,14 @@ inline void  PushId(const void* _ptr)                                        { G
 inline void  PushId(int _i)                                                  { GetContext().pushId(MakeId(_i));           }
 inline void  PopId()                                                         { GetContext().popId();                      }
 inline Id    GetId()                                                         { return GetContext().getId();               }
-inline Id    GetActiveId()                                                   { return GetContext().m_activeId;            }
+inline Id    GetActiveId()                                                   { return GetContext().m_appActiveId;         }
+inline Id    GetHotId()                                                      { return GetContext().m_appHotId;            }
+
+inline bool GizmoTranslation(const char* _id, float _translation_[3], bool _local)                   { return GizmoTranslation(MakeId(_id), _translation_);           }
+inline bool GizmoRotation(const char* _id, float _rotation_[3*3], bool _local)                       { return GizmoRotation(MakeId(_id), _rotation_, _local);         }
+inline bool GizmoScale(const char* _id, float _scale_[3])                                            { return GizmoScale(MakeId(_id), _scale_);                       }
+inline bool Gizmo(const char* _id, float _translation_[3], float _rotation_[3*3], float _scale_[3])  { return Gizmo(MakeId(_id), _translation_, _rotation_, _scale_); }
+inline bool Gizmo(const char* _id, float _transform_[4*4])                                           { return Gizmo(MakeId(_id), _transform_);                        }
 
 inline Context& GetContext()                                                 { return *internal::g_CurrentContext; }
 inline void     SetContext(Context& _ctx)                                    { internal::g_CurrentContext = &_ctx; }
