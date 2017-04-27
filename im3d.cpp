@@ -1697,10 +1697,6 @@ U32 Context::getPrimitiveCount(DrawPrimitiveType _type) const
 
 ******************************************************************************/
 
-const float Im3d::Pi     = 3.14159265359f;
-const float Im3d::TwoPi  = 2.0f * Pi;
-const float Im3d::HalfPi = 0.5f * Pi;
-
 // Vec3
 Vec3::Vec3(const Vec4& _v)
 	: x(_v.x)

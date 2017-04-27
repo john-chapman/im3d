@@ -212,12 +212,12 @@ Vec3  Nearest(const Ray& _ray, const LineSegment& _segment, float& tr_);
 
 float Distance2(const Ray& _ray, const LineSegment& _segment);
 
-extern const float Pi;
-extern const float TwoPi;
-extern const float HalfPi;
+constexpr float Pi      = 3.14159265359f;
+constexpr float TwoPi   = 2.0f * Pi;
+constexpr float HalfPi  = 0.5f * Pi;
 
-inline float Radians(float _degrees) { return _degrees * Pi / 180.0f; }
-inline float Degrees(float _radians) { return _radians * 180.0f / Pi; }
+inline float Radians(float _degrees) { return _degrees * (Pi / 180.0f); }
+inline float Degrees(float _radians) { return _radians * (180.0f / Pi); }
 
 template <typename T>
 inline T Max(T _a, T _b)                                   { return _a < _b ? _b : _a; }
