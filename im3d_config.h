@@ -27,10 +27,10 @@
 //	operator glm::vec4() const         { return glm::vec4(x, y, z, w);           }
 //#define IM3D_MAT3_APP \
 //	Mat3(const glm::mat3& _m)          { for (int i = 0; i < 9; ++i) m[i] = *(&(_m[0][0]) + i); } \
-//	operator glm::mat3() const         { glm::mat3 ret; for (int i = 0; i < 9; ++i) *(&(ret[0][0]) + i) = m[i]; }
+//	operator glm::mat3() const         { glm::mat3 ret; for (int i = 0; i < 9; ++i) *(&(ret[0][0]) + i) = m[i]; return ret; }
 //#define IM3D_MAT4_APP \
 //	Mat4(const glm::mat4& _m)          { for (int i = 0; i < 16; ++i) m[i] = *(&(_m[0][0]) + i); } \
-//	operator glm::mat4() const         { glm::mat4 ret; for (int i = 0; i < 16; ++i) *(&(ret[0][0]) + i) = m[i]; }
+//	operator glm::mat4() const         { glm::mat4 ret; for (int i = 0; i < 16; ++i) *(&(ret[0][0]) + i) = m[i]; return ret; }
 
 	
 #endif // im3d_config_h
