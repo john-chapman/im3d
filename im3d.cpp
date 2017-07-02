@@ -525,7 +525,7 @@ bool Im3d::GizmoTranslation(Id _id, float _translation_[3], bool _local)
 
  	Sphere boundingSphere(*outVec3, worldHeight * 1.5f); // expand the bs to catch the planar subgizmos 
 	Ray ray(appData.m_cursorRayOrigin, appData.m_cursorRayDirection);
-	bool intersects = ctx.m_appActiveId == ctx.m_appId || Intersects(ray, boundingSphere);
+	bool intersects = ctx.m_appHotId == ctx.m_appId || Intersects(ray, boundingSphere);
 
  // planes
  	ctx.pushEnableSorting(true);
@@ -631,7 +631,7 @@ bool Im3d::GizmoRotation(Id _id, float _rotation_[3*3], bool _local)
  
 	Sphere boundingSphere(origin, worldRadius);
 	Ray ray(ctx.getAppData().m_cursorRayOrigin, ctx.getAppData().m_cursorRayDirection);
-	bool intersects = ctx.m_appActiveId == ctx.m_appId || Intersects(ray, boundingSphere);
+	bool intersects = ctx.m_appHotId == ctx.m_appId || Intersects(ray, boundingSphere);
 
 	if (_local) {
 	 // extract axes from the pushed matrix
@@ -715,7 +715,7 @@ bool Im3d::GizmoScale(Id _id, float _scale_[3])
 
 	Sphere boundingSphere(origin, worldHeight);
 	Ray ray(appData.m_cursorRayOrigin, appData.m_cursorRayDirection);
-	bool intersects = ctx.m_appActiveId == ctx.m_appId || Intersects(ray, boundingSphere);
+	bool intersects = ctx.m_appHotId == ctx.m_appId || Intersects(ray, boundingSphere);
 
  	ctx.pushEnableSorting(true);
 	ctx.pushMatrix(Mat4(1.0f));
@@ -1553,7 +1553,7 @@ void Context::gizmoAxislAngle_Draw(Id _id, const Vec3& _origin, const Vec3& _axi
 	} else if (_id == m_hotId) {
 		color = Color_GizmoHighlight;
 	}
-	color.setA(Remap(aligned, 0.05f, 0.1f)); // fade out in the intersection blind spot
+	//color.setA(Remap(aligned, 0.05f, 0.1f)); // fade out in the intersection blind spot
 	aligned = Max(Remap(aligned, 0.9f, 1.0f), 0.1f);
 	if (m_activeId == _id) {
 		aligned = 1.0f;
