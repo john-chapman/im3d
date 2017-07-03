@@ -1,5 +1,6 @@
 /*	CHANGE LOG
 	==========
+	2017-07-03 (v1.06) - Rotation gizmo improvements; avoid selection failure at grazing angles + improved rotation behavior.
 	2017-04-04 (v1.05) - GetActiveId() returns the gizmo id set by the app instead of an internal id. Added Gizmo* variants which take an Id directly.
 	2017-03-24 (v1.04) - DrawArrow() interface changed (world space length/pixel thickness instead of head fraction).
 	2017-03-01 (v1.02) - Configurable VertexData alignment (IM3D_VERTEX_ALIGNMENT).
@@ -1470,26 +1471,49 @@ void Context::gizmoPlaneTranslation_Draw(Id _id, const Vec3& _origin, const Vec3
 
 bool Context::gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldRadius, float _worldSize, float* _out_)
 {
-// \note using the plane produces an intersection blind spot at grazing angles, hence expand the ring size by 1-aligned
-// \todo also this causes unintuitive behavior when the ray doesn't intersect the plane during interaction, could switch to a view-aligned plane?
 	Ray ray(m_appData.m_cursorRayOrigin, m_appData.m_cursorRayDirection);
-	Plane plane(_axis, _origin);
-	float tr;
-	bool intersects = Intersect(ray, plane, tr);
-	Vec3 intersection = ray.m_origin + ray.m_direction * tr;
 	Vec3 viewDir = Normalize(m_appData.m_viewOrigin - _origin);
 	float aligned = fabs(Dot(_axis, viewDir));
-	float dist = Length(intersection - _origin);
-	intersects &= fabs(dist - _worldRadius) < (_worldSize + _worldSize * (1.0f - aligned) * 2.0f);
+	float tr = 0.0f;
+	bool intersects = false;
+	Vec3 intersection;
+	if (aligned < 0.05f) {
+	 // ray-plane intersection fails at grazing angles, use capsule interesection
+		float t1;
+		Vec3 capsuleAxis = Cross(viewDir, _axis);
+		Capsule capsule(_origin + capsuleAxis * _worldRadius, _origin - capsuleAxis * _worldRadius, _worldSize * 0.5f);
+		intersects = Intersect(ray, capsule, tr, t1);
+		intersection = ray.m_origin + ray.m_direction * tr;
+		#ifdef IM3D_GIZMO_DEBUG
+			if (_id == m_hotId) {
+				PushDrawState();
+				SetColor(Im3d::Color_Magenta);
+				SetSize(3.0f);
+				DrawCapsule(capsule.m_start, capsule.m_end, capsule.m_radius);
+				PopDrawState();
+			}
+		#endif
+	} else {
+		Plane plane(_axis, _origin);
+		intersects = Intersect(ray, plane, tr);
+		intersection = ray.m_origin + ray.m_direction * tr;
+		float dist = Length(intersection - _origin);
+		intersects &= fabs(dist - _worldRadius) < (_worldSize + _worldSize * (1.0f - aligned) * 2.0f);
+	}
 	
 	Vec3& storedVec = m_gizmoStateVec3;
 	float& storedAngle = m_gizmoStateFloat;
 	bool ret = false;
 	
+ // use a view-aligned plane intersection to generate the rotation delta
+	Plane viewPlane(viewDir, _origin);
+	Intersect(ray, viewPlane, tr);
+	intersection = ray.m_origin + ray.m_direction * tr;
+
 	if (_id == m_activeId) {
 		if (isKeyDown(Action_Select)) {
 			Vec3 delta = Normalize(intersection - _origin);
-			float sign = Dot(Cross(storedVec, delta), plane.m_normal);
+			float sign = Dot(Cross(storedVec, delta), _axis);
 			float angle = acosf(Clamp(Dot(delta, storedVec), -1.0f, 1.0f));
 			*_out_ = storedAngle + copysignf(Snap(angle, m_appData.m_snapRotation), sign);
 			return true;
@@ -1507,6 +1531,7 @@ bool Context::gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& 
 		} else {
 			resetId();
 		}
+
 	} else {
 		makeHot(_id, tr, intersects);
 	}
@@ -1534,8 +1559,8 @@ void Context::gizmoAxislAngle_Draw(Id _id, const Vec3& _origin, const Vec3& _axi
 			begin(PrimitiveMode_Lines);
 				vertex(_origin - _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
 				vertex(_origin + _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
-				vertex(_origin, m_gizmoSizePixels * 0.5f, Color_GizmoHighlight);
-				vertex(_origin + storedVec * _worldRadius, m_gizmoSizePixels * 0.5f, Color_GizmoHighlight);
+				//vertex(_origin, m_gizmoSizePixels * 0.5f, Color_GizmoHighlight);
+				//vertex(_origin + storedVec * _worldRadius, m_gizmoSizePixels * 0.5f, Color_GizmoHighlight);
 			end();
 			popEnableSorting();
 			popAlpha();
@@ -1553,7 +1578,6 @@ void Context::gizmoAxislAngle_Draw(Id _id, const Vec3& _origin, const Vec3& _axi
 	} else if (_id == m_hotId) {
 		color = Color_GizmoHighlight;
 	}
-	//color.setA(Remap(aligned, 0.05f, 0.1f)); // fade out in the intersection blind spot
 	aligned = Max(Remap(aligned, 0.9f, 1.0f), 0.1f);
 	if (m_activeId == _id) {
 		aligned = 1.0f;
