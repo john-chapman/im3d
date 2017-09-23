@@ -81,7 +81,7 @@ void  PopAlpha();
 void  SetAlpha(float _alpha);
 float GetAlpha();
 
-// Size draw state, for points/lines this is the width/radius in pixels (per vertex).
+// Size draw state, for points/lines this is the radius/width in pixels (per vertex).
 void  PushSize(); // push the stack top
 void  PushSize(float _size);
 void  PopSize();
@@ -110,7 +110,7 @@ void  Rotate(const Vec3& _axis, float _angle);
 void  Rotate(const Mat3& _rotation);
 void  Scale(float _x, float _y, float _z);
 
-// High order shapes. Where _detail = -1, an automatic level of detail is chosen based on the distance to the view origin.
+// High order shapes. Where _detail = -1, an automatic level of detail is chosen based on the distance to the view origin (as specified via the AppData struct).
 void  DrawXyzAxes();
 void  DrawPoint(const Vec3& _position, float _size, Color _color);
 void  DrawLine(const Vec3& _a, const Vec3& _b, float _size, Color _color);
