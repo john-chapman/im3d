@@ -193,6 +193,7 @@
     <ClInclude Include="..\..\..\im3d.h" />
     <ClInclude Include="..\..\..\im3d_config.h" />
     <ClInclude Include="..\..\..\im3d_math.h" />
+    <ClInclude Include="..\..\common\GL\eglew.h" />
     <ClInclude Include="..\..\common\GL\glew.h" />
     <ClInclude Include="..\..\common\GL\glxew.h" />
     <ClInclude Include="..\..\common\GL\wglew.h" />

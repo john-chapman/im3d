@@ -27,6 +27,9 @@
     <ClInclude Include="..\..\..\im3d_math.h">
       <Filter>im3d</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\common\GL\eglew.h">
+      <Filter>common\GL</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\common\GL\glew.h">
       <Filter>common\GL</Filter>
     </ClInclude>
