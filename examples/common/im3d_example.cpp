@@ -1282,7 +1282,7 @@ bool Example::update()
 		m_deltaTime = (float)(microseconds / 1000000.0);
 	
 		MSG msg;
-		while (PeekMessage(&msg, g_Example->m_hwnd, 0, 0, PM_REMOVE) && msg.message != WM_QUIT) {
+		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE) && msg.message != WM_QUIT) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
