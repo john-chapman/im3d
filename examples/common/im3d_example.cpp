@@ -525,8 +525,8 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 				-1.0f,  1.0f,
 				 1.0f,  1.0f,
 				};
-			glAssert(glCreateBuffers(1, &vbQuad));
-			glAssert(glCreateVertexArrays(1, &vaQuad));	
+			glAssert(glGenBuffers(1, &vbQuad));
+			glAssert(glGenVertexArrays(1, &vaQuad));	
 			glAssert(glBindVertexArray(vaQuad));
 			glAssert(glBindBuffer(GL_ARRAY_BUFFER, vbQuad));
 			glAssert(glEnableVertexAttribArray(0));
@@ -561,9 +561,9 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 			} else {
 				return;
 			}
-			glAssert(glCreateBuffers(1, &vbTeapot));
-			glAssert(glCreateBuffers(1, &ibTeapot));
-			glAssert(glCreateVertexArrays(1, &vaTeapot));	
+			glAssert(glGenBuffers(1, &vbTeapot));
+			glAssert(glGenBuffers(1, &ibTeapot));
+			glAssert(glGenVertexArrays(1, &vaTeapot));	
 			glAssert(glBindVertexArray(vaTeapot));
 			glAssert(glBindBuffer(GL_ARRAY_BUFFER, vbTeapot));
 			glAssert(glEnableVertexAttribArray(0));
@@ -937,9 +937,9 @@ Color Im3d::RandColor(float _min, float _max)
 		glAssert(glUniform1i(glGetUniformLocation(g_ImGuiShader, "txTexture"), 0));
 		glAssert(glUseProgram(0));
 
-		glAssert(glCreateBuffers(1, &g_ImGuiVertexBuffer));
-		glAssert(glCreateBuffers(1, &g_ImGuiIndexBuffer));
-		glAssert(glCreateVertexArrays(1, &g_ImGuiVertexArray));	
+		glAssert(glGenBuffers(1, &g_ImGuiVertexBuffer));
+		glAssert(glGenBuffers(1, &g_ImGuiIndexBuffer));
+		glAssert(glGenVertexArrays(1, &g_ImGuiVertexArray));	
 		glAssert(glBindVertexArray(g_ImGuiVertexArray));
 		glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_ImGuiVertexBuffer));
 		glAssert(glEnableVertexAttribArray(0));

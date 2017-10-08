@@ -184,8 +184,8 @@ bool Im3d_Init()
 		}
 	}
 
-	glAssert(glCreateBuffers(1, &g_Im3dVertexBuffer));;
-	glAssert(glCreateVertexArrays(1, &g_Im3dVertexArray));	
+	glAssert(glGenBuffers(1, &g_Im3dVertexBuffer));;
+	glAssert(glGenVertexArrays(1, &g_Im3dVertexArray));	
 	glAssert(glBindVertexArray(g_Im3dVertexArray));
 	glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_Im3dVertexBuffer));
 	glAssert(glEnableVertexAttribArray(0));
