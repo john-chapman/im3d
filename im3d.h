@@ -98,6 +98,11 @@ void  EnableSorting(bool _enable);
 void  PushDrawState();
 void  PopDrawState();
 
+// Layer id state, subsequent primitives are added to a separate draw list. The default layer is 0. (per primitive).
+void  PushLayerId(Id _layer);
+void  PopLayerId();
+Id    GetLayerId();
+
 // Transform state (per vertex).
 void  PushMatrix(); // push stack top
 void  PushMatrix(const Mat4& _mat4);
@@ -361,6 +366,7 @@ const int DrawPrimitiveSize[DrawPrimitive_Count] =
 
 struct DrawList
 {
+	Id                m_layer;
 	DrawPrimitiveType m_primType;
 	const VertexData* m_vertexData;
 	U32               m_vertexCount;
@@ -497,6 +503,10 @@ public:
 	void        pushEnableSorting(bool _enable);
 	void        popEnableSorting();
 	
+	Id          getLayerId() const               { return m_layerIdStack.back(); }
+	void        pushLayerId(Id _layer);
+	void        popLayerId();
+
 	void        setMatrix(const Mat4& _mat4)     { m_matrixStack.back() = _mat4;   }
 	const Mat4& getMatrix() const                { return m_matrixStack.back();    }
 	void        pushMatrix(const Mat4& _mat4)    { m_matrixStack.push_back(_mat4); }
@@ -562,39 +572,51 @@ public:
 
  // stats/debugging	
 
-	// Return the total number of primitives (sorted + unsorted) of the given _type.
-	U32 getPrimitiveCount(DrawPrimitiveType _type) const; 
+	// Return the total number of primitives (sorted + unsorted) of the given _type in all layers.
+	U32 getPrimitiveCount(DrawPrimitiveType _type) const;
+
+	// Return the number of layers.
+	U32 getLayerCount() const { return m_layerIdMap.size(); }
 
 private:
  // state stacks
-	Vector<Color>      m_colorStack;
-	Vector<float>      m_alphaStack;
-	Vector<float>      m_sizeStack;
-	Vector<bool>       m_enableSortingStack;
-	Vector<Mat4>       m_matrixStack;
-	Vector<Id>         m_idStack;
+	Vector<Color>       m_colorStack;
+	Vector<float>       m_alphaStack;
+	Vector<float>       m_sizeStack;
+	Vector<bool>        m_enableSortingStack;
+	Vector<Mat4>        m_matrixStack;
+	Vector<Id>          m_idStack;
+	Vector<Id>          m_layerIdStack;
 
- // primitive data: [0] unsorted, [1] sorted
-	Vector<VertexData> m_vertexData[DrawPrimitive_Count][2];
-	Vector<DrawList>   m_sortedDrawLists;
-	bool               m_sortCalled;               // Prevent sorting during every call to draw().
-	bool               m_drawCalled;               // For assert if primitives are pushed after draw() was called.
+ // vertex data: one list per layer, per primitive type, *2 for sorted/unsorted
+	typedef Vector<VertexData> VertexList;
+	Vector<VertexList*> m_vertexData[2];            // Each layer is DrawPrimitive_Count consecutive lists.
+	int                 m_vertexDataIndex;
+	int                 m_layerIndex;
+	Vector<Id>          m_layerIdMap;               // Map Id -> vertex data index.
+	Vector<DrawList>    m_sortedDrawLists;          // Sorted draw lists are stored to avoid multiple calls to sort().
+	bool                m_sortCalled;               // Avoid calling sort() during every call to draw().
+	bool                m_drawCalled;               // For assert, if vertices are pushed after draw() was called.
 
  // primitive state
-	PrimitiveMode      m_primMode;   
-	int                m_primList;                 // 1 if sorting enabled, else 0.
-	U32                m_firstVertThisPrim;        // Index of the first vertex pushed during this primitive.
-	U32                m_vertCountThisPrim;        // # calls to vertex() since the last call to begin().
+	PrimitiveMode       m_primMode;
+	DrawPrimitiveType   m_primType;
+	U32                 m_firstVertThisPrim;        // Index of the first vertex pushed during this primitive.
+	U32                 m_vertCountThisPrim;        // # calls to vertex() since the last call to begin().
 
  // app data
-	AppData            m_appData;
-	bool               m_keyDownCurr[Key_Count];   // Key state captured during reset().
-	bool               m_keyDownPrev[Key_Count];   // Key state from previous frame.
+	AppData             m_appData;
+	bool                m_keyDownCurr[Key_Count];   // Key state captured during reset().
+	bool                m_keyDownPrev[Key_Count];   // Key state from previous frame.
 
 
 	// Sort primitive data.
 	void sort();
 
+	// Return -1 if _id not found.
+	int  findLayerIndex(Id _id) const;
+
+	VertexList* getCurrentVertexList();
 };
 
 namespace internal {
@@ -648,6 +670,11 @@ inline void  PushEnableSorting()                                             { G
 inline void  PushEnableSorting(bool _enable)                                 { GetContext().pushEnableSorting(_enable); }
 inline void  PopEnableSorting()                                              { GetContext().popEnableSorting();         }
 inline void  EnableSorting(bool _enable)                                     { GetContext().setEnableSorting(_enable);  }
+
+inline void  PushLayerId()                                                   { GetContext().pushLayerId(GetContext().getLayerId()); }
+inline void  PushLayerId(Id _layer)                                          { GetContext().pushLayerId(_layer); }
+inline void  PopLayerId()                                                    { GetContext().popLayerId();        }
+inline Id    GetLayerId()                                                    { return GetContext().getLayerId(); }
 
 inline void  PushMatrix()                                                    { GetContext().pushMatrix(GetContext().getMatrix()); }
 inline void  PushMatrix(const Mat4& _mat4)                                   { GetContext().pushMatrix(_mat4);                    }

@@ -981,25 +981,27 @@ void Context::begin(PrimitiveMode _mode)
 	m_vertCountThisPrim = 0;
 	switch (m_primMode) {
 		case PrimitiveMode_Points:
-			m_firstVertThisPrim = m_vertexData[DrawPrimitive_Points][m_primList].size();
+			m_primType = DrawPrimitive_Points;
 			break;
 		case PrimitiveMode_Lines:
 		case PrimitiveMode_LineStrip:
 		case PrimitiveMode_LineLoop:
-			m_firstVertThisPrim = m_vertexData[DrawPrimitive_Lines][m_primList].size();
+			m_primType = DrawPrimitive_Lines;
 			break;
 		case PrimitiveMode_Triangles:
 		case PrimitiveMode_TriangleStrip:
-			m_firstVertThisPrim = m_vertexData[DrawPrimitive_Triangles][m_primList].size();
+			m_primType = DrawPrimitive_Triangles;
 			break;
 		default:
 			break;
 	};
+	m_firstVertThisPrim = getCurrentVertexList()->size();
 }
 
 void Context::end()
 {
 	IM3D_ASSERT(m_primMode != PrimitiveMode_None); // End() called without Begin*()
+	VertexList* vertexList = getCurrentVertexList();
 	switch (m_primMode) {
 		case PrimitiveMode_Points:
 			break;
@@ -1011,8 +1013,8 @@ void Context::end()
 			break;
 		case PrimitiveMode_LineLoop:
 			IM3D_ASSERT(m_vertCountThisPrim > 1);
-			m_vertexData[DrawPrimitive_Lines][m_primList].push_back(m_vertexData[DrawPrimitive_Lines][m_primList].back());
-			m_vertexData[DrawPrimitive_Lines][m_primList].push_back(m_vertexData[DrawPrimitive_Lines][m_primList][m_firstVertThisPrim]);
+			vertexList->push_back(vertexList->back());
+			vertexList->push_back((*vertexList)[m_firstVertThisPrim]);
 			break;
 		case PrimitiveMode_Triangles:
 			IM3D_ASSERT(m_vertCountThisPrim % 3 == 0);
@@ -1024,6 +1026,7 @@ void Context::end()
 			break;
 	};
 	m_primMode = PrimitiveMode_None;
+	m_primType = DrawPrimitive_Count;
 }
 
 void Context::vertex(const Vec3& _position, float _size, Color _color)
@@ -1036,31 +1039,28 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 	}
 	vd.m_color.setA(vd.m_color.getA() * m_alphaStack.back());
 
+	VertexList* vertexList = getCurrentVertexList();
 	switch (m_primMode) {
 		case PrimitiveMode_Points:
-			m_vertexData[DrawPrimitive_Points][m_primList].push_back(vd);
-			break;
 		case PrimitiveMode_Lines:
-			m_vertexData[DrawPrimitive_Lines][m_primList].push_back(vd);
+		case PrimitiveMode_Triangles:
+			vertexList->push_back(vd);
 			break;
 		case PrimitiveMode_LineStrip:
 		case PrimitiveMode_LineLoop:
 			if (m_vertCountThisPrim >= 2) {
-				m_vertexData[DrawPrimitive_Lines][m_primList].push_back(m_vertexData[DrawPrimitive_Lines][m_primList].back());
+				vertexList->push_back(vertexList->back());
 				++m_vertCountThisPrim;
 			}
-			m_vertexData[DrawPrimitive_Lines][m_primList].push_back(vd);
-			break;
-		case PrimitiveMode_Triangles:
-			m_vertexData[DrawPrimitive_Triangles][m_primList].push_back(vd);
+			vertexList->push_back(vd);
 			break;
 		case PrimitiveMode_TriangleStrip:
 			if (m_vertCountThisPrim >= 3) {
-				m_vertexData[DrawPrimitive_Triangles][m_primList].push_back(*(m_vertexData[DrawPrimitive_Triangles][m_primList].end() - 2));
-				m_vertexData[DrawPrimitive_Triangles][m_primList].push_back(*(m_vertexData[DrawPrimitive_Triangles][m_primList].end() - 2));
+				vertexList->push_back(*(vertexList->end() - 2));
+				vertexList->push_back(*(vertexList->end() - 2));
 				m_vertCountThisPrim += 2;
 			}
-			m_vertexData[DrawPrimitive_Triangles][m_primList].push_back(vd);
+			vertexList->push_back(vd);
 			break;
 		default:
 			break;
@@ -1075,15 +1075,17 @@ void Context::reset()
 	IM3D_ASSERT(m_alphaStack.size() == 1);
 	IM3D_ASSERT(m_sizeStack.size() == 1);
 	IM3D_ASSERT(m_enableSortingStack.size() == 1);
+	IM3D_ASSERT(m_layerIdStack.size() == 1);
 	IM3D_ASSERT(m_matrixStack.size() == 1);
 	IM3D_ASSERT(m_idStack.size() == 1);
 	
 	IM3D_ASSERT(m_primMode == PrimitiveMode_None);
 	m_primMode = PrimitiveMode_None;
+	m_primType = DrawPrimitive_Count;
 
-	for (int i = 0; i < DrawPrimitive_Count; ++i) {
-		m_vertexData[i][0].clear();
-		m_vertexData[i][1].clear();
+	for (U32 i = 0; i < m_vertexData[0].size(); ++i) {
+		m_vertexData[0][i]->clear();
+		m_vertexData[1][i]->clear();
 	}
 	m_sortedDrawLists.clear();
 	m_sortCalled = false;
@@ -1115,12 +1117,13 @@ void Context::draw()
 	IM3D_ASSERT(m_appData.drawCallback);
 	
  // draw unsorted prims first
-	for (int i = 0; i < DrawPrimitive_Count; ++i) {
-		if (m_vertexData[i][0].size() > 0) {
+	for (U32 i = 0; i < m_vertexData[0].size(); ++i) {
+		if (m_vertexData[0][i]->size() > 0) {
 			DrawList dl;
-			dl.m_primType = (DrawPrimitiveType)i;
-			dl.m_vertexData = m_vertexData[i][0].data();
-			dl.m_vertexCount = m_vertexData[i][0].size();
+			dl.m_layer       = m_layerIdMap[i / DrawPrimitive_Count];
+			dl.m_primType    = (DrawPrimitiveType)(i % DrawPrimitive_Count);
+			dl.m_vertexData  = m_vertexData[0][i]->data();
+			dl.m_vertexCount = m_vertexData[0][i]->size();
 			m_appData.drawCallback(dl);
 		}
 	}
@@ -1140,20 +1143,43 @@ void Context::draw()
 void Context::pushEnableSorting(bool _enable)
 {
 	IM3D_ASSERT(m_primMode == PrimitiveMode_None); // can't change sort mode mid-primitive
-	m_primList = _enable ? 1 : 0;
+	m_vertexDataIndex = _enable ? 1 : 0;
 	m_enableSortingStack.push_back(_enable);
 }
 void Context::popEnableSorting()
 {
 	IM3D_ASSERT(m_primMode == PrimitiveMode_None); // can't change sort mode mid-primitive
 	m_enableSortingStack.pop_back();
-	m_primList = m_enableSortingStack.back() ? 1 : 0;
+	m_vertexDataIndex = m_enableSortingStack.back() ? 1 : 0;
 }
 void Context::setEnableSorting(bool _enable)
 {
 	IM3D_ASSERT(m_primMode == PrimitiveMode_None); // can't change sort mode mid-primitive
-	m_primList = _enable ? 1 : 0;
+	m_vertexDataIndex = _enable ? 1 : 0;
 	m_enableSortingStack.back() = _enable;
+}
+
+void Context::pushLayerId(Id _layer)
+{
+	int idx = findLayerIndex(_layer);
+	if (idx == -1) { // not found, push new layer
+		idx = m_vertexData[0].size() / DrawPrimitive_Count;
+		for (int i = 0; i < DrawPrimitive_Count; ++i) {
+			m_vertexData[0].push_back((VertexList*)IM3D_MALLOC(sizeof(VertexList)));
+			*m_vertexData[0].back() = VertexList();
+			m_vertexData[1].push_back((VertexList*)IM3D_MALLOC(sizeof(VertexList)));
+			*m_vertexData[1].back() = VertexList();
+		}
+		m_layerIdMap.push_back(_layer);
+	}
+	m_layerIdStack.push_back(_layer);
+	m_layerIndex = idx;
+}
+void Context::popLayerId()
+{
+	IM3D_ASSERT(m_layerIdStack.size() > 1);
+	m_layerIdStack.pop_back();
+	m_layerIndex = findLayerIndex(m_layerIdStack.back());
 }
 
 Context::Context()
@@ -1161,7 +1187,8 @@ Context::Context()
 	m_sortCalled = false;
 	m_drawCalled = false;
 	m_primMode = PrimitiveMode_None;
-	m_primList = 0; // = sorting disabled
+	m_vertexDataIndex = 0; // = sorting disabled
+	m_layerIndex = 0;
 	m_firstVertThisPrim = 0;
 	m_vertCountThisPrim = 0;
 
@@ -1185,11 +1212,18 @@ Context::Context()
 	pushAlpha(1.0f);
 	pushSize(1.0f);
 	pushEnableSorting(false);
+	pushLayerId(0);
 	pushId(0x811C9DC5u); // fnv1 hash base
 }
 
 Context::~Context()
 {
+	for (int i = 0; i < 2; ++i) {
+		while (!m_vertexData[i].empty()) {
+			IM3D_FREE(m_vertexData[i].back());
+			m_vertexData[i].pop_back();
+		}
+	}
 }
 
 namespace {
@@ -1229,78 +1263,94 @@ namespace {
 
 void Context::sort()
 {
-	Vector<SortData> sortData[DrawPrimitive_Count];
-	Vec3 viewOrigin = m_appData.m_viewOrigin;
-
- // sort each primitive list internally
-	for (int i = 0 ; i < DrawPrimitive_Count; ++i) {
-		Vector<VertexData>& vd = m_vertexData[i][1];
-		if (!vd.empty()) {
-			sortData[i].reserve(vd.size() / DrawPrimitiveSize[i]);
-			for (VertexData* v = vd.begin(); v != vd.end(); ) {
-				sortData[i].push_back(SortData(0.0f, v));
-				IM3D_ASSERT(v < vd.end());
-				for (int j = 0; j < DrawPrimitiveSize[i]; ++j, ++v) {
-				 // sort key is the primitive midpoint distance to view origin
-					sortData[i].back().m_key += Length2(Vec3(v->m_positionSize) - viewOrigin);
+	for (U32 layer = 0; layer < m_layerIdMap.size(); ++layer) {
+		Vector<SortData> sortData[DrawPrimitive_Count];
+		Vec3 viewOrigin = m_appData.m_viewOrigin;
+	
+	 // sort each primitive list internally
+		for (int i = 0 ; i < DrawPrimitive_Count; ++i) {
+			Vector<VertexData>& vertexData = *(m_vertexData[1][layer + i]);
+			if (!vertexData.empty()) {
+				sortData[i].reserve(vertexData.size() / DrawPrimitiveSize[i]);
+				for (VertexData* v = vertexData.begin(); v != vertexData.end(); ) {
+					sortData[i].push_back(SortData(0.0f, v));
+					IM3D_ASSERT(v < vertexData.end());
+					for (int j = 0; j < DrawPrimitiveSize[i]; ++j, ++v) {
+					 // sort key is the primitive midpoint distance to view origin
+						sortData[i].back().m_key += Length2(Vec3(v->m_positionSize) - viewOrigin);
+					}
+					sortData[i].back().m_key /= (float)DrawPrimitiveSize[i];
 				}
-				sortData[i].back().m_key /= (float)DrawPrimitiveSize[i];
-			}
-		 // qsort is not necessarily stable but it doesn't matter assuming the prims are pushed in roughly the same order each frame
-			qsort(sortData[i].data(), sortData[i].size(), sizeof(SortData), SortCmp);
-			Reorder(m_vertexData[i][1], sortData[i].data(), sortData[i].size(), DrawPrimitiveSize[i]);
-		}
-	}
-
- // construct draw lists - partition sort data into non-overlapping lists
-	int cprim = 0;
-	SortData* search[DrawPrimitive_Count];
-	int emptyCount = 0;
-	for (int i = 0; i < DrawPrimitive_Count; ++i) {
-		if (sortData[i].empty()) {
-			search[i] = 0;
-			++emptyCount;
-		} else {
-			search[i] = sortData[i].begin();
-		}
-	}
-	#define modinc(v) ((v + 1) % DrawPrimitive_Count)
-	while (emptyCount != DrawPrimitive_Count) {
-		while (search[cprim] == 0) {
-			cprim = modinc(cprim);
-		}
-	 // find the max key at the current position across all sort data
-		float mxkey = search[cprim]->m_key;
-		int mxprim = cprim;
-		for (int p = modinc(cprim); p != cprim; p = modinc(p)) {
-			if (search[p] != 0 && search[p]->m_key > mxkey) {
-				mxkey = search[p]->m_key;
-				mxprim = p;
+			 // qsort is not necessarily stable but it doesn't matter assuming the prims are pushed in roughly the same order each frame
+				qsort(sortData[i].data(), sortData[i].size(), sizeof(SortData), SortCmp);
+				Reorder(vertexData, sortData[i].data(), sortData[i].size(), DrawPrimitiveSize[i]);
 			}
 		}
-
-	 // if draw list is empty or primitive changed start a new draw list
-		if (m_sortedDrawLists.empty() || m_sortedDrawLists.back().m_primType != mxprim) {
-			cprim = mxprim;
-			DrawList dl;
-			dl.m_primType = (DrawPrimitiveType)cprim;
-			dl.m_vertexData = m_vertexData[cprim][1].data() + (search[cprim] - sortData[cprim].data()) * DrawPrimitiveSize[cprim];
-			dl.m_vertexCount= 0;
-			m_sortedDrawLists.push_back(dl);
+	
+	 // construct draw lists - partition sort data into non-overlapping lists
+		int cprim = 0;
+		SortData* search[DrawPrimitive_Count];
+		int emptyCount = 0;
+		for (int i = 0; i < DrawPrimitive_Count; ++i) {
+			if (sortData[i].empty()) {
+				search[i] = 0;
+				++emptyCount;
+			} else {
+				search[i] = sortData[i].begin();
+			}
 		}
-
-	 // increment the vertex count for the current draw list
-		m_sortedDrawLists.back().m_vertexCount += DrawPrimitiveSize[cprim];
-		++search[cprim];
-		if (search[cprim] == sortData[cprim].end()) {
-			search[cprim] = 0;
-			++emptyCount;
+		#define modinc(v) ((v + 1) % DrawPrimitive_Count)
+		while (emptyCount != DrawPrimitive_Count) {
+			while (search[cprim] == 0) {
+				cprim = modinc(cprim);
+			}
+		 // find the max key at the current position across all sort data
+			float mxkey = search[cprim]->m_key;
+			int mxprim = cprim;
+			for (int p = modinc(cprim); p != cprim; p = modinc(p)) {
+				if (search[p] != 0 && search[p]->m_key > mxkey) {
+					mxkey = search[p]->m_key;
+					mxprim = p;
+				}
+			}
+	
+		 // if draw list is empty or primitive changed start a new draw list
+			if (m_sortedDrawLists.empty() || m_sortedDrawLists.back().m_primType != mxprim) {
+				cprim = mxprim;
+				DrawList dl;
+				dl.m_primType = (DrawPrimitiveType)cprim;
+				dl.m_vertexData = m_vertexData[1][layer + cprim]->data() + (search[cprim] - sortData[cprim].data()) * DrawPrimitiveSize[cprim];
+				dl.m_vertexCount= 0;
+				m_sortedDrawLists.push_back(dl);
+			}
+	
+		 // increment the vertex count for the current draw list
+			m_sortedDrawLists.back().m_vertexCount += DrawPrimitiveSize[cprim];
+			++search[cprim];
+			if (search[cprim] == sortData[cprim].end()) {
+				search[cprim] = 0;
+				++emptyCount;
+			}
+	
 		}
-
+		#undef modinc
 	}
-	#undef modinc
 }
 
+int Context::findLayerIndex(Id _id) const
+{
+	for (int i = 0; i < (int)m_layerIdMap.size(); ++i) {
+		if (m_layerIdMap[i] == _id) {
+			return i * DrawPrimitive_Count;
+		}
+	}
+	return -1;
+}
+
+Context::VertexList* Context::getCurrentVertexList()
+{
+	return m_vertexData[m_vertexDataIndex][m_layerIndex + m_primType];
+}
 
 float Context::pixelsToWorldSize(const Vec3& _position, float _pixels)
 {
@@ -1592,7 +1642,7 @@ void Context::gizmoAxislAngle_Draw(Id _id, const Vec3& _origin, const Vec3& _axi
 			vertex(Vec3(cosf(rad) * _worldRadius, sinf(rad) * _worldRadius, 0.0f));
 
 		 // post-modify the alpha for parts of the ring occluded by the sphere
-			VertexData& vd = m_vertexData[DrawPrimitive_Lines][m_primList].back();
+			VertexData& vd = getCurrentVertexList()->back();
 			Vec3 v = vd.m_positionSize;
 			float d = Dot(Normalize(v - _origin), viewDir); 
 			d = Max(Remap(d, 0.1f, 0.2f), aligned);
@@ -1710,7 +1760,11 @@ void Context::resetId()
 
 U32 Context::getPrimitiveCount(DrawPrimitiveType _type) const
 {
-	U32 ret = m_vertexData[_type][0].size() + m_vertexData[_type][1].size();
+	U32 ret = 0;
+	for (U32 i = 0; i < m_layerIdMap.size(); ++i) {
+		U32 j = i * DrawPrimitive_Count + _type;
+		ret += m_vertexData[0][j]->size() + m_vertexData[1][j]->size();
+	}
 	ret /= DrawPrimitiveSize[_type];
 	return ret;
 }
