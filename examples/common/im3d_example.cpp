@@ -1384,6 +1384,7 @@ bool Example::update()
 		ImGuiWindowFlags_AlwaysAutoResize
 		);
 		ImGui::Text("%.2f fps", 1.0f / m_deltaTime);
+		ImGui::Text("Layers:    %u ", Im3d::GetContext().getLayerCount());
 		ImGui::Text("Triangles: %u ", Im3d::GetContext().getPrimitiveCount(Im3d::DrawPrimitive_Triangles));
 		ImGui::Text("Lines:     %u ", Im3d::GetContext().getPrimitiveCount(Im3d::DrawPrimitive_Lines));
 		ImGui::Text("Points:    %u ", Im3d::GetContext().getPrimitiveCount(Im3d::DrawPrimitive_Points));

@@ -1161,16 +1161,17 @@ void Context::setEnableSorting(bool _enable)
 
 void Context::pushLayerId(Id _layer)
 {
+	IM3D_ASSERT(m_primMode == PrimitiveMode_None); // can't change layer mid-primitive
 	int idx = findLayerIndex(_layer);
 	if (idx == -1) { // not found, push new layer
-		idx = m_vertexData[0].size() / DrawPrimitive_Count;
+		idx = m_layerIdMap.size();
+		m_layerIdMap.push_back(_layer);
 		for (int i = 0; i < DrawPrimitive_Count; ++i) {
 			m_vertexData[0].push_back((VertexList*)IM3D_MALLOC(sizeof(VertexList)));
 			*m_vertexData[0].back() = VertexList();
 			m_vertexData[1].push_back((VertexList*)IM3D_MALLOC(sizeof(VertexList)));
 			*m_vertexData[1].back() = VertexList();
 		}
-		m_layerIdMap.push_back(_layer);
 	}
 	m_layerIdStack.push_back(_layer);
 	m_layerIndex = idx;
@@ -1269,7 +1270,7 @@ void Context::sort()
 	
 	 // sort each primitive list internally
 		for (int i = 0 ; i < DrawPrimitive_Count; ++i) {
-			Vector<VertexData>& vertexData = *(m_vertexData[1][layer + i]);
+			Vector<VertexData>& vertexData = *(m_vertexData[1][layer * DrawPrimitive_Count + i]);
 			if (!vertexData.empty()) {
 				sortData[i].reserve(vertexData.size() / DrawPrimitiveSize[i]);
 				for (VertexData* v = vertexData.begin(); v != vertexData.end(); ) {
@@ -1318,9 +1319,10 @@ void Context::sort()
 			if (m_sortedDrawLists.empty() || m_sortedDrawLists.back().m_primType != mxprim) {
 				cprim = mxprim;
 				DrawList dl;
-				dl.m_primType = (DrawPrimitiveType)cprim;
-				dl.m_vertexData = m_vertexData[1][layer + cprim]->data() + (search[cprim] - sortData[cprim].data()) * DrawPrimitiveSize[cprim];
-				dl.m_vertexCount= 0;
+				dl.m_layer       = layer;
+				dl.m_primType    = (DrawPrimitiveType)cprim;
+				dl.m_vertexData  = m_vertexData[1][layer * DrawPrimitive_Count + cprim]->data() + (search[cprim] - sortData[cprim].data()) * DrawPrimitiveSize[cprim];
+				dl.m_vertexCount = 0;
 				m_sortedDrawLists.push_back(dl);
 			}
 	
@@ -1341,7 +1343,7 @@ int Context::findLayerIndex(Id _id) const
 {
 	for (int i = 0; i < (int)m_layerIdMap.size(); ++i) {
 		if (m_layerIdMap[i] == _id) {
-			return i * DrawPrimitive_Count;
+			return i;
 		}
 	}
 	return -1;
@@ -1349,7 +1351,7 @@ int Context::findLayerIndex(Id _id) const
 
 Context::VertexList* Context::getCurrentVertexList()
 {
-	return m_vertexData[m_vertexDataIndex][m_layerIndex + m_primType];
+	return m_vertexData[m_vertexDataIndex][m_layerIndex * DrawPrimitive_Count + m_primType];
 }
 
 float Context::pixelsToWorldSize(const Vec3& _position, float _pixels)

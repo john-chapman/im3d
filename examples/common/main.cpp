@@ -193,7 +193,6 @@ int main(int, char**)
 		if (ImGui::TreeNode("High Order Shapes")) {
 		 // Im3d provides functions to easily draw high order shapes - these don't strictly require a matrix to be pushed on
 		 // the stack (although this is supported, as below).
-
 			static Im3d::Mat4 transform(1.0f);
 			Im3d::Gizmo("ShapeGizmo", transform);
 
@@ -403,6 +402,31 @@ int main(int, char**)
 					Im3d::PopMatrix();
 				}
 			Im3d::PopDrawState();
+
+			ImGui::TreePop();
+		}
+		
+		if (ImGui::TreeNode("Layers")) {
+		 // layers allow primitives to be grouped by the application
+	Im3d::PushEnableSorting(true);		
+			Im3d::PushLayerId(Im3d::MakeId("DrawFirst")); Im3d::PopLayerId();
+			Im3d::PushLayerId(Im3d::MakeId("DrawSecond")); Im3d::PopLayerId();
+
+			Im3d::PushLayerId(Im3d::MakeId("DrawSecond"));
+				Im3d::BeginTriangles();
+					Im3d::Vertex(-0.4f, 0.0f, 0.0f, 16.0f, Im3d::Color_Red);
+					Im3d::Vertex( 0.1f, 1.0f, 0.0f, 16.0f, Im3d::Color_Red);
+					Im3d::Vertex( 0.6f, 0.0f, 0.0f, 16.0f, Im3d::Color_Red);
+				Im3d::End();
+			Im3d::PopLayerId();
+			Im3d::PushLayerId(Im3d::MakeId("DrawFirst"));
+				Im3d::BeginTriangles();
+					Im3d::Vertex(-0.6f, 0.0f, 0.0f, 16.0f, Im3d::Color_Magenta);
+					Im3d::Vertex(-0.1f, 1.0f, 0.0f, 16.0f, Im3d::Color_Magenta);
+					Im3d::Vertex( 0.4f, 0.0f, 0.0f, 16.0f, Im3d::Color_Magenta);
+				Im3d::End();
+			Im3d::PopLayerId();
+	Im3d::PopEnableSorting();
 
 			ImGui::TreePop();
 		}
