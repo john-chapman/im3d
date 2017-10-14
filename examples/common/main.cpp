@@ -31,10 +31,10 @@ int main(int, char**)
 
 		ImGui::SetNextTreeNodeOpen(true, ImGuiSetCond_Once);
 		if (ImGui::TreeNode("Unified Gizmo")) {
-		 // unified gizmo operates directly on a 4x4 matrix using the context-global gizmo modes
+		 // Unified gizmo operates directly on a 4x4 matrix using the context-global gizmo modes.
 			static Im3d::Mat4 transform(1.0f);
 
-		 // context-global gizmo modes are set via actions in the AppData::m_keyDown but could also be modified via a GUI as follows
+		 // Context-global gizmo modes are set via actions in the AppData::m_keyDown but could also be modified via a GUI as follows:
 			int gizmoMode = (int)Im3d::GetContext().m_gizmoMode;
 			ImGui::Checkbox("Local (Ctrl+L)", &Im3d::GetContext().m_gizmoLocal);
 			ImGui::SameLine();
@@ -45,7 +45,7 @@ int main(int, char**)
 			ImGui::RadioButton("Scale (Ctrl+S)", &gizmoMode, Im3d::GizmoMode_Scale);
 			Im3d::GetContext().m_gizmoMode = (Im3d::GizmoMode)gizmoMode;
 	
-		 // the ID passed to Gizmo() should be unique during a frame - to create gizmos in a loop use PushId()/PopId()
+		 // The ID passed to Gizmo() should be unique during a frame - to create gizmos in a loop use PushId()/PopId().
 			if (Im3d::Gizmo("GizmoUnified", transform)) {
 			 // if Gizmo() returns true, the transform was modified
 				switch (Im3d::GetContext().m_gizmoMode) {
@@ -69,8 +69,8 @@ int main(int, char**)
 				
 			}
 
-		 // using the transform for drawing *after* the call to Gizmo() causes a 1 frame lag between the gizmo position and the output
-		 // matrix - this can be avoided if it's possible to issue the draw call *before* calling Gizmo()
+		 // Using the transform for drawing *after* the call to Gizmo() causes a 1 frame lag between the gizmo position and the output
+		 // matrix - this can only be avoided if it's possible to issue the draw call *before* calling Gizmo().
 			Im3d::DrawTeapot(transform, example.m_camViewProj);
 
 			ImGui::TreePop();
@@ -78,12 +78,12 @@ int main(int, char**)
 
 
 		if (ImGui::TreeNode("Separate Gizmos")) {
-		 // translation/rotation/scale can be modified separately - useful in cases where only certain transformations are valid
+		 // Translation/rotation/scale can be modified separately - useful in cases where only certain transformations are valid.
 			static Im3d::Vec3 translation(0.0f);
 			static Im3d::Mat3 rotation(1.0f);
 			static Im3d::Vec3 scale(1.0f);
 
-		 // the separate Gizmo*() functions require the transformation to be pushed on the matrix stack to correctly handle local gizmos
+		 // The separate Gizmo*() functions require the transformation to be pushed on the matrix stack to correctly handle local gizmos.
 			Im3d::PushMatrix(Im3d::Mat4(translation, rotation, scale));
 
 			int gizmoMode = (int)Im3d::GetContext().m_gizmoMode;
@@ -127,8 +127,8 @@ int main(int, char**)
 
 		
 		if (ImGui::TreeNode("Hierarchical Gizmos")) {
-		 // it is often useful to modify a single node in a transformation hierarchy directly, which can be done as follows
-		 // note that scaling the parent is probably undesirable in these cases
+		 // It is often useful to modify a single node in a transformation hierarchy directly, which can be done as follows.
+		 // Note that scaling the parent is probably undesirable in these cases.
 			static Im3d::Mat4 parent(1.0f);
 			static Im3d::Mat4 child(Im3d::Vec3(0.0f, 1.0f, 0.0f), Im3d::Mat3(1.0f), Im3d::Vec3(0.5f));
 
@@ -146,7 +146,7 @@ int main(int, char**)
 		}
 
 		if (ImGui::TreeNode("Gizmo Appearance")) {
-		 // the size/radius of gizmos can be modified globally
+		 // The size/radius of gizmos can be modified globally.
 			static float alpha  = 1.0f;
 			static float size   = Im3d::GetContext().m_gizmoSizePixels;
 			static float height = Im3d::GetContext().m_gizmoHeightPixels; 
@@ -173,18 +173,22 @@ int main(int, char**)
 		}
 
 		if (ImGui::TreeNode("Cursor Ray Intersection")) {
-		 // context exposes the 'hot depth' along the cursor ray which intersects with the current hot gizmo - this is useful
+		 // Context exposes the 'hot depth' along the cursor ray which intersects with the current hot gizmo - this is useful
 		 // when drawing the cursor ray.
 			float depth = FLT_MAX;
 			depth = Im3d::Min(depth, Im3d::GetContext().m_hotDepth);
 			float size = Im3d::Clamp(32.0f / depth, 4.0f, 32.0f);
 			
-			ImGui::Text("Depth: %f", depth);
-			Im3d::PushEnableSorting(true);
-			Im3d::BeginPoints();
-				Im3d::Vertex(ad.m_cursorRayOrigin + ad.m_cursorRayDirection * depth * 0.99f, size, Im3d::Color_Magenta);
-			Im3d::End();
-			Im3d::PopEnableSorting();
+			if (depth != FLT_MAX) {
+				ImGui::Text("Depth: %f", depth);
+				Im3d::PushEnableSorting(true);
+				Im3d::BeginPoints();
+					Im3d::Vertex(ad.m_cursorRayOrigin + ad.m_cursorRayDirection * depth * 0.99f, size, Im3d::Color_Magenta);
+				Im3d::End();
+				Im3d::PopEnableSorting();
+			} else {
+				ImGui::Text("Depth: FLT_MAX");
+			}
 		
 			ImGui::TreePop();
 		}
@@ -316,9 +320,9 @@ int main(int, char**)
 
 		
 		if (ImGui::TreeNode("Basic Perf")) {
-		 // simple perf test: draw a large number of points, enable/disable sorting and the use of the matrix stack
+		 // Simple perf test: draw a large number of points, enable/disable sorting and the use of the matrix stack.
 			static bool enableSorting = false;
-			static bool useMatrix = false; // if the matrix stack size == 1 Im3d assumes it's the identity matrix and skips the matrix mul
+			static bool useMatrix = false; // if the matrix stack size == 1 Im3d assumes it's the identity matrix and skips the matrix mul as an optimisation
 			static int  primCount = 50000;
 			ImGui::Checkbox("Enable sorting", &enableSorting);
 			ImGui::Checkbox("Use matrix stack", &useMatrix);
@@ -349,7 +353,7 @@ int main(int, char**)
 
 
 		if (ImGui::TreeNode("Sorting")) {
-		 // if sorting is enabled, primitives are sorted back-to-front for rendering. Lines/triangles use the primitive midpoint, so very long
+		 // If sorting is enabled, primitives are sorted back-to-front for rendering. Lines/triangles use the primitive midpoint, so very long
 		 // lines or large triangles may not sort correctly.
 			static bool enableSorting = true;
 			static int  primCount = 1000;
@@ -407,8 +411,11 @@ int main(int, char**)
 		}
 		
 		if (ImGui::TreeNode("Layers")) {
-		 // layers allow primitives to be grouped by the application
-	Im3d::PushEnableSorting(true);		
+		 // Layers allow primitives to be grouped by the application. Each layer results in a separate call to the draw callback, which gives the 
+		 // application opportunity to modify the rendering on a per-layer basis (e.g. to enable depth testing). Layers can also be used to 
+		 // achieve some coarse-grained sorting, as below:
+
+		 // Layers are drawn in the order which the application declares them.
 			Im3d::PushLayerId(Im3d::MakeId("DrawFirst")); Im3d::PopLayerId();
 			Im3d::PushLayerId(Im3d::MakeId("DrawSecond")); Im3d::PopLayerId();
 
@@ -426,7 +433,6 @@ int main(int, char**)
 					Im3d::Vertex( 0.4f, 0.0f, 0.0f, 16.0f, Im3d::Color_Magenta);
 				Im3d::End();
 			Im3d::PopLayerId();
-	Im3d::PopEnableSorting();
 
 			ImGui::TreePop();
 		}

@@ -24,6 +24,10 @@ void Im3d_Draw(const Im3d::DrawList& _drawList)
 {
 	AppData& ad = GetAppData();
 
+	if (_drawList.m_layerId == Im3d::MakeId("NamedLayer")) {
+	 // The application may group primitives into layers, which can be used to change the draw state (e.g. enable depth testing, use a different shader)
+	}
+
  // setting the framebuffer, viewport and pipeline states can (and should) be done prior to calling Im3d::Draw
 	glAssert(glViewport(0, 0, (GLsizei)g_Example->m_width, (GLsizei)g_Example->m_height));
 	glAssert(glEnable(GL_BLEND));

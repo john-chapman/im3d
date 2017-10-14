@@ -113,7 +113,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>IM3D_DEBUG;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;IM3D_OPENGL_VMAJ=3;IM3D_OPENGL_VMIN=1;IM3D_OPENGL_VSHADER=140;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>IM3D_DEBUG;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;IM3D_OPENGL_VMAJ=3;IM3D_OPENGL_VMIN=1;IM3D_OPENGL_VSHADER=140;IM3D_VERTEX_ALIGNEMENT=16;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\..;..\..\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
@@ -130,7 +130,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>IM3D_DEBUG;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;IM3D_OPENGL_VMAJ=3;IM3D_OPENGL_VMIN=1;IM3D_OPENGL_VSHADER=140;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>IM3D_DEBUG;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;IM3D_OPENGL_VMAJ=3;IM3D_OPENGL_VMIN=1;IM3D_OPENGL_VSHADER=140;IM3D_VERTEX_ALIGNEMENT=16;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\..;..\..\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
@@ -147,7 +147,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;IM3D_OPENGL_VMAJ=3;IM3D_OPENGL_VMIN=1;IM3D_OPENGL_VSHADER=140;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;IM3D_OPENGL_VMAJ=3;IM3D_OPENGL_VMIN=1;IM3D_OPENGL_VSHADER=140;IM3D_VERTEX_ALIGNEMENT=16;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\..;..\..\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Full</Optimization>
@@ -170,7 +170,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;IM3D_OPENGL_VMAJ=3;IM3D_OPENGL_VMIN=1;IM3D_OPENGL_VSHADER=140;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;IM3D_OPENGL_VMAJ=3;IM3D_OPENGL_VMIN=1;IM3D_OPENGL_VSHADER=140;IM3D_VERTEX_ALIGNEMENT=16;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\..;..\..\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Full</Optimization>
@@ -193,6 +193,7 @@
     <ClInclude Include="..\..\..\im3d.h" />
     <ClInclude Include="..\..\..\im3d_config.h" />
     <ClInclude Include="..\..\..\im3d_math.h" />
+    <ClInclude Include="..\..\common\GL\eglew.h" />
     <ClInclude Include="..\..\common\GL\glew.h" />
     <ClInclude Include="..\..\common\GL\glxew.h" />
     <ClInclude Include="..\..\common\GL\wglew.h" />
