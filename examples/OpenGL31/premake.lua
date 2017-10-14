@@ -53,6 +53,7 @@ workspace "im3d_opengl31"
 		targetdir ""
 	
 		defines { "IM3D_OPENGL_VMAJ=3", "IM3D_OPENGL_VMIN=1", "IM3D_OPENGL_VSHADER=140" }
+		defines { "IM3D_VERTEX_ALIGNEMENT=16" } -- can also do this via im3d_config.h
 		
 		includedirs({
 			IM3D_DIR,

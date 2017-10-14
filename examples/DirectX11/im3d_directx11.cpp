@@ -51,6 +51,10 @@ void Im3d_Draw(const Im3d::DrawList& _drawList)
 	ID3D11Device* d3d = g_Example->m_d3dDevice;
 	ID3D11DeviceContext* ctx = g_Example->m_d3dDeviceCtx;
 
+	if (_drawList.m_layerId == Im3d::MakeId("NamedLayer")) {
+	 // The application may group primitives into layers, which can be used to change the draw state (e.g. enable depth testing, use a different shader)
+	}
+	
  // setting the framebuffer, viewport and pipeline states can (and should) be done prior to calling Im3d::Draw
 	D3D11_VIEWPORT viewport = {
 		0.0f, 0.0f, // TopLeftX, TopLeftY
