@@ -1,5 +1,6 @@
 /*	CHANGE LOG
 	==========
+	2017-10-14 (v1.07) - Layers API.
 	2017-07-03 (v1.06) - Rotation gizmo improvements; avoid selection failure at grazing angles + improved rotation behavior.
 	2017-04-04 (v1.05) - GetActiveId() returns the gizmo id set by the app instead of an internal id. Added Gizmo* variants which take an Id directly.
 	2017-03-24 (v1.04) - DrawArrow() interface changed (world space length/pixel thickness instead of head fraction).
@@ -1120,15 +1121,14 @@ void Context::draw()
 	for (U32 i = 0; i < m_vertexData[0].size(); ++i) {
 		if (m_vertexData[0][i]->size() > 0) {
 			DrawList dl;
-			dl.m_layer       = m_layerIdMap[i / DrawPrimitive_Count];
+			dl.m_layerId     = m_layerIdMap[i / DrawPrimitive_Count];
 			dl.m_primType    = (DrawPrimitiveType)(i % DrawPrimitive_Count);
 			dl.m_vertexData  = m_vertexData[0][i]->data();
 			dl.m_vertexCount = m_vertexData[0][i]->size();
 			m_appData.drawCallback(dl);
 		}
 	}
-
- // draw sorted primitives on top
+ // draw sorted primitives second
 	if (!m_sortCalled) {
 		sort();
 		m_sortCalled = true;
@@ -1315,11 +1315,15 @@ void Context::sort()
 				}
 			}
 	
-		 // if draw list is empty or primitive changed start a new draw list
-			if (m_sortedDrawLists.empty() || m_sortedDrawLists.back().m_primType != mxprim) {
+		 // if draw list is empty or the layer or primitive changed, start a new draw list
+			if (
+				m_sortedDrawLists.empty() || 
+				m_sortedDrawLists.back().m_layerId != layer || 
+				m_sortedDrawLists.back().m_primType != mxprim
+				) {
 				cprim = mxprim;
 				DrawList dl;
-				dl.m_layer       = layer;
+				dl.m_layerId     = layer;
 				dl.m_primType    = (DrawPrimitiveType)cprim;
 				dl.m_vertexData  = m_vertexData[1][layer * DrawPrimitive_Count + cprim]->data() + (search[cprim] - sortData[cprim].data()) * DrawPrimitiveSize[cprim];
 				dl.m_vertexCount = 0;

@@ -4,7 +4,7 @@
 
 #include "im3d_config.h"
 
-#define IM3D_VERSION "1.06"
+#define IM3D_VERSION "1.07"
 
 #ifndef IM3D_ASSERT
 	#include <cassert>
@@ -98,7 +98,7 @@ void  EnableSorting(bool _enable);
 void  PushDrawState();
 void  PopDrawState();
 
-// Layer id state, subsequent primitives are added to a separate draw list. The default layer is 0. (per primitive).
+// Layer id state, subsequent primitives are added to a separate draw list associated with the id (per primitive).
 void  PushLayerId(Id _layer);
 void  PopLayerId();
 Id    GetLayerId();
@@ -366,7 +366,7 @@ const int DrawPrimitiveSize[DrawPrimitive_Count] =
 
 struct DrawList
 {
-	Id                m_layer;
+	Id                m_layerId;
 	DrawPrimitiveType m_primType;
 	const VertexData* m_vertexData;
 	U32               m_vertexCount;
@@ -591,9 +591,9 @@ private:
  // vertex data: one list per layer, per primitive type, *2 for sorted/unsorted
 	typedef Vector<VertexData> VertexList;
 	Vector<VertexList*> m_vertexData[2];            // Each layer is DrawPrimitive_Count consecutive lists.
-	int                 m_vertexDataIndex;
-	int                 m_layerIndex;
+	int                 m_vertexDataIndex;          // 0, or 1 if sorting enabled.
 	Vector<Id>          m_layerIdMap;               // Map Id -> vertex data index.
+	int                 m_layerIndex;               // Index of the currently active layer in m_layerIdMap.
 	Vector<DrawList>    m_sortedDrawLists;          // Sorted draw lists are stored to avoid multiple calls to sort().
 	bool                m_sortCalled;               // Avoid calling sort() during every call to draw().
 	bool                m_drawCalled;               // For assert, if vertices are pushed after draw() was called.
