@@ -193,7 +193,7 @@ int main(int, char**)
 			ImGui::TreePop();
 		}
 
-		
+		//ImGui::SetNextTreeNodeOpen(true, ImGuiCond_Once);
 		if (ImGui::TreeNode("High Order Shapes")) {
 		 // Im3d provides functions to easily draw high order shapes - these don't strictly require a matrix to be pushed on
 		 // the stack (although this is supported, as below).
@@ -206,7 +206,9 @@ int main(int, char**)
 				Shape_Circle,
 				Shape_CircleFilled,
 				Shape_Sphere,
+				Shape_SphereFilled,
 				Shape_AlignedBox,
+				Shape_AlignedBoxFilled,
 				Shape_Cylinder,
 				Shape_Capsule,
 				Shape_Prism,
@@ -218,7 +220,9 @@ int main(int, char**)
 				"Circle\0"
 				"Circle Filled\0"
 				"Sphere\0"
+				"Sphere Filled\0"
 				"AlignedBox\0"
+				"AlignedBoxFilled\0"
 				"Cylinder\0"
 				"Capsule\0"
 				"Prism\0"
@@ -228,10 +232,10 @@ int main(int, char**)
 			ImGui::Combo("Shape", &currentShape, shapeList);
 			static Im3d::Vec4 color = Im3d::Vec4(1.0f, 0.0f, 0.6f, 1.0f);
 			ImGui::ColorEdit4("Color", color);
-			
 			static float thickness = 4.0f;
 			ImGui::SliderFloat("Thickness", &thickness, 0.0f, 16.0f);
-			
+			static int detail = -1;			
+
 			Im3d::PushMatrix(transform);
 			Im3d::PushDrawState();
 			Im3d::SetSize(thickness);
@@ -253,23 +257,35 @@ int main(int, char**)
 				case Shape_CircleFilled: {
 					static float circleRadius = 1.0f;
 					ImGui::SliderFloat("Radius", &circleRadius, 0.0f, 10.0f);
+					ImGui::SliderInt("Detail", &detail, -1, 128);
 					if (currentShape == Shape_Circle) {
-						Im3d::DrawCircle(Im3d::Vec3(0.0f), Im3d::Vec3(0.0f, 0.0f, 1.0f), circleRadius);
+						Im3d::DrawCircle(Im3d::Vec3(0.0f), Im3d::Vec3(0.0f, 0.0f, 1.0f), circleRadius, detail);
 					} else if (currentShape = Shape_CircleFilled) {
-						Im3d::DrawCircleFilled(Im3d::Vec3(0.0f), Im3d::Vec3(0.0f, 0.0f, 1.0f), circleRadius);
+						Im3d::DrawCircleFilled(Im3d::Vec3(0.0f), Im3d::Vec3(0.0f, 0.0f, 1.0f), circleRadius, detail);
 					}
 					break;
 				}
-				case Shape_Sphere: {
+				case Shape_Sphere:
+				case Shape_SphereFilled: {
 					static float sphereRadius = 1.0f;
 					ImGui::SliderFloat("Radius", &sphereRadius, 0.0f, 10.0f);
-					Im3d::DrawSphere(Im3d::Vec3(0.0f), sphereRadius);
+					ImGui::SliderInt("Detail", &detail, -1, 128);
+					if (currentShape == Shape_Sphere) {
+						Im3d::DrawSphere(Im3d::Vec3(0.0f), sphereRadius, detail);
+					} else { 
+						Im3d::DrawSphereFilled(Im3d::Vec3(0.0f), sphereRadius, detail);
+					}
 					break;
 				}
-				case Shape_AlignedBox: {
+				case Shape_AlignedBox: 
+				case Shape_AlignedBoxFilled: {
 					static Im3d::Vec3 boxSize(1.0f);
 					ImGui::SliderFloat3("Size", boxSize, 0.0f, 10.0f);
-					Im3d::DrawAlignedBox(-boxSize, boxSize);
+					if (currentShape == Shape_AlignedBox) {
+						Im3d::DrawAlignedBox(-boxSize, boxSize);
+					} else {
+						Im3d::DrawAlignedBoxFilled(-boxSize, boxSize);
+					}
 					break;
 				}
 				case Shape_Cylinder: {
@@ -277,7 +293,8 @@ int main(int, char**)
 					static float cylinderLength = 1.0f;
 					ImGui::SliderFloat("Radius", &cylinderRadius, 0.0f, 10.0f);
 					ImGui::SliderFloat("Length", &cylinderLength, 0.0f, 10.0f);
-					Im3d::DrawCylinder(Im3d::Vec3(0.0f, -cylinderLength, 0.0f), Im3d::Vec3(0.0f, cylinderLength, 0.0f), cylinderRadius);
+					ImGui::SliderInt("Detail", &detail, -1, 128);
+					Im3d::DrawCylinder(Im3d::Vec3(0.0f, -cylinderLength, 0.0f), Im3d::Vec3(0.0f, cylinderLength, 0.0f), cylinderRadius, detail);
 					break;
 				}
 				case Shape_Capsule: {
@@ -285,7 +302,8 @@ int main(int, char**)
 					static float capsuleLength = 1.0f;
 					ImGui::SliderFloat("Radius", &capsuleRadius, 0.0f, 10.0f);
 					ImGui::SliderFloat("Length", &capsuleLength, 0.0f, 10.0f);
-					Im3d::DrawCapsule(Im3d::Vec3(0.0f, -capsuleLength, 0.0f), Im3d::Vec3(0.0f, capsuleLength, 0.0f), capsuleRadius);
+					ImGui::SliderInt("Detail", &detail, -1, 128);
+					Im3d::DrawCapsule(Im3d::Vec3(0.0f, -capsuleLength, 0.0f), Im3d::Vec3(0.0f, capsuleLength, 0.0f), capsuleRadius, detail);
 					break;
 				}
 				case Shape_Prism: {

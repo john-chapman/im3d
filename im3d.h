@@ -4,7 +4,7 @@
 
 #include "im3d_config.h"
 
-#define IM3D_VERSION "1.07"
+#define IM3D_VERSION "1.08"
 
 #ifndef IM3D_ASSERT
 	#include <cassert>
@@ -126,7 +126,9 @@ void  DrawQuadFilled(const Vec3& _origin, const Vec3& _normal, const Vec2& _size
 void  DrawCircle(const Vec3& _origin, const Vec3& _normal, float _radius, int _detail = -1);
 void  DrawCircleFilled(const Vec3& _origin, const Vec3& _normal, float _radius, int _detail = -1);
 void  DrawSphere(const Vec3& _origin, float _radius, int _detail = -1);
+void  DrawSphereFilled(const Vec3& _origin, float _radius, int _detail = -1);
 void  DrawAlignedBox(const Vec3& _min, const Vec3& _max);
+void  DrawAlignedBoxFilled(const Vec3& _min, const Vec3& _max);
 void  DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, int _detail = -1);
 void  DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int _detail = -1);
 void  DrawPrism(const Vec3& _start, const Vec3& _end, float _radius, int _sides);
@@ -541,7 +543,7 @@ public:
 	// Convert world space size -> pixels based on distance between _position and view origin.
 	float worldSizeToPixels(const Vec3& _position, float _pixels);
 	// Blend between _min and _max based on distance betwen _position and view origin.
-	int estimateLevelOfDetail(const Vec3& _position, float _worldSize, int _min = 16, int _max = 256);
+	int estimateLevelOfDetail(const Vec3& _position, float _worldSize, int _min = 4, int _max = 256);
 	
 	// Make _id hot if _depth < m_hotDepth && _intersects.
 	bool makeHot(Id _id, float _depth, bool _intersects);

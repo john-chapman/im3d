@@ -1,5 +1,6 @@
 /*	CHANGE LOG
 	==========
+	2017-10-21 (v1.08) - Added DrawAlignedBoxFilled(), DrawSphereFilled(), fixed clamped ranges for auto LOD in high order primitives.
 	2017-10-14 (v1.07) - Layers API.
 	2017-07-03 (v1.06) - Rotation gizmo improvements; avoid selection failure at grazing angles + improved rotation behavior.
 	2017-04-04 (v1.05) - GetActiveId() returns the gizmo id set by the app instead of an internal id. Added Gizmo* variants which take an Id directly.
@@ -180,10 +181,10 @@ void Im3d::DrawQuadFilled(const Vec3& _origin, const Vec3& _normal, const Vec2& 
 	Context& ctx = GetContext();
 	ctx.pushMatrix(ctx.getMatrix() * LookAt(_origin, _origin + _normal, ctx.getAppData().m_worldUp));
 	DrawQuadFilled(
-		Vec3(-_size.x,  _size.y, 0.0f),
-		Vec3( _size.x,  _size.y, 0.0f),
+		Vec3(-_size.x, -_size.y, 0.0f),
 		Vec3( _size.x, -_size.y, 0.0f),
-		Vec3(-_size.x, -_size.y, 0.0f)
+		Vec3( _size.x,  _size.y, 0.0f),
+		Vec3(-_size.x,  _size.y, 0.0f)
 		);
 	ctx.popMatrix();
 }
@@ -191,8 +192,10 @@ void Im3d::DrawCircle(const Vec3& _origin, const Vec3& _normal, float _radius, i
 {
 	Context& ctx = GetContext();
 	if (_detail < 0) {
-		_detail = ctx.estimateLevelOfDetail(_origin, _radius);
+		_detail = ctx.estimateLevelOfDetail(_origin, _radius, 8, 48);
 	}
+	_detail = Max(_detail, 3);
+
  	ctx.pushMatrix(ctx.getMatrix() * LookAt(_origin, _origin + _normal, ctx.getAppData().m_worldUp));
 	ctx.begin(PrimitiveMode_LineLoop);
 		for (int i = 0; i < _detail; ++i) {
@@ -206,12 +209,14 @@ void Im3d::DrawCircleFilled(const Vec3& _origin, const Vec3& _normal, float _rad
 {
 	Context& ctx = GetContext();
 	if (_detail < 0) {
-		_detail = ctx.estimateLevelOfDetail(_origin, _radius);
+		_detail = ctx.estimateLevelOfDetail(_origin, _radius, 8, 64);
 	}
+	_detail = Max(_detail, 3);
+
  	ctx.pushMatrix(ctx.getMatrix() * LookAt(_origin, _origin + _normal, ctx.getAppData().m_worldUp));
 	ctx.begin(PrimitiveMode_Triangles);
-		float cp = cosf(0.0f) * _radius;
-		float sp = sinf(0.0f) * _radius;
+		float cp = _radius;
+		float sp = 0.0f;
 		for (int i = 1; i <= _detail; ++i) {
 			ctx.vertex(_origin);
 			ctx.vertex(Vec3(cp, sp, 0.0f));
@@ -229,8 +234,10 @@ void Im3d::DrawSphere(const Vec3& _origin, float _radius, int _detail)
 {
 	Context& ctx = GetContext();
 	if (_detail < 0) {
-		_detail = ctx.estimateLevelOfDetail(_origin, _radius);
+		_detail = ctx.estimateLevelOfDetail(_origin, _radius, 8, 48);
 	}
+	_detail = Max(_detail, 3);
+
  // xy circle
 	ctx.begin(PrimitiveMode_LineLoop);
 		for (int i = 0; i < _detail; ++i) {
@@ -250,6 +257,46 @@ void Im3d::DrawSphere(const Vec3& _origin, float _radius, int _detail)
 		for (int i = 0; i < _detail; ++i) {
 			float rad = TwoPi * ((float)i / (float)_detail);
 			ctx.vertex(Vec3(0.0f + _origin.x, cosf(rad) * _radius + _origin.y, sinf(rad) * _radius + _origin.z));
+		}
+	ctx.end();
+}
+void Im3d::DrawSphereFilled(const Vec3& _origin, float _radius, int _detail)
+{
+	Context& ctx = GetContext();
+	if (_detail < 0) {
+		_detail = ctx.estimateLevelOfDetail(_origin, _radius, 12, 32);
+	}
+	_detail = Max(_detail, 6);
+
+	ctx.begin(PrimitiveMode_Triangles);
+		float yp = -_radius;
+		float rp = 0.0f;
+		for (int i = 1; i <= _detail / 2; ++i) {
+			float y = ((float)i / (float)(_detail / 2)) * 2.0f - 1.0f;
+			float r = cosf(y * HalfPi) * _radius;
+			y = sinf(y * HalfPi) * _radius;
+			
+			float xp = 1.0f;
+			float zp = 0.0f;
+			for (int j = 1; j <= _detail; ++j) {
+				float x = ((float)j / (float)(_detail)) * TwoPi;
+				float z = sinf(x);
+				x = cosf(x);
+
+				ctx.vertex(Vec3(xp * rp, yp, zp * rp));
+				ctx.vertex(Vec3(xp * r,  y,  zp * r));
+				ctx.vertex(Vec3(x  * r,  y,  z  * r));
+
+				ctx.vertex(Vec3(xp * rp, yp, zp * rp));
+				ctx.vertex(Vec3(x  * r,  y,  z  * r));
+				ctx.vertex(Vec3(x  * rp, yp, z  * rp));
+
+				xp = x;
+				zp = z;
+			}
+
+			yp = y;
+			rp = r;
 		}
 	ctx.end();
 }
@@ -279,13 +326,63 @@ void Im3d::DrawAlignedBox(const Vec3& _min, const Vec3& _max)
 		ctx.vertex(Vec3(_max.x, _max.y, _max.z));
 	ctx.end();
 }
+void Im3d::DrawAlignedBoxFilled(const Vec3& _min, const Vec3& _max)
+{
+	Context& ctx = GetContext();
+	ctx.pushEnableSorting(true);
+ // x+
+	DrawQuadFilled(
+		Vec3(_max.x, _max.y, _min.z),
+		Vec3(_max.x, _max.y, _max.z),
+		Vec3(_max.x, _min.y, _max.z),
+		Vec3(_max.x, _min.y, _min.z)
+		);
+ // x-
+	DrawQuadFilled(
+		Vec3(_min.x, _min.y, _min.z),
+		Vec3(_min.x, _min.y, _max.z),
+		Vec3(_min.x, _max.y, _max.z),
+		Vec3(_min.x, _max.y, _min.z)
+		);
+ // y+
+	DrawQuadFilled(
+		Vec3(_min.x, _max.y, _min.z),
+		Vec3(_min.x, _max.y, _max.z),
+		Vec3(_max.x, _max.y, _max.z),
+		Vec3(_max.x, _max.y, _min.z)
+		);
+ // y-
+	DrawQuadFilled(
+		Vec3(_max.x, _min.y, _min.z),
+		Vec3(_max.x, _min.y, _max.z),
+		Vec3(_min.x, _min.y, _max.z),
+		Vec3(_min.x, _min.y, _min.z)
+		);
+ // z+
+	DrawQuadFilled(
+		Vec3(_max.x, _min.y, _max.z),
+		Vec3(_max.x, _max.y, _max.z),
+		Vec3(_min.x, _max.y, _max.z),
+		Vec3(_min.x, _min.y, _max.z)
+		);
+ // z-
+	DrawQuadFilled(
+		Vec3(_min.x, _min.y, _min.z),
+		Vec3(_min.x, _max.y, _min.z),
+		Vec3(_max.x, _max.y, _min.z),
+		Vec3(_max.x, _min.y, _min.z)
+		);
+	ctx.popEnableSorting();
+}
 void Im3d::DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, int _detail)
 {
 	Context& ctx = GetContext();
 	Vec3 org  = _start + (_end - _start) * 0.5f;
 	if (_detail < 0) {
-		_detail = ctx.estimateLevelOfDetail(org, _radius);
+		_detail = ctx.estimateLevelOfDetail(org, _radius, 16, 24);
 	}
+	_detail = Max(_detail, 3);
+
 	float ln  = Length(_end - _start) * 0.5f;
 	ctx.pushMatrix(ctx.getMatrix() * LookAt(org, _end, ctx.getAppData().m_worldUp));
 	ctx.begin(PrimitiveMode_LineLoop);
@@ -314,8 +411,10 @@ void Im3d::DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int 
 	Context& ctx = GetContext();
 	Vec3 org = _start + (_end - _start) * 0.5f;
 	if (_detail < 0) {
-		_detail = ctx.estimateLevelOfDetail(org, _radius);
+		_detail = ctx.estimateLevelOfDetail(org, _radius, 6, 24);
 	}
+	_detail = Max(_detail, 3);
+	
 	float ln = Length(_end - _start) * 0.5f;
 	int detail2 = _detail * 2; // force cap base detail to match ends
 	ctx.pushMatrix(ctx.getMatrix() * LookAt(org, _end, ctx.getAppData().m_worldUp));
@@ -1372,6 +1471,9 @@ float Context::worldSizeToPixels(const Vec3& _position, float _size)
 
 int Context::estimateLevelOfDetail(const Vec3& _position, float _worldSize, int _min, int _max)
 {
+	if (m_appData.m_projOrtho) {
+		return _max;
+	}
 	float d = Length(_position - m_appData.m_viewOrigin);
 	float x = Clamp(2.0f * atanf(_worldSize / (2.0f * d)), 0.0f, 1.0f);
 	float fmin = (float)_min;
