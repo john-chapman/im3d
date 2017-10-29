@@ -212,6 +212,8 @@ Vec3  Nearest(const Ray& _ray, const LineSegment& _segment, float& tr_);
 
 float Distance2(const Ray& _ray, const LineSegment& _segment);
 
+inline float Distance(const Vec4& _plane, const Vec3& _point) { return _plane.x * _point.x + _plane.y * _point.y + _plane.z * _point.z + _plane.w; }
+
 constexpr float Pi      = 3.14159265359f;
 constexpr float TwoPi   = 2.0f * Pi;
 constexpr float HalfPi  = 0.5f * Pi;

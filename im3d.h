@@ -94,6 +94,9 @@ void  PushEnableSorting(bool _enable);
 void  PopEnableSorting();
 void  EnableSorting(bool _enable);
 
+// Enable/disable culling (per primitive). The application must set the culling frustum via AppData.
+void  SetEnableCulling(bool _enable);
+
 // Push/pop all draw states (color, alpha, size, sorting).
 void  PushDrawState();
 void  PopDrawState();
@@ -394,24 +397,40 @@ enum Key
 
 	Action_Count
 };
+enum FrustumPlane
+{
+	FrustumPlane_Far,
+	FrustumPlane_Near,
+	FrustumPlane_Top,
+	FrustumPlane_Right,
+	FrustumPlane_Bottom,
+	FrustumPlane_Left,
+
+	FrustumPlane_Count
+};
 struct AppData
 {
-	bool   m_keyDown[Key_Count];  // Application-provided key states.
-
-	Vec3   m_cursorRayOrigin;     // World space cursor ray origin.
-	Vec3   m_cursorRayDirection;  // World space cursor ray direction.
-	Vec3   m_worldUp;             // World space 'up' vector.
-	Vec3   m_viewOrigin;          // World space render origin (camera position).
-	Vec2   m_viewportSize;        // Viewport size (pixels).
-	float  m_projScaleY;          // Scale factor used to convert from pixel size -> world scale; use tan(fov) for perspective projections, far plane height for ortho.
-	bool   m_projOrtho;           // If the projection matrix is orthographic.
-	float  m_deltaTime;           // Time since previous frame (seconds).
-	float  m_snapTranslation;     // Snap value for translation gizmos (world units). 0 = disabled.
-	float  m_snapRotation;        // Snap value for rotation gizmos (radians). 0 = disabled.
-	float  m_snapScale;           // Snap value for scale gizmos. 0 = disabled.
-	void*  m_appData;             // App-specific data (useful for passing app context to drawCallback).
+	bool   m_keyDown[Key_Count];               // Key states.
+	Vec4   m_cullFrustum[FrustumPlane_Count];  // Frustum planes for culling (if culling enabled).
+	Vec3   m_cursorRayOrigin;                  // World space cursor ray origin.
+	Vec3   m_cursorRayDirection;               // World space cursor ray direction.
+	Vec3   m_worldUp;                          // World space 'up' vector.
+	Vec3   m_viewOrigin;                       // World space render origin (camera position).
+	Vec2   m_viewportSize;                     // Viewport size (pixels).
+	float  m_projScaleY;                       // Scale factor used to convert from pixel size -> world scale; use tan(fov) for perspective projections, far plane height for ortho.
+	bool   m_projOrtho;                        // If the projection matrix is orthographic.
+	float  m_deltaTime;                        // Time since previous frame (seconds).
+	float  m_snapTranslation;                  // Snap value for translation gizmos (world units). 0 = disabled.
+	float  m_snapRotation;                     // Snap value for rotation gizmos (radians). 0 = disabled.
+	float  m_snapScale;                        // Snap value for scale gizmos. 0 = disabled.
+	void*  m_appData;                          // App-specific data.
 
 	DrawPrimitivesCallback* drawCallback; // e.g. void Im3d_Draw(const DrawList& _drawList)
+
+	// Extract cull frustum planes from the view-projection matrix. 
+	// Set _viewZNegative = true if view space Z is negative.
+	// Set _clipZNegativeOneToOne = true if the proj matrix maps z from [-1,1] (OpenGL style).
+	void setCullFrustum(const Mat4& _viewProj, bool _viewZNegative, bool _clipZNegativeOneToOne);
 };
 
 // Minimal vector.
@@ -504,6 +523,9 @@ public:
 	bool        getEnableSorting() const         { return m_enableSortingStack.back(); }
 	void        pushEnableSorting(bool _enable);
 	void        popEnableSorting();
+
+	void        setEnableCulling(bool _enable)   { m_enableCulling = _enable; }
+	bool        getEnableCulling() const         { return m_enableCulling;    }
 	
 	Id          getLayerId() const               { return m_layerIdStack.back(); }
 	void        pushLayerId(Id _layer);
@@ -599,6 +621,7 @@ private:
 	Vector<DrawList>    m_sortedDrawLists;          // Sorted draw lists are stored to avoid multiple calls to sort().
 	bool                m_sortCalled;               // Avoid calling sort() during every call to draw().
 	bool                m_drawCalled;               // For assert, if vertices are pushed after draw() was called.
+	bool                m_enableCulling;
 
  // primitive state
 	PrimitiveMode       m_primMode;
@@ -617,6 +640,9 @@ private:
 
 	// Return -1 if _id not found.
 	int  findLayerIndex(Id _id) const;
+
+	// Visibiity tests for culling.
+	bool isVisible(const VertexData* _vdata, DrawPrimitiveType _prim);
 
 	VertexList* getCurrentVertexList();
 };
@@ -672,6 +698,8 @@ inline void  PushEnableSorting()                                             { G
 inline void  PushEnableSorting(bool _enable)                                 { GetContext().pushEnableSorting(_enable); }
 inline void  PopEnableSorting()                                              { GetContext().popEnableSorting();         }
 inline void  EnableSorting(bool _enable)                                     { GetContext().setEnableSorting(_enable);  }
+
+inline void  SetEnableCulling(bool _enable)                                  { GetContext().setEnableCulling(_enable); }
 
 inline void  PushLayerId()                                                   { GetContext().pushLayerId(GetContext().getLayerId()); }
 inline void  PushLayerId(Id _layer)                                          { GetContext().pushLayerId(_layer); }

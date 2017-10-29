@@ -980,6 +980,55 @@ bool Im3d::Gizmo(Id _id, float _translation_[3], float _rotation_[3*3], float _s
 	return ret;
 }
 
+void AppData::setCullFrustum(const Mat4& _viewProj, bool _viewZNegative, bool _clipZOGL)
+{
+	m_cullFrustum[FrustumPlane_Top].x    = _viewProj(3, 0) - _viewProj(1, 0);
+	m_cullFrustum[FrustumPlane_Top].y    = _viewProj(3, 1) - _viewProj(1, 1);
+	m_cullFrustum[FrustumPlane_Top].z    = _viewProj(3, 2) - _viewProj(1, 2);
+	m_cullFrustum[FrustumPlane_Top].w    = _viewProj(3, 3) - _viewProj(1, 3);
+	
+	m_cullFrustum[FrustumPlane_Bottom].x = _viewProj(3, 0) + _viewProj(1, 0);
+	m_cullFrustum[FrustumPlane_Bottom].y = _viewProj(3, 1) + _viewProj(1, 1);
+	m_cullFrustum[FrustumPlane_Bottom].z = _viewProj(3, 2) + _viewProj(1, 2);
+	m_cullFrustum[FrustumPlane_Bottom].w = _viewProj(3, 3) + _viewProj(1, 3);
+
+	m_cullFrustum[FrustumPlane_Right].x  = _viewProj(3, 0) - _viewProj(0, 0);
+	m_cullFrustum[FrustumPlane_Right].y  = _viewProj(3, 1) - _viewProj(0, 1);
+	m_cullFrustum[FrustumPlane_Right].z  = _viewProj(3, 2) - _viewProj(0, 2);
+	m_cullFrustum[FrustumPlane_Right].w  = _viewProj(3, 3) - _viewProj(0, 3);
+
+	m_cullFrustum[FrustumPlane_Left].x   = _viewProj(3, 0) + _viewProj(0, 0);
+	m_cullFrustum[FrustumPlane_Left].y   = _viewProj(3, 1) + _viewProj(0, 1);
+	m_cullFrustum[FrustumPlane_Left].z   = _viewProj(3, 2) + _viewProj(0, 2);
+	m_cullFrustum[FrustumPlane_Left].w   = _viewProj(3, 3) + _viewProj(0, 3);
+	m_cullFrustum[FrustumPlane_Far].x    = _viewProj(3, 0) - _viewProj(2, 0);
+	m_cullFrustum[FrustumPlane_Far].y    = _viewProj(3, 1) - _viewProj(2, 1);
+	m_cullFrustum[FrustumPlane_Far].z    = _viewProj(3, 2) - _viewProj(2, 2);
+	m_cullFrustum[FrustumPlane_Far].w    = _viewProj(3, 3) - _viewProj(2, 3);
+
+	if (_clipZOGL) {
+		m_cullFrustum[FrustumPlane_Near].x = _viewProj(3, 0) + _viewProj(2, 0);
+		m_cullFrustum[FrustumPlane_Near].y = _viewProj(3, 1) + _viewProj(2, 1);
+		m_cullFrustum[FrustumPlane_Near].z = _viewProj(3, 2) + _viewProj(2, 2);
+		m_cullFrustum[FrustumPlane_Near].w = _viewProj(3, 3) + _viewProj(2, 3);
+	} else {
+		m_cullFrustum[FrustumPlane_Near].x = _viewProj(2, 0);
+		m_cullFrustum[FrustumPlane_Near].y = _viewProj(2, 1);
+		m_cullFrustum[FrustumPlane_Near].z = _viewProj(2, 2);
+		m_cullFrustum[FrustumPlane_Near].w = _viewProj(2, 3);
+	}
+	if (_viewZNegative) {
+		for (int i = 0; i < FrustumPlane_Count; ++i) {
+			m_cullFrustum[i].w = -m_cullFrustum[i].w;
+		}
+	}
+
+	for (int i = 0; i < FrustumPlane_Count; ++i) {
+		float d = 1.0f/Length(Vec3(m_cullFrustum[i]));
+		m_cullFrustum[i] = m_cullFrustum[i] * d;
+	}
+}
+
 /*******************************************************************************
 
                                   Vector
@@ -1166,6 +1215,43 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 			break;
 	};
 	++m_vertCountThisPrim;
+
+ // check if the primitive was visible and rewind vertex data if not
+	if (m_enableCulling) {
+		switch (m_primMode) {
+			case PrimitiveMode_Points:
+				if (!isVisible(&vertexList->back(), DrawPrimitive_Points)) {
+					vertexList->pop_back();
+					--m_vertCountThisPrim;
+				}
+				break;
+			case PrimitiveMode_Lines:
+				if (m_vertCountThisPrim % 2 == 0) {
+					if (!isVisible(&vertexList->back() - 1, DrawPrimitive_Lines)) {
+						for (int i = 0; i < 2; ++i) {
+							vertexList->pop_back();
+							--m_vertCountThisPrim;
+						}
+					}
+				}
+				break;
+			case PrimitiveMode_Triangles:
+				if (m_vertCountThisPrim % 3 == 0) {
+					if (!isVisible(&vertexList->back() - 2, DrawPrimitive_Triangles)) {
+						for (int i = 0; i < 3; ++i) {
+							vertexList->pop_back();
+							--m_vertCountThisPrim;
+						}
+					}
+				}
+				break;
+			case PrimitiveMode_LineStrip:
+			case PrimitiveMode_LineLoop:
+			case PrimitiveMode_TriangleStrip:
+			default:
+				break;
+		};
+	}
 }
 
 void Context::reset()
@@ -1450,6 +1536,49 @@ int Context::findLayerIndex(Id _id) const
 		}
 	}
 	return -1;
+}
+
+bool Context::isVisible(const VertexData* _vdata, DrawPrimitiveType _prim)
+{
+	int planeIndex = 1; // start at 1 = ignore far plane
+	switch (_prim) {
+		case DrawPrimitive_Points: {
+			Vec3  pos  = Vec3(_vdata->m_positionSize);
+			float size = pixelsToWorldSize(pos, _vdata->m_positionSize.w);
+			for (; planeIndex < FrustumPlane_Count; ++planeIndex) {
+				if (Distance(m_appData.m_cullFrustum[planeIndex], pos) < -size) {
+					return false;
+				}
+			}
+			break;
+		}
+		case DrawPrimitive_Lines: {
+			Vec3  posA   = Vec3(_vdata[0].m_positionSize);
+			float sizeA  = pixelsToWorldSize(posA, _vdata[0].m_positionSize.w);
+			Vec3  posB   = Vec3(_vdata[1].m_positionSize);
+			float sizeB  = pixelsToWorldSize(posB, _vdata[1].m_positionSize.w);
+			for (; planeIndex < FrustumPlane_Count; ++planeIndex) {
+				if (Distance(m_appData.m_cullFrustum[planeIndex], posA) < -sizeA && Distance(m_appData.m_cullFrustum[planeIndex], posB) < -sizeB) {
+					return false;
+				}
+			}
+			break;
+		}
+		case DrawPrimitive_Triangles: {
+			Vec3 posA = Vec3(_vdata[0].m_positionSize);
+			Vec3 posB = Vec3(_vdata[1].m_positionSize);
+			Vec3 posC = Vec3(_vdata[2].m_positionSize);
+			for (; planeIndex < FrustumPlane_Count; ++planeIndex) {
+				if (Distance(m_appData.m_cullFrustum[planeIndex], posA) < -0.0f && Distance(m_appData.m_cullFrustum[planeIndex], posB) < 0.0f && Distance(m_appData.m_cullFrustum[planeIndex], posC) < 0.0f) {
+					return false;
+				}
+			}
+			break;
+		}
+		default:
+			break;
+	};
+	return true;
 }
 
 Context::VertexList* Context::getCurrentVertexList()
