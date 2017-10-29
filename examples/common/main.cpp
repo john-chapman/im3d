@@ -427,6 +427,14 @@ int main(int, char**)
 
 			ImGui::TreePop();
 		}
+
+		if (ImGui::TreeNode("Culling")) {
+			bool cullingEnabled = Im3d::GetContext().getEnableCulling();
+			ImGui::Checkbox("Enable", &cullingEnabled);
+			Im3d::GetContext().setEnableCulling(cullingEnabled);
+
+			ImGui::TreePop();
+		}
 		
 		if (ImGui::TreeNode("Layers")) {
 		 // Layers allow primitives to be grouped by the application. Each layer results in a separate call to the draw callback, which gives the 
