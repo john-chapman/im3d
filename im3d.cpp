@@ -218,7 +218,7 @@ void Im3d::DrawCircleFilled(const Vec3& _origin, const Vec3& _normal, float _rad
 		float cp = _radius;
 		float sp = 0.0f;
 		for (int i = 1; i <= _detail; ++i) {
-			ctx.vertex(_origin);
+			ctx.vertex(Vec3(0.0f, 0.0f, 0.0f));
 			ctx.vertex(Vec3(cp, sp, 0.0f));
 			float rad = TwoPi * ((float)i / (float)_detail);
 			float c = cosf(rad) * _radius;
