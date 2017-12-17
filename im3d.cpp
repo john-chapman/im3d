@@ -1023,6 +1023,7 @@ void AppData::setCullFrustum(const Mat4& _viewProj, bool _viewZNegative, bool _c
 		}
 	}
 
+ // normalize the planes
 	for (int i = 0; i < FrustumPlane_Count; ++i) {
 		float d = 1.0f/Length(Vec3(m_cullFrustum[i]));
 		m_cullFrustum[i] = m_cullFrustum[i] * d;
@@ -1150,30 +1151,32 @@ void Context::begin(PrimitiveMode _mode)
 void Context::end()
 {
 	IM3D_ASSERT(m_primMode != PrimitiveMode_None); // End() called without Begin*()
-	VertexList* vertexList = getCurrentVertexList();
-	switch (m_primMode) {
-		case PrimitiveMode_Points:
-			break;
-		case PrimitiveMode_Lines:
-			IM3D_ASSERT(m_vertCountThisPrim % 2 == 0);
-			break;
-		case PrimitiveMode_LineStrip:
-			IM3D_ASSERT(m_vertCountThisPrim > 1);
-			break;
-		case PrimitiveMode_LineLoop:
-			IM3D_ASSERT(m_vertCountThisPrim > 1);
-			vertexList->push_back(vertexList->back());
-			vertexList->push_back((*vertexList)[m_firstVertThisPrim]);
-			break;
-		case PrimitiveMode_Triangles:
-			IM3D_ASSERT(m_vertCountThisPrim % 3 == 0);
-			break;
-		case PrimitiveMode_TriangleStrip:
-			IM3D_ASSERT(m_vertCountThisPrim >= 3);
-			break;
-		default:
-			break;
-	};
+	if (m_vertCountThisPrim > 0) {
+		VertexList* vertexList = getCurrentVertexList();
+		switch (m_primMode) {
+			case PrimitiveMode_Points:
+				break;
+			case PrimitiveMode_Lines:
+				IM3D_ASSERT(m_vertCountThisPrim % 2 == 0);
+				break;
+			case PrimitiveMode_LineStrip:
+				IM3D_ASSERT(m_vertCountThisPrim > 1);
+				break;
+			case PrimitiveMode_LineLoop:
+				IM3D_ASSERT(m_vertCountThisPrim > 1);
+				vertexList->push_back(vertexList->back());
+				vertexList->push_back((*vertexList)[m_firstVertThisPrim]);
+				break;
+			case PrimitiveMode_Triangles:
+				IM3D_ASSERT(m_vertCountThisPrim % 3 == 0);
+				break;
+			case PrimitiveMode_TriangleStrip:
+				IM3D_ASSERT(m_vertCountThisPrim >= 3);
+				break;
+			default:
+				break;
+		};
+	}
 	m_primMode = PrimitiveMode_None;
 	m_primType = DrawPrimitive_Count;
 }
@@ -1225,7 +1228,10 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 					--m_vertCountThisPrim;
 				}
 				break;
+			case PrimitiveMode_LineLoop:
+				break; // can't cull line loops; end() may add an invalid line if any vertices are culled
 			case PrimitiveMode_Lines:
+			case PrimitiveMode_LineStrip:
 				if (m_vertCountThisPrim % 2 == 0) {
 					if (!isVisible(&vertexList->back() - 1, DrawPrimitive_Lines)) {
 						for (int i = 0; i < 2; ++i) {
@@ -1236,6 +1242,7 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 				}
 				break;
 			case PrimitiveMode_Triangles:
+			case PrimitiveMode_TriangleStrip:
 				if (m_vertCountThisPrim % 3 == 0) {
 					if (!isVisible(&vertexList->back() - 2, DrawPrimitive_Triangles)) {
 						for (int i = 0; i < 3; ++i) {
@@ -1245,9 +1252,6 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 					}
 				}
 				break;
-			case PrimitiveMode_LineStrip:
-			case PrimitiveMode_LineLoop:
-			case PrimitiveMode_TriangleStrip:
 			default:
 				break;
 		};
@@ -1540,44 +1544,25 @@ int Context::findLayerIndex(Id _id) const
 
 bool Context::isVisible(const VertexData* _vdata, DrawPrimitiveType _prim)
 {
-	int planeIndex = 1; // start at 1 = ignore far plane
-	switch (_prim) {
-		case DrawPrimitive_Points: {
-			Vec3  pos  = Vec3(_vdata->m_positionSize);
-			float size = pixelsToWorldSize(pos, _vdata->m_positionSize.w);
-			for (; planeIndex < FrustumPlane_Count; ++planeIndex) {
-				if (Distance(m_appData.m_cullFrustum[planeIndex], pos) < -size) {
-					return false;
-				}
-			}
-			break;
+	int planeIndexStart = 1; // start at 1 = ignore far plane
+	int planeIndexEnd = FrustumPlane_Count; 
+//planeIndexStart = planeIndexEnd = FrustumPlane_Left;
+
+	Vec3  pos[3];
+	float size[3];
+	for (int i = 0; i < DrawPrimitiveSize[_prim]; ++i) {
+		pos[i]  = Vec3(_vdata[i].m_positionSize);
+		size[i] = _prim == DrawPrimitive_Triangles ? 0.0f : pixelsToWorldSize(pos[i], _vdata[i].m_positionSize.w);
+	}
+	for (int i = planeIndexStart; i < planeIndexEnd; ++i) {
+		bool isVisible= true;
+		for (int j = 0; j < DrawPrimitiveSize[_prim]; ++j) {
+			isVisible |= Distance(m_appData.m_cullFrustum[i], pos[j]) > -size[j];
 		}
-		case DrawPrimitive_Lines: {
-			Vec3  posA   = Vec3(_vdata[0].m_positionSize);
-			float sizeA  = pixelsToWorldSize(posA, _vdata[0].m_positionSize.w);
-			Vec3  posB   = Vec3(_vdata[1].m_positionSize);
-			float sizeB  = pixelsToWorldSize(posB, _vdata[1].m_positionSize.w);
-			for (; planeIndex < FrustumPlane_Count; ++planeIndex) {
-				if (Distance(m_appData.m_cullFrustum[planeIndex], posA) < -sizeA && Distance(m_appData.m_cullFrustum[planeIndex], posB) < -sizeB) {
-					return false;
-				}
-			}
-			break;
+		if (!isVisible) {
+			return false;
 		}
-		case DrawPrimitive_Triangles: {
-			Vec3 posA = Vec3(_vdata[0].m_positionSize);
-			Vec3 posB = Vec3(_vdata[1].m_positionSize);
-			Vec3 posC = Vec3(_vdata[2].m_positionSize);
-			for (; planeIndex < FrustumPlane_Count; ++planeIndex) {
-				if (Distance(m_appData.m_cullFrustum[planeIndex], posA) < -0.0f && Distance(m_appData.m_cullFrustum[planeIndex], posB) < 0.0f && Distance(m_appData.m_cullFrustum[planeIndex], posC) < 0.0f) {
-					return false;
-				}
-			}
-			break;
-		}
-		default:
-			break;
-	};
+	}
 	return true;
 }
 
