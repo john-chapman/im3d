@@ -1344,29 +1344,44 @@ bool Example::update()
 	float scale = tanf(m_camFovRad * 0.5f) * n;
 	
 	if (m_camOrtho) {
-		n = -500.0f;
+	 // ortho proj
 		scale = 5.0f;
 		float r = scale * a;
 		float l = -scale * a;
 		float t = scale;
 		float b = -scale;
 		m_camProj = Mat4(
-			2.0f / (r - l),      0.0f,                 0.0f,               -(r + l) / (r - l),
-			0.0f,                2.0f / (t - b),       0.0f,               -(t + b) / (t - b),
-			0.0f,                0.0f,                -2.0f / (f - n),     -(f + n) / (f - n),
+		#if defined(IM3D_OPENGL)
+			2.0f / (r - l),      0.0f,                 0.0f,               (r + l) / (l - r),
+			0.0f,                2.0f / (t - b),       0.0f,               (t + b) / (b - t),
+			0.0f,                0.0f,                 2.0f / (n - f),     (n + f) / (n - f),
 			0.0f,                0.0f,                 0.0f,               1.0f
+		#elif defined(IM3D_DX11)
+			2.0f / (r - l),      0.0f,                 0.0f,               (r + l) / (l - r),
+			0.0f,                2.0f / (t - b),       0.0f,               (t + b) / (b - t),
+			0.0f,                0.0f,                 1.0f / (n - f),     n / (n - f),
+			0.0f,                0.0f,                 0.0f,               1.0f
+		#endif
 			);
 	} else {
+	 // infinite perspective proj
 		float r = a * scale;
 		float l = -r;
 		float t = scale;
 		float b = -t;
 
 		m_camProj = Mat4(
-			2.0f * n / (r - l),  0.0f,                 (r + l) / (r - l),   0.0f,
-			0.0f,                2.0f * n / (t - b),   (t + b) / (t - b),   0.0f,
+		#if defined(IM3D_OPENGL)
+			2.0f * n / (r - l),  0.0f,                (r + l) / (r - l),   0.0f,
+			0.0f,                2.0f * n / (t - b),  (t + b) / (t - b),   0.0f,
 			0.0f,                0.0f,                -1.0f,               -2.0f * n,
-			0.0f,                0.0f,                -1.0f,                0.0f
+			0.0f,                0.0f,                -1.0f,               0.0f
+		#elif defined(IM3D_DX11)
+			2.0f * n / (r - l),  0.0f,                (r + l) / (r - l),   0.0f,
+			0.0f,                2.0f * n / (t - b),  (t + b) / (t - b),   0.0f,
+			0.0f,                0.0f,                -1.0f,               -n,
+			0.0f,                0.0f,                -1.0f,               0.0f
+		#endif
 			);
 	}
 
