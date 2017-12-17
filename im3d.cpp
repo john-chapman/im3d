@@ -1017,11 +1017,11 @@ void AppData::setCullFrustum(const Mat4& _viewProj, bool _viewZNegative, bool _c
 		m_cullFrustum[FrustumPlane_Near].z = _viewProj(2, 2);
 		m_cullFrustum[FrustumPlane_Near].w = _viewProj(2, 3);
 	}
-	if (_viewZNegative) {
+	/*if (_viewZNegative) {
 		for (int i = 0; i < FrustumPlane_Count; ++i) {
 			m_cullFrustum[i].w = -m_cullFrustum[i].w;
 		}
-	}
+	}*/
 
  // normalize the planes
 	for (int i = 0; i < FrustumPlane_Count; ++i) {

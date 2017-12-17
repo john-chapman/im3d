@@ -433,6 +433,17 @@ int main(int, char**)
 			ImGui::Checkbox("Enable", &cullingEnabled);
 			Im3d::GetContext().setEnableCulling(cullingEnabled);
 
+			static Im3d::Vec3 p;
+			Im3d::GizmoTranslation("TestPos", p);
+
+			Im3d::Vec4 pv = example.m_camView * Im3d::Vec4(p, 1.0f);
+			Im3d::Vec4 pp = example.m_camProj * pv;
+			
+
+			ImGui::Text("W  %f, %f, %f, 1.0f", p.x, p.y, p.z);
+			ImGui::Text("V  %f, %f, %f, 1.0f", pv.x, pv.y, pv.z);
+			ImGui::Text("P  %f, %f, %f, %f",   pp.x / pp.w, pp.y / pp.w, pp.z / pp.w, pp.w);
+
 			ImGui::TreePop();
 		}
 		
