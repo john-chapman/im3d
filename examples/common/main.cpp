@@ -29,7 +29,7 @@ int main(int, char**)
 		}
 		ImGui::Spacing();
 
-		ImGui::SetNextTreeNodeOpen(true, ImGuiSetCond_Once);
+		//ImGui::SetNextTreeNodeOpen(true, ImGuiSetCond_Once);
 		if (ImGui::TreeNode("Unified Gizmo")) {
 		 // Unified gizmo operates directly on a 4x4 matrix using the context-global gizmo modes.
 			static Im3d::Mat4 transform(1.0f);
@@ -428,6 +428,7 @@ int main(int, char**)
 			ImGui::TreePop();
 		}
 
+		ImGui::SetNextTreeNodeOpen(true, ImGuiCond_Once);
 		if (ImGui::TreeNode("Culling")) {
 			bool cullingEnabled = Im3d::GetContext().getEnableCulling();
 			ImGui::Checkbox("Enable", &cullingEnabled);
@@ -438,11 +439,36 @@ int main(int, char**)
 
 			Im3d::Vec4 pv = example.m_camView * Im3d::Vec4(p, 1.0f);
 			Im3d::Vec4 pp = example.m_camProj * pv;
-			
 
-			ImGui::Text("W  %f, %f, %f, 1.0f", p.x, p.y, p.z);
-			ImGui::Text("V  %f, %f, %f, 1.0f", pv.x, pv.y, pv.z);
-			ImGui::Text("P  %f, %f, %f, %f",   pp.x / pp.w, pp.y / pp.w, pp.z / pp.w, pp.w);
+			static int frustumPlane = Im3d::FrustumPlane_Count;
+			ImGui::Combo("Frustume Plane", &frustumPlane, 
+				"Far\0"
+				"Near\0"
+				"Top\0"
+				"Right\0"
+				"Bottom\0"
+				"Left\0"
+				"All\0"
+				);
+			int i = frustumPlane == Im3d::FrustumPlane_Count ? 0 : frustumPlane;
+			int n = frustumPlane == Im3d::FrustumPlane_Count ? frustumPlane : i + 1;
+			bool visible = true;
+			for (; i < n; ++i) {
+				if (isinf(ad.m_cullFrustum[i].w)) {
+					continue;
+				}
+				visible &= Im3d::Distance(ad.m_cullFrustum[i], p) > -1.0f;
+			}
+			Im3d::PushColor(visible ? Im3d::Color_Green : Im3d::Color_Red);
+				Im3d::DrawSphere(p, 1.0f);
+			Im3d::PopColor();
+			ImGui::TextColored(visible ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), visible ? "VISIBLE" : "NOT VISIBLE");
+			if (frustumPlane != Im3d::FrustumPlane_Count) {
+				const Im3d::Vec4& pl = ad.m_cullFrustum[frustumPlane];
+				ImGui::Text("Plane: %1.3f, %1.3f, %1.3f, %1.3f", pl.x, pl.y, pl.z, pl.w);
+				ImGui::Text("Distance: %f", Im3d::Distance(pl, p));
+			}
+			
 
 			ImGui::TreePop();
 		}

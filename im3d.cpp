@@ -985,37 +985,38 @@ void AppData::setCullFrustum(const Mat4& _viewProj, bool _viewZNegative, bool _c
 	m_cullFrustum[FrustumPlane_Top].x    = _viewProj(3, 0) - _viewProj(1, 0);
 	m_cullFrustum[FrustumPlane_Top].y    = _viewProj(3, 1) - _viewProj(1, 1);
 	m_cullFrustum[FrustumPlane_Top].z    = _viewProj(3, 2) - _viewProj(1, 2);
-	m_cullFrustum[FrustumPlane_Top].w    = _viewProj(3, 3) - _viewProj(1, 3);
+	m_cullFrustum[FrustumPlane_Top].w    = -(_viewProj(3, 3) - _viewProj(1, 3));
 	
 	m_cullFrustum[FrustumPlane_Bottom].x = _viewProj(3, 0) + _viewProj(1, 0);
 	m_cullFrustum[FrustumPlane_Bottom].y = _viewProj(3, 1) + _viewProj(1, 1);
 	m_cullFrustum[FrustumPlane_Bottom].z = _viewProj(3, 2) + _viewProj(1, 2);
-	m_cullFrustum[FrustumPlane_Bottom].w = _viewProj(3, 3) + _viewProj(1, 3);
+	m_cullFrustum[FrustumPlane_Bottom].w = -(_viewProj(3, 3) + _viewProj(1, 3));
 
 	m_cullFrustum[FrustumPlane_Right].x  = _viewProj(3, 0) - _viewProj(0, 0);
 	m_cullFrustum[FrustumPlane_Right].y  = _viewProj(3, 1) - _viewProj(0, 1);
 	m_cullFrustum[FrustumPlane_Right].z  = _viewProj(3, 2) - _viewProj(0, 2);
-	m_cullFrustum[FrustumPlane_Right].w  = _viewProj(3, 3) - _viewProj(0, 3);
+	m_cullFrustum[FrustumPlane_Right].w  = -(_viewProj(3, 3) - _viewProj(0, 3));
 
 	m_cullFrustum[FrustumPlane_Left].x   = _viewProj(3, 0) + _viewProj(0, 0);
 	m_cullFrustum[FrustumPlane_Left].y   = _viewProj(3, 1) + _viewProj(0, 1);
 	m_cullFrustum[FrustumPlane_Left].z   = _viewProj(3, 2) + _viewProj(0, 2);
-	m_cullFrustum[FrustumPlane_Left].w   = _viewProj(3, 3) + _viewProj(0, 3);
+	m_cullFrustum[FrustumPlane_Left].w   = -(_viewProj(3, 3) + _viewProj(0, 3));
+
 	m_cullFrustum[FrustumPlane_Far].x    = _viewProj(3, 0) - _viewProj(2, 0);
 	m_cullFrustum[FrustumPlane_Far].y    = _viewProj(3, 1) - _viewProj(2, 1);
 	m_cullFrustum[FrustumPlane_Far].z    = _viewProj(3, 2) - _viewProj(2, 2);
-	m_cullFrustum[FrustumPlane_Far].w    = _viewProj(3, 3) - _viewProj(2, 3);
+	m_cullFrustum[FrustumPlane_Far].w    = -(_viewProj(3, 3) - _viewProj(2, 3));
 
 	if (_clipZOGL) {
 		m_cullFrustum[FrustumPlane_Near].x = _viewProj(3, 0) + _viewProj(2, 0);
 		m_cullFrustum[FrustumPlane_Near].y = _viewProj(3, 1) + _viewProj(2, 1);
 		m_cullFrustum[FrustumPlane_Near].z = _viewProj(3, 2) + _viewProj(2, 2);
-		m_cullFrustum[FrustumPlane_Near].w = _viewProj(3, 3) + _viewProj(2, 3);
+		m_cullFrustum[FrustumPlane_Near].w = -(_viewProj(3, 3) + _viewProj(2, 3));
 	} else {
 		m_cullFrustum[FrustumPlane_Near].x = _viewProj(2, 0);
 		m_cullFrustum[FrustumPlane_Near].y = _viewProj(2, 1);
 		m_cullFrustum[FrustumPlane_Near].z = _viewProj(2, 2);
-		m_cullFrustum[FrustumPlane_Near].w = _viewProj(2, 3);
+		m_cullFrustum[FrustumPlane_Near].w = -_viewProj(2, 3);
 	}
 	/*if (_viewZNegative) {
 		for (int i = 0; i < FrustumPlane_Count; ++i) {
@@ -1025,7 +1026,7 @@ void AppData::setCullFrustum(const Mat4& _viewProj, bool _viewZNegative, bool _c
 
  // normalize the planes
 	for (int i = 0; i < FrustumPlane_Count; ++i) {
-		float d = 1.0f/Length(Vec3(m_cullFrustum[i]));
+		float d = 1.0f / Length(Vec3(m_cullFrustum[i]));
 		m_cullFrustum[i] = m_cullFrustum[i] * d;
 	}
 }
@@ -1544,9 +1545,8 @@ int Context::findLayerIndex(Id _id) const
 
 bool Context::isVisible(const VertexData* _vdata, DrawPrimitiveType _prim)
 {
-	int planeIndexStart = 1; // start at 1 = ignore far plane
-	int planeIndexEnd = FrustumPlane_Count; 
-//planeIndexStart = planeIndexEnd = FrustumPlane_Left;
+	int frustumIndexBeg = 1; // start at 1 = ignore far plane
+	int frustumIndexEnd = FrustumPlane_Count; 
 
 	Vec3  pos[3];
 	float size[3];
@@ -1554,8 +1554,8 @@ bool Context::isVisible(const VertexData* _vdata, DrawPrimitiveType _prim)
 		pos[i]  = Vec3(_vdata[i].m_positionSize);
 		size[i] = _prim == DrawPrimitive_Triangles ? 0.0f : pixelsToWorldSize(pos[i], _vdata[i].m_positionSize.w);
 	}
-	for (int i = planeIndexStart; i < planeIndexEnd; ++i) {
-		bool isVisible= true;
+	for (int i = frustumIndexBeg; i < frustumIndexEnd; ++i) {
+		bool isVisible= false;
 		for (int j = 0; j < DrawPrimitiveSize[_prim]; ++j) {
 			isVisible |= Distance(m_appData.m_cullFrustum[i], pos[j]) > -size[j];
 		}
