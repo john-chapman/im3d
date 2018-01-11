@@ -435,7 +435,7 @@ int main(int, char**)
 			Im3d::GetContext().setEnableCulling(cullingEnabled);
 
 			static Im3d::Vec3 p;
-			Im3d::GizmoTranslation("TestPos", p);
+			//Im3d::GizmoTranslation("TestPos", p);
 
 			Im3d::Vec4 pv = example.m_camView * Im3d::Vec4(p, 1.0f);
 			Im3d::Vec4 pp = example.m_camProj * pv;
@@ -459,7 +459,7 @@ int main(int, char**)
 				}
 				visible &= Im3d::Distance(ad.m_cullFrustum[i], p) > -1.0f;
 			}
-			Im3d::PushColor(visible ? Im3d::Color_Green : Im3d::Color_Red);
+			/*Im3d::PushColor(visible ? Im3d::Color_Green : Im3d::Color_Red);
 				Im3d::DrawSphere(p, 1.0f);
 			Im3d::PopColor();
 			ImGui::TextColored(visible ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1), visible ? "VISIBLE" : "NOT VISIBLE");
@@ -467,7 +467,7 @@ int main(int, char**)
 				const Im3d::Vec4& pl = ad.m_cullFrustum[frustumPlane];
 				ImGui::Text("Plane: %1.3f, %1.3f, %1.3f, %1.3f", pl.x, pl.y, pl.z, pl.w);
 				ImGui::Text("Distance: %f", Im3d::Distance(pl, p));
-			}
+			}*/
 			
 
 			ImGui::TreePop();

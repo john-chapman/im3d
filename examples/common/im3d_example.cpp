@@ -1342,6 +1342,7 @@ bool Example::update()
 	float f = 500.0f;
 	float a = (float)m_width / (float)m_height;
 	float scale = tanf(m_camFovRad * 0.5f) * n;
+	float viewZ = -1.0f;
 	
 	if (m_camOrtho) {
 	 // ortho proj
@@ -1372,20 +1373,20 @@ bool Example::update()
 
 		m_camProj = Mat4(
 		#if defined(IM3D_OPENGL)
-			2.0f * n / (r - l),  0.0f,                (r + l) / (r - l),   0.0f,
-			0.0f,                2.0f * n / (t - b),  (t + b) / (t - b),   0.0f,
-			0.0f,                0.0f,                -1.0f,               -2.0f * n,
-			0.0f,                0.0f,                -1.0f,               0.0f
+			2.0f * n / (r - l),  0.0f,                -viewZ * (r + l) / (r - l),   0.0f,
+			0.0f,                2.0f * n / (t - b),  -viewZ * (t + b) / (t - b),   0.0f,
+			0.0f,                0.0f,                viewZ,                        -2.0f * n,
+			0.0f,                0.0f,                viewZ,                        0.0f
 		#elif defined(IM3D_DX11)
-			2.0f * n / (r - l),  0.0f,                (r + l) / (r - l),   0.0f,
-			0.0f,                2.0f * n / (t - b),  (t + b) / (t - b),   0.0f,
-			0.0f,                0.0f,                -1.0f,               -n,
-			0.0f,                0.0f,                -1.0f,               0.0f
+			2.0f * n / (r - l),  0.0f,                -viewZ * (r + l) / (r - l),   0.0f,
+			0.0f,                2.0f * n / (t - b),  -viewZ * (t + b) / (t - b),   0.0f,
+			0.0f,                0.0f,                viewZ,                        -n,
+			0.0f,                0.0f,                viewZ,                        0.0f
 		#endif
 			);
 	}
 
-	m_camWorld = LookAt(m_camPos, m_camPos - m_camDir);
+	m_camWorld = LookAt(m_camPos, m_camPos + m_camDir * viewZ);
 	m_camView  = Inverse(m_camWorld);
 	m_camViewProj = m_camProj * m_camView;
 
