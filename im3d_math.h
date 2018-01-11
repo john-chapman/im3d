@@ -221,33 +221,84 @@ constexpr float HalfPi  = 0.5f * Pi;
 inline float Radians(float _degrees) { return _degrees * (Pi / 180.0f); }
 inline float Degrees(float _radians) { return _radians * (180.0f / Pi); }
 
-template <typename T>
-inline T Max(T _a, T _b)                                   { return _a < _b ? _b : _a; }
-template <typename T>
-inline T Min(T _a, T _b)                                   { return _a < _b ? _a : _b; }
-template <typename T>
-inline T Clamp(T _a, T _min, T _max)                       { return Max(Min(_a, _max), _min); }
+namespace internal {
 
-// Remap _x in [_start,_end] to [0,1].
-inline float Remap(float _x, float _start, float _end)     { return Clamp(_x * (1.0f / (_end - _start)) + (-_start / (_end - _start)), 0.0f, 1.0f); }
+struct ScalarT {};
+	struct FloatT: public ScalarT {};
+	struct IntT:   public ScalarT {};
+struct CompositeT {};
+	struct VecT: public CompositeT {};
+	struct MatT: public CompositeT {};
+template <typename T>
+struct TypeTraits { typedef typename T::Type Type; enum { kSize = T::kSize }; };
+	template<> struct TypeTraits<int>    { typedef IntT   Type; enum { kSize = 1 };  };
+	template<> struct TypeTraits<float>  { typedef FloatT Type; enum { kSize = 1 };  };
+	template<> struct TypeTraits<Vec2>   { typedef VecT   Type; enum { kSize = 2 };  };
+	template<> struct TypeTraits<Vec3>   { typedef VecT   Type; enum { kSize = 3 };  };
+	template<> struct TypeTraits<Vec4>   { typedef VecT   Type; enum { kSize = 4 };  };
+	template<> struct TypeTraits<Mat4>   { typedef MatT   Type; enum { kSize = 16 }; };
 
 template <typename T>
-int Count();
-	template <> inline int Count<Vec2>() { return 2; }
-	template <> inline int Count<Vec3>() { return 3; }
-	template <> inline int Count<Vec4>() { return 4; }
-	template <> inline int Count<Mat4>() { return 16; }
-
-template <typename T>
-inline bool AllLess(const T& _a, const T& _b)
+inline bool _AllLess(const T& _a, const T& _b, ScalarT)
 {
-	for (int i = 0, n = Count<T>(); i < n; ++i) {
+	return _a < _b;
+}
+template <typename T>
+inline bool _AllLess(const T& _a, const T& _b, CompositeT)
+{
+	for (int i = 0, n = TypeTraits<T>::kSize; i < n; ++i) {
 		if (_a[i] > _b[i]) {
 			return false;
 		}
 	}
 	return true;
 }
+
+template <typename T>
+inline T _Max(const T& _a, const T& _b, ScalarT)
+{
+	return _a < _b ? _b : _a;
+}
+template <typename T>
+inline T _Max(const T& _a, const T& _b, CompositeT)
+{
+	T ret;
+	for (int i = 0, n = TypeTraits<T>::kSize; i < n; ++i) {
+		ret[i] = _Max(_a[i], _b[i], ScalarT());
+	}
+	return ret;
+}
+
+template <typename T>
+inline T _Min(const T& _a, const T& _b, ScalarT)
+{
+	return _a < _b ? _a : _b;
+}
+template <typename T>
+inline T _Min(const T& _a, const T& _b, CompositeT)
+{
+	T ret;
+	for (int i = 0, n = TypeTraits<T>::kSize; i < n; ++i) {
+		ret[i] = _Min(_a[i], _b[i], ScalarT());
+	}
+	return ret;
+}
+
+} // namespace internal
+
+
+template <typename T>
+inline bool AllLess(const T& _a, const T& _b)              { return internal::_AllLess(_a, _b, typename internal::TypeTraits<T>::Type()); }
+
+template <typename T>
+inline T Max(T _a, T _b)                                   { return internal::_Max(_a, _b, typename internal::TypeTraits<T>::Type()); }
+template <typename T>
+inline T Min(T _a, T _b)                                   { return internal::_Min(_a, _b, typename internal::TypeTraits<T>::Type()); }
+template <typename T>
+inline T Clamp(T _a, T _min, T _max)                       { return Max(Min(_a, _max), _min); }
+
+// Remap _x in [_start,_end] to [0,1].
+inline float Remap(float _x, float _start, float _end)     { return Clamp(_x * (1.0f / (_end - _start)) + (-_start / (_end - _start)), 0.0f, 1.0f); }
 
 } // namespace Im3d
 
