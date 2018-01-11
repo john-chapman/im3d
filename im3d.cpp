@@ -1,5 +1,8 @@
 /*	CHANGE LOG
 	==========
+	2018-01-   (v1.09) - Culling API.
+	                   - Moved DrawPrimitiveSize to im3d.cpp, renamed as VertsPerDrawPrimitive.
+	                   - Added traits + tag dispatch for math utilities (Min, Max, etc).
 	2017-10-21 (v1.08) - Added DrawAlignedBoxFilled(), DrawSphereFilled(), fixed clamped ranges for auto LOD in high order primitives.
 	2017-10-14 (v1.07) - Layers API.
 	2017-07-03 (v1.06) - Rotation gizmo improvements; avoid selection failure at grazing angles + improved rotation behavior.
@@ -56,6 +59,9 @@
 
 //#define IM3D_GIZMO_DEBUG
 
+//#define IM3D_CULL_PER_VERTEX
+#define IM3D_CULL_PER_PRIM
+
 using namespace Im3d;
 
 const Id    Im3d::Id_Invalid    = 0;
@@ -69,6 +75,13 @@ const Color Im3d::Color_Yellow  = Color(0xffff00ff);
 const Color Im3d::Color_Cyan    = Color(0x00ffffff);
 
 static const Color Color_GizmoHighlight = Color(0xffc745ff);
+
+static const int VertsPerDrawPrimitive[DrawPrimitive_Count] = 
+{
+	3, //DrawPrimitive_Triangles,
+	2, //DrawPrimitive_Lines,
+	1  //DrawPrimitive_Points,
+};
 
 Color::Color(const Vec4& _rgba)
 {
@@ -980,7 +993,7 @@ bool Im3d::Gizmo(Id _id, float _translation_[3], float _rotation_[3*3], float _s
 	return ret;
 }
 
-void AppData::setCullFrustum(const Mat4& _viewProj, bool _viewZNegative, bool _clipZOGL)
+void AppData::setCullFrustum(const Mat4& _viewProj, bool _ndcZNegativeOneToOne)
 {
 	m_cullFrustum[FrustumPlane_Top].x    = _viewProj(3, 0) - _viewProj(1, 0);
 	m_cullFrustum[FrustumPlane_Top].y    = _viewProj(3, 1) - _viewProj(1, 1);
@@ -1007,7 +1020,7 @@ void AppData::setCullFrustum(const Mat4& _viewProj, bool _viewZNegative, bool _c
 	m_cullFrustum[FrustumPlane_Far].z    = _viewProj(3, 2) - _viewProj(2, 2);
 	m_cullFrustum[FrustumPlane_Far].w    = -(_viewProj(3, 3) - _viewProj(2, 3));
 
-	if (_clipZOGL) {
+	if (_ndcZNegativeOneToOne) {
 		m_cullFrustum[FrustumPlane_Near].x = _viewProj(3, 0) + _viewProj(2, 0);
 		m_cullFrustum[FrustumPlane_Near].y = _viewProj(3, 1) + _viewProj(2, 1);
 		m_cullFrustum[FrustumPlane_Near].z = _viewProj(3, 2) + _viewProj(2, 2);
@@ -1016,15 +1029,10 @@ void AppData::setCullFrustum(const Mat4& _viewProj, bool _viewZNegative, bool _c
 		m_cullFrustum[FrustumPlane_Near].x = _viewProj(2, 0);
 		m_cullFrustum[FrustumPlane_Near].y = _viewProj(2, 1);
 		m_cullFrustum[FrustumPlane_Near].z = _viewProj(2, 2);
-		m_cullFrustum[FrustumPlane_Near].w = -_viewProj(2, 3);
+		m_cullFrustum[FrustumPlane_Near].w = -(_viewProj(2, 3));
 	}
-	/*if (_viewZNegative) {
-		for (int i = 0; i < FrustumPlane_Count; ++i) {
-			m_cullFrustum[i].w = -m_cullFrustum[i].w;
-		}
-	}*/
 
- // normalize the planes
+ // normalize
 	for (int i = 0; i < FrustumPlane_Count; ++i) {
 		float d = 1.0f / Length(Vec3(m_cullFrustum[i]));
 		m_cullFrustum[i] = m_cullFrustum[i] * d;
@@ -1091,6 +1099,7 @@ void Vector<T>::resize(U32 _size, const T& _val)
 	while (m_size < _size) {
 		push_back(_val);
 	}
+	m_size = _size;
 }
 
 template <typename T>
@@ -1177,9 +1186,27 @@ void Context::end()
 			default:
 				break;
 		};
+	#ifdef IM3D_CULL_PER_PRIM
+		if (m_enableCulling && !isVisible(m_minVertThisPrim, m_maxVertThisPrim)) {
+			vertexList->resize(m_firstVertThisPrim, VertexData());
+		}
+	#endif
 	}
 	m_primMode = PrimitiveMode_None;
 	m_primType = DrawPrimitive_Count;
+#ifdef IM3D_CULL_PER_PRIM
+	/*if (m_enableCulling) {
+		m_enableCulling = false;
+		pushColor(Im3d::Color_Magenta);
+		pushSize(1.0f);
+		pushMatrix(Mat4(1.0f));
+		DrawAlignedBox(m_minVertThisPrim, m_maxVertThisPrim);
+		popMatrix();
+		popColor();
+		popSize();
+		m_enableCulling = true;
+	}*/
+#endif
 }
 
 void Context::vertex(const Vec3& _position, float _size, Color _color)
@@ -1191,6 +1218,18 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 		vd.m_positionSize = Vec4(m_matrixStack.back() * _position, _size);
 	}
 	vd.m_color.setA(vd.m_color.getA() * m_alphaStack.back());
+
+#ifdef IM3D_CULL_PER_PRIM
+	if (m_enableCulling) {
+		Vec3 p = Vec3(vd.m_positionSize);
+		if (m_vertCountThisPrim == 0) { // p is the first vertex
+			m_minVertThisPrim = m_maxVertThisPrim = p;
+		} else {
+			m_minVertThisPrim = Min(m_minVertThisPrim, p);
+			m_maxVertThisPrim = Max(m_maxVertThisPrim, p);
+		}
+	}
+#endif
 
 	VertexList* vertexList = getCurrentVertexList();
 	switch (m_primMode) {
@@ -1220,6 +1259,7 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 	};
 	++m_vertCountThisPrim;
 
+#ifdef IM3D_CULL_PER_VERTEX
  // check if the primitive was visible and rewind vertex data if not
 	if (m_enableCulling) {
 		switch (m_primMode) {
@@ -1257,6 +1297,7 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 				break;
 		};
 	}
+#endif
 }
 
 void Context::reset()
@@ -1285,6 +1326,19 @@ void Context::reset()
  // copy keydown array internally so that we can make a delta to detect key presses
 	memcpy(m_keyDownPrev, m_keyDownCurr,       Key_Count); // \todo avoid this copy, use an index
 	memcpy(m_keyDownCurr, m_appData.m_keyDown, Key_Count); // must copy in case m_keyDown is updated after reset (e.g. by an app callback)
+ 
+ // process cull frustum
+	m_cullFrustumCount = 0;
+	for (int i = 0; i < FrustumPlane_Count; ++i) {
+		const Vec4& plane = m_appData.m_cullFrustum[i];
+		if (m_appData.m_projOrtho && i == FrustumPlane_Near) { // skip near plane if perspective
+			continue;
+		}
+		if (isinf(plane.w)) { // may be the case e.g. for the far plane if projection is infinite
+			continue;
+		}
+		m_cullFrustum[m_cullFrustumCount++] = plane;
+	}
 
  // update gizmo modes
 	if (wasKeyPressed(Action_GizmoTranslation)) {
@@ -1462,19 +1516,19 @@ void Context::sort()
 		for (int i = 0 ; i < DrawPrimitive_Count; ++i) {
 			Vector<VertexData>& vertexData = *(m_vertexData[1][layer * DrawPrimitive_Count + i]);
 			if (!vertexData.empty()) {
-				sortData[i].reserve(vertexData.size() / DrawPrimitiveSize[i]);
+				sortData[i].reserve(vertexData.size() / VertsPerDrawPrimitive[i]);
 				for (VertexData* v = vertexData.begin(); v != vertexData.end(); ) {
 					sortData[i].push_back(SortData(0.0f, v));
 					IM3D_ASSERT(v < vertexData.end());
-					for (int j = 0; j < DrawPrimitiveSize[i]; ++j, ++v) {
+					for (int j = 0; j < VertsPerDrawPrimitive[i]; ++j, ++v) {
 					 // sort key is the primitive midpoint distance to view origin
 						sortData[i].back().m_key += Length2(Vec3(v->m_positionSize) - viewOrigin);
 					}
-					sortData[i].back().m_key /= (float)DrawPrimitiveSize[i];
+					sortData[i].back().m_key /= (float)VertsPerDrawPrimitive[i];
 				}
 			 // qsort is not necessarily stable but it doesn't matter assuming the prims are pushed in roughly the same order each frame
 				qsort(sortData[i].data(), sortData[i].size(), sizeof(SortData), SortCmp);
-				Reorder(vertexData, sortData[i].data(), sortData[i].size(), DrawPrimitiveSize[i]);
+				Reorder(vertexData, sortData[i].data(), sortData[i].size(), VertsPerDrawPrimitive[i]);
 			}
 		}
 	
@@ -1515,13 +1569,13 @@ void Context::sort()
 				DrawList dl;
 				dl.m_layerId     = layer;
 				dl.m_primType    = (DrawPrimitiveType)cprim;
-				dl.m_vertexData  = m_vertexData[1][layer * DrawPrimitive_Count + cprim]->data() + (search[cprim] - sortData[cprim].data()) * DrawPrimitiveSize[cprim];
+				dl.m_vertexData  = m_vertexData[1][layer * DrawPrimitive_Count + cprim]->data() + (search[cprim] - sortData[cprim].data()) * VertsPerDrawPrimitive[cprim];
 				dl.m_vertexCount = 0;
 				m_sortedDrawLists.push_back(dl);
 			}
 	
 		 // increment the vertex count for the current draw list
-			m_sortedDrawLists.back().m_vertexCount += DrawPrimitiveSize[cprim];
+			m_sortedDrawLists.back().m_vertexCount += VertsPerDrawPrimitive[cprim];
 			++search[cprim];
 			if (search[cprim] == sortData[cprim].end()) {
 				search[cprim] = 0;
@@ -1545,25 +1599,83 @@ int Context::findLayerIndex(Id _id) const
 
 bool Context::isVisible(const VertexData* _vdata, DrawPrimitiveType _prim)
 {
-	int frustumIndexBeg = 1; // start at 1 = ignore far plane
-	int frustumIndexEnd = FrustumPlane_Count; 
-
 	Vec3  pos[3];
 	float size[3];
-	for (int i = 0; i < DrawPrimitiveSize[_prim]; ++i) {
+	for (int i = 0; i < VertsPerDrawPrimitive[_prim]; ++i) {
 		pos[i]  = Vec3(_vdata[i].m_positionSize);
 		size[i] = _prim == DrawPrimitive_Triangles ? 0.0f : pixelsToWorldSize(pos[i], _vdata[i].m_positionSize.w);
 	}
-	for (int i = frustumIndexBeg; i < frustumIndexEnd; ++i) {
+	for (int i = 0; i < m_cullFrustumCount; ++i) {
+		const Vec4& plane = m_cullFrustum[i];
 		bool isVisible= false;
-		for (int j = 0; j < DrawPrimitiveSize[_prim]; ++j) {
-			isVisible |= Distance(m_appData.m_cullFrustum[i], pos[j]) > -size[j];
+		for (int j = 0; j < VertsPerDrawPrimitive[_prim]; ++j) {
+			isVisible |= Distance(plane, pos[j]) > -size[j];
 		}
 		if (!isVisible) {
 			return false;
 		}
 	}
 	return true;
+}
+
+bool Context::isVisible(const Vec3& _origin, float _radius)
+{
+	for (int i = 0; i < m_cullFrustumCount; ++i) {
+		const Vec4& plane = m_cullFrustum[i];
+		if (Distance(plane, _origin) < -_radius) {
+			return false;
+		}
+	}
+	return true;
+}
+
+bool Context::isVisible(const Vec3& _min, const Vec3& _max)
+{
+#if 1
+ 	const Vec3 points[] = {
+		Vec3(_min.x, _min.y, _min.z),
+		Vec3(_max.x, _min.y, _min.z),
+		Vec3(_max.x, _max.y, _min.z),
+		Vec3(_min.x, _max.y, _min.z),
+
+		Vec3(_min.x, _min.y, _max.z),
+		Vec3(_max.x, _min.y, _max.z),
+		Vec3(_max.x, _max.y, _max.z),
+		Vec3(_min.x, _max.y, _max.z)
+	};
+
+ 	for (int i = 0; i < m_cullFrustumCount; ++i) {
+		const Vec4& plane = m_cullFrustum[i];
+		bool inside = false;
+		for (int j = 0; j < 8; ++j) {
+			if (Distance(plane, points[j]) > 0.0f) {
+				inside = true;
+				break;
+			}
+		}
+		if (!inside) {
+			return false;
+		}
+	}
+	return true;
+#else
+	bool ret = false;
+	for (int i = 0; i < m_cullFrustumCount; ++i) {
+		const Vec4& plane = m_cullFrustum[i];
+		float d = 
+			Min(_min.x * plane.x, _max.x * plane.x) +
+			Min(_min.y * plane.y, _max.y * plane.y) +
+			Min(_min.z * plane.z, _max.z * plane.z) +
+			plane.w
+			;
+		if (d > 0.0f) {
+			ret = true;
+			break;
+		}
+		
+	}
+	return ret;
+#endif
 }
 
 Context::VertexList* Context::getCurrentVertexList()
@@ -1987,7 +2099,7 @@ U32 Context::getPrimitiveCount(DrawPrimitiveType _type) const
 		U32 j = i * DrawPrimitive_Count + _type;
 		ret += m_vertexData[0][j]->size() + m_vertexData[1][j]->size();
 	}
-	ret /= DrawPrimitiveSize[_type];
+	ret /= VertsPerDrawPrimitive[_type];
 	return ret;
 }
 

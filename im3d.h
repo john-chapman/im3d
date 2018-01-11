@@ -361,13 +361,6 @@ enum DrawPrimitiveType
 
 	DrawPrimitive_Count
 };
-const int DrawPrimitiveSize[DrawPrimitive_Count] = 
-{
- // vertices per draw primitive type
-	3, //DrawPrimitive_Triangles,
-	2, //DrawPrimitive_Lines,
-	1  //DrawPrimitive_Points,
-};
 
 struct DrawList
 {
@@ -397,10 +390,11 @@ enum Key
 
 	Action_Count
 };
+
 enum FrustumPlane
 {
-	FrustumPlane_Far,
 	FrustumPlane_Near,
+	FrustumPlane_Far,
 	FrustumPlane_Top,
 	FrustumPlane_Right,
 	FrustumPlane_Bottom,
@@ -408,6 +402,7 @@ enum FrustumPlane
 
 	FrustumPlane_Count
 };
+
 struct AppData
 {
 	bool   m_keyDown[Key_Count];               // Key states.
@@ -428,9 +423,8 @@ struct AppData
 	DrawPrimitivesCallback* drawCallback; // e.g. void Im3d_Draw(const DrawList& _drawList)
 
 	// Extract cull frustum planes from the view-projection matrix. 
-	// Set _viewZNegative = true if view space Z is negative.
-	// Set _clipZNegativeOneToOne = true if the proj matrix maps z from [-1,1] (OpenGL style).
-	void setCullFrustum(const Mat4& _viewProj, bool _viewZNegative, bool _clipZNegativeOneToOne);
+	// Set _ndcZNegativeOneToOne = true if the proj matrix maps z from [-1,1] (OpenGL style).
+	void setCullFrustum(const Mat4& _viewProj, bool _ndcZNegativeOneToOne);
 };
 
 // Minimal vector.
@@ -628,11 +622,15 @@ private:
 	DrawPrimitiveType   m_primType;
 	U32                 m_firstVertThisPrim;        // Index of the first vertex pushed during this primitive.
 	U32                 m_vertCountThisPrim;        // # calls to vertex() since the last call to begin().
+	Vec3                m_minVertThisPrim;
+	Vec3                m_maxVertThisPrim;
 
  // app data
 	AppData             m_appData;
 	bool                m_keyDownCurr[Key_Count];   // Key state captured during reset().
 	bool                m_keyDownPrev[Key_Count];   // Key state from previous frame.
+	Vec4                m_cullFrustum[FrustumPlane_Count];  // Optimized frustum planes from m_appData.m_cullFrustum.
+	int                 m_cullFrustumCount;         // # valid frustum planes in m_cullFrustum.
 
 
 	// Sort primitive data.
@@ -642,7 +640,9 @@ private:
 	int  findLayerIndex(Id _id) const;
 
 	// Visibiity tests for culling.
-	bool isVisible(const VertexData* _vdata, DrawPrimitiveType _prim);
+	bool isVisible(const VertexData* _vdata, DrawPrimitiveType _prim); // per-vertex
+	bool isVisible(const Vec3& _origin, float _radius);                // sphere
+	bool isVisible(const Vec3& _min, const Vec3& _max);                // axis-aligned box
 
 	VertexList* getCurrentVertexList();
 };
