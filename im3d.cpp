@@ -1631,7 +1631,7 @@ bool Context::isVisible(const Vec3& _origin, float _radius)
 
 bool Context::isVisible(const Vec3& _min, const Vec3& _max)
 {
-#if 1
+#if 0
  	const Vec3 points[] = {
 		Vec3(_min.x, _min.y, _min.z),
 		Vec3(_max.x, _min.y, _min.z),
@@ -1659,22 +1659,20 @@ bool Context::isVisible(const Vec3& _min, const Vec3& _max)
 	}
 	return true;
 #else
-	bool ret = false;
 	for (int i = 0; i < m_cullFrustumCount; ++i) {
 		const Vec4& plane = m_cullFrustum[i];
 		float d = 
-			Min(_min.x * plane.x, _max.x * plane.x) +
-			Min(_min.y * plane.y, _max.y * plane.y) +
-			Min(_min.z * plane.z, _max.z * plane.z) +
+			Max(_min.x * plane.x, _max.x * plane.x) +
+			Max(_min.y * plane.y, _max.y * plane.y) +
+			Max(_min.z * plane.z, _max.z * plane.z) -
 			plane.w
 			;
-		if (d > 0.0f) {
-			ret = true;
-			break;
+		if (d < 0.0f) {
+			return false;
 		}
 		
 	}
-	return ret;
+	return true;
 #endif
 }
 
