@@ -165,8 +165,9 @@ void Im3d_Update()
 	ad.m_cursorRayOrigin = rayOrigin;
 	ad.m_cursorRayDirection = rayDirection;
 
- // Set cull frustum planes (only required if culling will be enabled).
-	ad.setCullFrustum(g_Example->m_camViewProj, false);
+ // Set cull frustum planes. This is only required if IM3D_CULL_GIZMOS or IM3D_CULL_PRIMTIIVES is enable via
+ // im3d_config.h, or if any of the IsVisible() functions are called.
+	ad.setCullFrustum(g_Example->m_camViewProj, true);
 
  // Fill the key state array; using GetAsyncKeyState here but this could equally well be done via the window proc.
  // All key states have an equivalent (and more descriptive) 'Action_' enum.

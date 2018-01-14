@@ -4,15 +4,15 @@
 
 #include "im3d_config.h"
 
-#define IM3D_VERSION "1.08"
+#define IM3D_VERSION "1.09"
 
 #ifndef IM3D_ASSERT
 	#include <cassert>
 	#define IM3D_ASSERT(e) assert(e)
 #endif
 
-#ifndef IM3D_VERTEX_ALIGNEMENT
-	#define IM3D_VERTEX_ALIGNEMENT 4
+#ifndef IM3D_VERTEX_ALIGNMENT
+	#define IM3D_VERTEX_ALIGNMENT 4
 #endif
 
 namespace Im3d {
@@ -94,9 +94,6 @@ void  PushEnableSorting(bool _enable);
 void  PopEnableSorting();
 void  EnableSorting(bool _enable);
 
-// Enable/disable culling (per primitive). The application must set the culling frustum via AppData.
-void  SetEnableCulling(bool _enable);
-
 // Push/pop all draw states (color, alpha, size, sorting).
 void  PushDrawState();
 void  PopDrawState();
@@ -169,6 +166,10 @@ bool  GizmoRotation(Id _id, float _rotation_[3*3], bool _local = false);
 bool  GizmoScale(Id _id, float _scale_[3]);
 bool  Gizmo(Id _id, float _transform_[4*4]);
 bool  Gizmo(Id _id, float _translation_[3], float _rotation_[3*3], float _scale_[3]);
+
+// Visibility tests. The application must set a culling frustum via AppData. 
+bool  IsVisible(const Vec3& _origin, float _radius); // sphere
+bool  IsVisible(const Vec3& _minExtents, const Vec3& _maxExtents); // axis-aligned bounding box
 
 // Get/set the current context. All Im3d calls affect the currently bound context.
 Context& GetContext();
@@ -343,7 +344,7 @@ struct Color
 	float getA() const                                                       { return get(0); }
 };
 
-struct alignas(IM3D_VERTEX_ALIGNEMENT) VertexData
+struct alignas(IM3D_VERTEX_ALIGNMENT) VertexData
 {
 	Vec4   m_positionSize; // xyz = position, w = size
 	Color  m_color;        // rgba8 (MSB = r)
@@ -517,9 +518,6 @@ public:
 	bool        getEnableSorting() const         { return m_enableSortingStack.back(); }
 	void        pushEnableSorting(bool _enable);
 	void        popEnableSorting();
-
-	void        setEnableCulling(bool _enable)   { m_enableCulling = _enable; }
-	bool        getEnableCulling() const         { return m_enableCulling;    }
 	
 	Id          getLayerId() const               { return m_layerIdStack.back(); }
 	void        pushLayerId(Id _layer);
@@ -572,6 +570,11 @@ public:
 	bool isKeyDown(Key _key) const     { return m_keyDownCurr[_key]; }
 	bool wasKeyPressed(Key _key) const { return m_keyDownCurr[_key] && !m_keyDownPrev[_key]; }
 
+	// Visibiity tests for culling.
+	bool isVisible(const VertexData* _vdata, DrawPrimitiveType _prim); // per-vertex
+	bool isVisible(const Vec3& _origin, float _radius);                // sphere
+	bool isVisible(const Vec3& _min, const Vec3& _max);                // axis-aligned box
+
  // gizmo state
 	bool               m_gizmoLocal;               // Global mode selection for gizmos.
 	GizmoMode          m_gizmoMode;                //               "
@@ -615,7 +618,6 @@ private:
 	Vector<DrawList>    m_sortedDrawLists;          // Sorted draw lists are stored to avoid multiple calls to sort().
 	bool                m_sortCalled;               // Avoid calling sort() during every call to draw().
 	bool                m_drawCalled;               // For assert, if vertices are pushed after draw() was called.
-	bool                m_enableCulling;
 
  // primitive state
 	PrimitiveMode       m_primMode;
@@ -638,11 +640,6 @@ private:
 
 	// Return -1 if _id not found.
 	int  findLayerIndex(Id _id) const;
-
-	// Visibiity tests for culling.
-	bool isVisible(const VertexData* _vdata, DrawPrimitiveType _prim); // per-vertex
-	bool isVisible(const Vec3& _origin, float _radius);                // sphere
-	bool isVisible(const Vec3& _min, const Vec3& _max);                // axis-aligned box
 
 	VertexList* getCurrentVertexList();
 };
@@ -699,8 +696,6 @@ inline void  PushEnableSorting(bool _enable)                                 { G
 inline void  PopEnableSorting()                                              { GetContext().popEnableSorting();         }
 inline void  EnableSorting(bool _enable)                                     { GetContext().setEnableSorting(_enable);  }
 
-inline void  SetEnableCulling(bool _enable)                                  { GetContext().setEnableCulling(_enable); }
-
 inline void  PushLayerId()                                                   { GetContext().pushLayerId(GetContext().getLayerId()); }
 inline void  PushLayerId(Id _layer)                                          { GetContext().pushLayerId(_layer); }
 inline void  PopLayerId()                                                    { GetContext().popLayerId();        }
@@ -727,6 +722,9 @@ inline bool GizmoRotation(const char* _id, float _rotation_[3*3], bool _local)  
 inline bool GizmoScale(const char* _id, float _scale_[3])                                            { return GizmoScale(MakeId(_id), _scale_);                       }
 inline bool Gizmo(const char* _id, float _translation_[3], float _rotation_[3*3], float _scale_[3])  { return Gizmo(MakeId(_id), _translation_, _rotation_, _scale_); }
 inline bool Gizmo(const char* _id, float _transform_[4*4])                                           { return Gizmo(MakeId(_id), _transform_);                        }
+
+inline bool IsVisible(const Vec3& _origin, float _radius)                    { return GetContext().isVisible(_origin, _radius);       }
+inline bool IsVisible(const Vec3& _minExtent, const Vec3& _maxExtent)        { return GetContext().isVisible(_minExtent, _maxExtent); }
 
 inline Context& GetContext()                                                 { return *internal::g_CurrentContext; }
 inline void     SetContext(Context& _ctx)                                    { internal::g_CurrentContext = &_ctx; }

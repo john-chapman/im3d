@@ -1,6 +1,6 @@
 /*	CHANGE LOG
 	==========
-	2018-01-   (v1.09) - Culling API.
+	2018-01-14 (v1.09) - Culling API.
 	                   - Moved DrawPrimitiveSize to im3d.cpp, renamed as VertsPerDrawPrimitive.
 	                   - Added traits + tag dispatch for math utilities (Min, Max, etc).
 	2017-10-21 (v1.08) - Added DrawAlignedBoxFilled(), DrawSphereFilled(), fixed clamped ranges for auto LOD in high order primitives.
@@ -30,6 +30,12 @@
 #ifndef IM3D_FREE
 	#define IM3D_FREE(ptr) free(ptr)
 #endif
+#ifndef IM3D_CULL_PRIMITIVES
+	#define IM3D_CULL_PRIMITIVES 0
+#endif
+#ifndef IM3D_CULL_GIZMOS
+	#define IM3D_CULL_GIZMOS 0
+#endif
 
 // Compiler
 #if defined(__GNUC__)
@@ -58,9 +64,6 @@
 #endif
 
 //#define IM3D_GIZMO_DEBUG
-
-//#define IM3D_CULL_PER_VERTEX
-#define IM3D_CULL_PER_PRIM
 
 using namespace Im3d;
 
@@ -593,6 +596,18 @@ inline static Vec3 Snap(const Vec3& _pos, const Plane& _plane, float _snap)
 bool Im3d::GizmoTranslation(Id _id, float _translation_[3], bool _local)
 {
 	Context& ctx = GetContext();
+
+	bool ret = false;
+	Vec3* outVec3 = (Vec3*)_translation_;
+	Vec3 drawAt = *outVec3;
+
+	float worldHeight = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoHeightPixels);
+	#if IM3D_CULL_GIZMOS
+		if (!ctx.isVisible(drawAt, worldHeight)) {
+			return false;
+		}
+	#endif
+
 	ctx.pushId(_id);
 	ctx.m_appId = _id;
 
@@ -601,15 +616,10 @@ bool Im3d::GizmoTranslation(Id _id, float _translation_[3], bool _local)
 		localMatrix.setScale(Vec3(1.0f));
 		ctx.pushMatrix(localMatrix);
 	}
-	
-	bool ret = false;
-	Vec3* outVec3 = (Vec3*)_translation_;
-	Vec3 drawAt = *outVec3;
 
-	float worldHeight = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoHeightPixels);
-	float worldSize = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoSizePixels);	
 	float planeSize = worldHeight * (0.5f * 0.5f);
 	float planeOffset = worldHeight * 0.5f;
+	float worldSize = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoSizePixels);	
 	
 	struct AxisG { Id m_id; Vec3 m_axis; Color m_color; };
 	AxisG axes[] = {
@@ -722,6 +732,15 @@ bool Im3d::GizmoTranslation(Id _id, float _translation_[3], bool _local)
 bool Im3d::GizmoRotation(Id _id, float _rotation_[3*3], bool _local)
 {
 	Context& ctx = GetContext();
+	
+	Vec3 origin = ctx.getMatrix().getTranslation();
+	float worldRadius = ctx.pixelsToWorldSize(origin, ctx.m_gizmoHeightPixels);
+	#if IM3D_CULL_GIZMOS
+		if (!ctx.isVisible(origin, worldRadius)) {
+			return false;
+		}
+	#endif
+
 	Id currentId = ctx.m_activeId; // store currentId to detect if the gizmo becomes active during this call
 	ctx.pushId(_id);
 	ctx.m_appId = _id;
@@ -730,9 +749,6 @@ bool Im3d::GizmoRotation(Id _id, float _rotation_[3*3], bool _local)
 	Mat3& storedRotation = ctx.m_gizmoStateMat3;
 	Mat3* outMat3 = (Mat3*)_rotation_;
 	Vec3 euler = ToEulerXYZ(*outMat3);
-	Vec3 origin = ctx.getMatrix().getTranslation();
-
-	float worldRadius = ctx.pixelsToWorldSize(origin, ctx.m_gizmoHeightPixels);
 	float worldSize = ctx.pixelsToWorldSize(origin, ctx.m_gizmoSizePixels);
 	
 	struct AxisG { Id m_id; Vec3 m_axis; Color m_color; };
@@ -799,17 +815,24 @@ bool Im3d::GizmoRotation(Id _id, float _rotation_[3*3], bool _local)
 bool Im3d::GizmoScale(Id _id, float _scale_[3])
 {
 	Context& ctx = GetContext();
+	
+	Vec3 origin = ctx.getMatrix().getTranslation();
+	float worldHeight = ctx.pixelsToWorldSize(origin, ctx.m_gizmoHeightPixels);
+	#if IM3D_CULL_GIZMOS
+		if (!ctx.isVisible(origin, worldHeight)) {
+			return false;
+		}
+	#endif
+
 	ctx.pushId(_id);
 	ctx.m_appId = _id;
 
 	bool ret = false;
 	Vec3* outVec3 = (Vec3*)_scale_;
-	Vec3 origin = ctx.getMatrix().getTranslation();
 
-	float worldHeight = ctx.pixelsToWorldSize(origin, ctx.m_gizmoHeightPixels);
-	float worldSize = ctx.pixelsToWorldSize(origin, ctx.m_gizmoSizePixels);	
 	float planeSize = worldHeight * (0.5f * 0.5f);
 	float planeOffset = worldHeight * 0.5f;
+	float worldSize = ctx.pixelsToWorldSize(origin, ctx.m_gizmoSizePixels);	
 	
 	struct AxisG { Id m_id; Vec3 m_axis; Color m_color; };
 	AxisG axes[] = {
@@ -1186,27 +1209,31 @@ void Context::end()
 			default:
 				break;
 		};
-	#ifdef IM3D_CULL_PER_PRIM
-		if (m_enableCulling && !isVisible(m_minVertThisPrim, m_maxVertThisPrim)) {
-			vertexList->resize(m_firstVertThisPrim, VertexData());
-		}
-	#endif
+		#if IM3D_CULL_PRIMITIVES
+		 // \hack force the bounds to be slightly conservative to account for point/line size
+			m_minVertThisPrim = m_minVertThisPrim - Vec3(1.0f);
+			m_maxVertThisPrim = m_maxVertThisPrim + Vec3(1.0f);
+			if (!isVisible(m_minVertThisPrim, m_maxVertThisPrim)) {
+				vertexList->resize(m_firstVertThisPrim, VertexData());
+			}
+		#endif
 	}
 	m_primMode = PrimitiveMode_None;
 	m_primType = DrawPrimitive_Count;
-#ifdef IM3D_CULL_PER_PRIM
-	/*if (m_enableCulling) {
-		m_enableCulling = false;
-		pushColor(Im3d::Color_Magenta);
-		pushSize(1.0f);
-		pushMatrix(Mat4(1.0f));
-		DrawAlignedBox(m_minVertThisPrim, m_maxVertThisPrim);
-		popMatrix();
-		popColor();
-		popSize();
-		m_enableCulling = true;
-	}*/
-#endif
+	#if IM3D_CULL_PRIMITIVES
+	 // \debug draw primitive BBs
+		//if (m_enableCulling) {
+		//	m_enableCulling = false;
+		//	pushColor(Im3d::Color_Magenta);
+		//	pushSize(1.0f);
+		//	pushMatrix(Mat4(1.0f));
+		//	DrawAlignedBox(m_minVertThisPrim, m_maxVertThisPrim);
+		//	popMatrix();
+		//	popColor();
+		//	popSize();
+		//	m_enableCulling = true;
+		//}
+	#endif
 }
 
 void Context::vertex(const Vec3& _position, float _size, Color _color)
@@ -1219,8 +1246,7 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 	}
 	vd.m_color.setA(vd.m_color.getA() * m_alphaStack.back());
 
-#ifdef IM3D_CULL_PER_PRIM
-	if (m_enableCulling) {
+	#if IM3D_CULL_PRIMITIVES
 		Vec3 p = Vec3(vd.m_positionSize);
 		if (m_vertCountThisPrim == 0) { // p is the first vertex
 			m_minVertThisPrim = m_maxVertThisPrim = p;
@@ -1228,8 +1254,7 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 			m_minVertThisPrim = Min(m_minVertThisPrim, p);
 			m_maxVertThisPrim = Max(m_maxVertThisPrim, p);
 		}
-	}
-#endif
+	#endif
 
 	VertexList* vertexList = getCurrentVertexList();
 	switch (m_primMode) {
@@ -1259,9 +1284,10 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 	};
 	++m_vertCountThisPrim;
 
-#ifdef IM3D_CULL_PER_VERTEX
- // check if the primitive was visible and rewind vertex data if not
-	if (m_enableCulling) {
+	#if 0 
+	 // per-vertex primitive culling; this method is generally too expensive to be practical (and can't cull line loops).
+
+	 // check if the primitive was visible and rewind vertex data if not
 		switch (m_primMode) {
 			case PrimitiveMode_Points:
 				if (!isVisible(&vertexList->back(), DrawPrimitive_Points)) {
@@ -1296,8 +1322,7 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 			default:
 				break;
 		};
-	}
-#endif
+	#endif
 }
 
 void Context::reset()
