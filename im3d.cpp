@@ -1477,6 +1477,11 @@ Context::Context()
 	memset(&m_keyDownCurr, 0, sizeof(m_keyDownCurr));
 	memset(&m_keyDownPrev, 0, sizeof(m_keyDownPrev));
 
+ // init cull frustum to INF effectively disables culling
+	for (int i = 0; i < FrustumPlane_Count; ++i) {
+		m_appData.m_cullFrustum[i] = Vec4(INFINITY);
+	}
+
 	pushMatrix(Mat4(1.0f));
 	pushColor(Color_White);
 	pushAlpha(1.0f);
