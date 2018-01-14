@@ -169,7 +169,7 @@ bool  Gizmo(Id _id, float _translation_[3], float _rotation_[3*3], float _scale_
 
 // Visibility tests. The application must set a culling frustum via AppData. 
 bool  IsVisible(const Vec3& _origin, float _radius); // sphere
-bool  IsVisible(const Vec3& _minExtents, const Vec3& _maxExtents); // axis-aligned bounding box
+bool  IsVisible(const Vec3& _min, const Vec3& _max); // axis-aligned bounding box
 
 // Get/set the current context. All Im3d calls affect the currently bound context.
 Context& GetContext();
@@ -723,8 +723,8 @@ inline bool GizmoScale(const char* _id, float _scale_[3])                       
 inline bool Gizmo(const char* _id, float _translation_[3], float _rotation_[3*3], float _scale_[3])  { return Gizmo(MakeId(_id), _translation_, _rotation_, _scale_); }
 inline bool Gizmo(const char* _id, float _transform_[4*4])                                           { return Gizmo(MakeId(_id), _transform_);                        }
 
-inline bool IsVisible(const Vec3& _origin, float _radius)                    { return GetContext().isVisible(_origin, _radius);       }
-inline bool IsVisible(const Vec3& _minExtent, const Vec3& _maxExtent)        { return GetContext().isVisible(_minExtent, _maxExtent); }
+inline bool IsVisible(const Vec3& _origin, float _radius)                    { return GetContext().isVisible(_origin, _radius); }
+inline bool IsVisible(const Vec3& _min, const Vec3& _max)                    { return GetContext().isVisible(_min, _max);       }
 
 inline Context& GetContext()                                                 { return *internal::g_CurrentContext; }
 inline void     SetContext(Context& _ctx)                                    { internal::g_CurrentContext = &_ctx; }

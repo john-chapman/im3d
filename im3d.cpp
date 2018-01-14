@@ -207,6 +207,13 @@ void Im3d::DrawQuadFilled(const Vec3& _origin, const Vec3& _normal, const Vec2& 
 void Im3d::DrawCircle(const Vec3& _origin, const Vec3& _normal, float _radius, int _detail)
 {
 	Context& ctx = GetContext();
+	#if IM3D_CULL_PRIMITIVES
+		if (!ctx.isVisible(_origin, _radius)) {
+			return;
+		}
+	#endif
+
+
 	if (_detail < 0) {
 		_detail = ctx.estimateLevelOfDetail(_origin, _radius, 8, 48);
 	}
@@ -224,6 +231,12 @@ void Im3d::DrawCircle(const Vec3& _origin, const Vec3& _normal, float _radius, i
 void Im3d::DrawCircleFilled(const Vec3& _origin, const Vec3& _normal, float _radius, int _detail)
 {
 	Context& ctx = GetContext();
+	#if IM3D_CULL_PRIMITIVES
+		if (!ctx.isVisible(_origin, _radius)) {
+			return;
+		}
+	#endif
+
 	if (_detail < 0) {
 		_detail = ctx.estimateLevelOfDetail(_origin, _radius, 8, 64);
 	}
@@ -249,6 +262,12 @@ void Im3d::DrawCircleFilled(const Vec3& _origin, const Vec3& _normal, float _rad
 void Im3d::DrawSphere(const Vec3& _origin, float _radius, int _detail)
 {
 	Context& ctx = GetContext();
+	#if IM3D_CULL_PRIMITIVES
+		if (!ctx.isVisible(_origin, _radius)) {
+			return;
+		}
+	#endif
+
 	if (_detail < 0) {
 		_detail = ctx.estimateLevelOfDetail(_origin, _radius, 8, 48);
 	}
@@ -279,6 +298,12 @@ void Im3d::DrawSphere(const Vec3& _origin, float _radius, int _detail)
 void Im3d::DrawSphereFilled(const Vec3& _origin, float _radius, int _detail)
 {
 	Context& ctx = GetContext();
+	#if IM3D_CULL_PRIMITIVES
+		if (!ctx.isVisible(_origin, _radius)) {
+			return;
+		}
+	#endif
+
 	if (_detail < 0) {
 		_detail = ctx.estimateLevelOfDetail(_origin, _radius, 12, 32);
 	}
@@ -319,6 +344,11 @@ void Im3d::DrawSphereFilled(const Vec3& _origin, float _radius, int _detail)
 void Im3d::DrawAlignedBox(const Vec3& _min, const Vec3& _max)
 {
 	Context& ctx = GetContext();
+	#if IM3D_CULL_PRIMITIVES
+		if (!ctx.isVisible(_min, _max)) {
+			return;
+		}
+	#endif
 	ctx.begin(PrimitiveMode_LineLoop);
 		ctx.vertex(Vec3(_min.x, _min.y, _min.z)); 
 		ctx.vertex(Vec3(_max.x, _min.y, _min.z));
@@ -345,6 +375,12 @@ void Im3d::DrawAlignedBox(const Vec3& _min, const Vec3& _max)
 void Im3d::DrawAlignedBoxFilled(const Vec3& _min, const Vec3& _max)
 {
 	Context& ctx = GetContext();
+	#if IM3D_CULL_PRIMITIVES
+		if (!ctx.isVisible(_min, _max)) {
+			return;
+		}
+	#endif
+
 	ctx.pushEnableSorting(true);
  // x+
 	DrawQuadFilled(
@@ -393,6 +429,12 @@ void Im3d::DrawAlignedBoxFilled(const Vec3& _min, const Vec3& _max)
 void Im3d::DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, int _detail)
 {
 	Context& ctx = GetContext();
+	#if IM3D_CULL_PRIMITIVES
+		if (!ctx.isVisible((_start + _end) * 0.5f, Max(Length2(_start - _end), _radius))) {
+			return;
+		}
+	#endif
+
 	Vec3 org  = _start + (_end - _start) * 0.5f;
 	if (_detail < 0) {
 		_detail = ctx.estimateLevelOfDetail(org, _radius, 16, 24);
@@ -425,6 +467,12 @@ void Im3d::DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, int
 void Im3d::DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int _detail)
 {
 	Context& ctx = GetContext();
+	#if IM3D_CULL_PRIMITIVES
+		if (!ctx.isVisible((_start + _end) * 0.5f, Max(Length2(_start - _end), _radius))) {
+			return;
+		}
+	#endif
+
 	Vec3 org = _start + (_end - _start) * 0.5f;
 	if (_detail < 0) {
 		_detail = ctx.estimateLevelOfDetail(org, _radius, 6, 24);
@@ -470,6 +518,12 @@ void Im3d::DrawPrism(const Vec3& _start, const Vec3& _end, float _radius, int _s
 {
 	IM3D_ASSERT(_sides > 2);
 	Context& ctx = GetContext();
+	#if IM3D_CULL_PRIMITIVES
+		if (!ctx.isVisible((_start + _end) * 0.5f, Max(Length2(_start - _end), _radius))) {
+			return;
+		}
+	#endif
+
 	Vec3 org  = _start + (_end - _start) * 0.5f;
 	float ln  = Length(_end - _start) * 0.5f;
 	ctx.pushMatrix(ctx.getMatrix() * LookAt(org, _end, ctx.getAppData().m_worldUp));
