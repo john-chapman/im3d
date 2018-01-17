@@ -427,7 +427,7 @@ int main(int, char**)
 
 			ImGui::TreePop();
 		}
-		
+
 		if (ImGui::TreeNode("Layers")) {
 		 // Layers allow primitives to be grouped by the application. Each layer results in a separate call to the draw callback, which gives the 
 		 // application opportunity to modify the rendering on a per-layer basis (e.g. to enable depth testing). Layers can also be used to 

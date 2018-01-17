@@ -1,5 +1,8 @@
 /*	CHANGE LOG
 	==========
+	2018-01-14 (v1.09) - Culling API.
+	                   - Moved DrawPrimitiveSize to im3d.cpp, renamed as VertsPerDrawPrimitive.
+	                   - Added traits + tag dispatch for math utilities (Min, Max, etc).
 	2017-10-21 (v1.08) - Added DrawAlignedBoxFilled(), DrawSphereFilled(), fixed clamped ranges for auto LOD in high order primitives.
 	2017-10-14 (v1.07) - Layers API.
 	2017-07-03 (v1.06) - Rotation gizmo improvements; avoid selection failure at grazing angles + improved rotation behavior.
@@ -26,6 +29,12 @@
 #endif
 #ifndef IM3D_FREE
 	#define IM3D_FREE(ptr) free(ptr)
+#endif
+#ifndef IM3D_CULL_PRIMITIVES
+	#define IM3D_CULL_PRIMITIVES 0
+#endif
+#ifndef IM3D_CULL_GIZMOS
+	#define IM3D_CULL_GIZMOS 0
 #endif
 
 // Compiler
@@ -69,6 +78,13 @@ const Color Im3d::Color_Yellow  = Color(0xffff00ff);
 const Color Im3d::Color_Cyan    = Color(0x00ffffff);
 
 static const Color Color_GizmoHighlight = Color(0xffc745ff);
+
+static const int VertsPerDrawPrimitive[DrawPrimitive_Count] = 
+{
+	3, //DrawPrimitive_Triangles,
+	2, //DrawPrimitive_Lines,
+	1  //DrawPrimitive_Points,
+};
 
 Color::Color(const Vec4& _rgba)
 {
@@ -191,6 +207,13 @@ void Im3d::DrawQuadFilled(const Vec3& _origin, const Vec3& _normal, const Vec2& 
 void Im3d::DrawCircle(const Vec3& _origin, const Vec3& _normal, float _radius, int _detail)
 {
 	Context& ctx = GetContext();
+	#if IM3D_CULL_PRIMITIVES
+		if (!ctx.isVisible(_origin, _radius)) {
+			return;
+		}
+	#endif
+
+
 	if (_detail < 0) {
 		_detail = ctx.estimateLevelOfDetail(_origin, _radius, 8, 48);
 	}
@@ -208,6 +231,12 @@ void Im3d::DrawCircle(const Vec3& _origin, const Vec3& _normal, float _radius, i
 void Im3d::DrawCircleFilled(const Vec3& _origin, const Vec3& _normal, float _radius, int _detail)
 {
 	Context& ctx = GetContext();
+	#if IM3D_CULL_PRIMITIVES
+		if (!ctx.isVisible(_origin, _radius)) {
+			return;
+		}
+	#endif
+
 	if (_detail < 0) {
 		_detail = ctx.estimateLevelOfDetail(_origin, _radius, 8, 64);
 	}
@@ -233,6 +262,12 @@ void Im3d::DrawCircleFilled(const Vec3& _origin, const Vec3& _normal, float _rad
 void Im3d::DrawSphere(const Vec3& _origin, float _radius, int _detail)
 {
 	Context& ctx = GetContext();
+	#if IM3D_CULL_PRIMITIVES
+		if (!ctx.isVisible(_origin, _radius)) {
+			return;
+		}
+	#endif
+
 	if (_detail < 0) {
 		_detail = ctx.estimateLevelOfDetail(_origin, _radius, 8, 48);
 	}
@@ -263,6 +298,12 @@ void Im3d::DrawSphere(const Vec3& _origin, float _radius, int _detail)
 void Im3d::DrawSphereFilled(const Vec3& _origin, float _radius, int _detail)
 {
 	Context& ctx = GetContext();
+	#if IM3D_CULL_PRIMITIVES
+		if (!ctx.isVisible(_origin, _radius)) {
+			return;
+		}
+	#endif
+
 	if (_detail < 0) {
 		_detail = ctx.estimateLevelOfDetail(_origin, _radius, 12, 32);
 	}
@@ -303,6 +344,11 @@ void Im3d::DrawSphereFilled(const Vec3& _origin, float _radius, int _detail)
 void Im3d::DrawAlignedBox(const Vec3& _min, const Vec3& _max)
 {
 	Context& ctx = GetContext();
+	#if IM3D_CULL_PRIMITIVES
+		if (!ctx.isVisible(_min, _max)) {
+			return;
+		}
+	#endif
 	ctx.begin(PrimitiveMode_LineLoop);
 		ctx.vertex(Vec3(_min.x, _min.y, _min.z)); 
 		ctx.vertex(Vec3(_max.x, _min.y, _min.z));
@@ -329,6 +375,12 @@ void Im3d::DrawAlignedBox(const Vec3& _min, const Vec3& _max)
 void Im3d::DrawAlignedBoxFilled(const Vec3& _min, const Vec3& _max)
 {
 	Context& ctx = GetContext();
+	#if IM3D_CULL_PRIMITIVES
+		if (!ctx.isVisible(_min, _max)) {
+			return;
+		}
+	#endif
+
 	ctx.pushEnableSorting(true);
  // x+
 	DrawQuadFilled(
@@ -377,6 +429,12 @@ void Im3d::DrawAlignedBoxFilled(const Vec3& _min, const Vec3& _max)
 void Im3d::DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, int _detail)
 {
 	Context& ctx = GetContext();
+	#if IM3D_CULL_PRIMITIVES
+		if (!ctx.isVisible((_start + _end) * 0.5f, Max(Length2(_start - _end), _radius))) {
+			return;
+		}
+	#endif
+
 	Vec3 org  = _start + (_end - _start) * 0.5f;
 	if (_detail < 0) {
 		_detail = ctx.estimateLevelOfDetail(org, _radius, 16, 24);
@@ -409,6 +467,12 @@ void Im3d::DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, int
 void Im3d::DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int _detail)
 {
 	Context& ctx = GetContext();
+	#if IM3D_CULL_PRIMITIVES
+		if (!ctx.isVisible((_start + _end) * 0.5f, Max(Length2(_start - _end), _radius))) {
+			return;
+		}
+	#endif
+
 	Vec3 org = _start + (_end - _start) * 0.5f;
 	if (_detail < 0) {
 		_detail = ctx.estimateLevelOfDetail(org, _radius, 6, 24);
@@ -454,6 +518,12 @@ void Im3d::DrawPrism(const Vec3& _start, const Vec3& _end, float _radius, int _s
 {
 	IM3D_ASSERT(_sides > 2);
 	Context& ctx = GetContext();
+	#if IM3D_CULL_PRIMITIVES
+		if (!ctx.isVisible((_start + _end) * 0.5f, Max(Length2(_start - _end), _radius))) {
+			return;
+		}
+	#endif
+
 	Vec3 org  = _start + (_end - _start) * 0.5f;
 	float ln  = Length(_end - _start) * 0.5f;
 	ctx.pushMatrix(ctx.getMatrix() * LookAt(org, _end, ctx.getAppData().m_worldUp));
@@ -580,6 +650,18 @@ inline static Vec3 Snap(const Vec3& _pos, const Plane& _plane, float _snap)
 bool Im3d::GizmoTranslation(Id _id, float _translation_[3], bool _local)
 {
 	Context& ctx = GetContext();
+
+	bool ret = false;
+	Vec3* outVec3 = (Vec3*)_translation_;
+	Vec3 drawAt = *outVec3;
+
+	float worldHeight = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoHeightPixels);
+	#if IM3D_CULL_GIZMOS
+		if (!ctx.isVisible(drawAt, worldHeight)) {
+			return false;
+		}
+	#endif
+
 	ctx.pushId(_id);
 	ctx.m_appId = _id;
 
@@ -588,15 +670,10 @@ bool Im3d::GizmoTranslation(Id _id, float _translation_[3], bool _local)
 		localMatrix.setScale(Vec3(1.0f));
 		ctx.pushMatrix(localMatrix);
 	}
-	
-	bool ret = false;
-	Vec3* outVec3 = (Vec3*)_translation_;
-	Vec3 drawAt = *outVec3;
 
-	float worldHeight = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoHeightPixels);
-	float worldSize = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoSizePixels);	
 	float planeSize = worldHeight * (0.5f * 0.5f);
 	float planeOffset = worldHeight * 0.5f;
+	float worldSize = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoSizePixels);	
 	
 	struct AxisG { Id m_id; Vec3 m_axis; Color m_color; };
 	AxisG axes[] = {
@@ -709,6 +786,15 @@ bool Im3d::GizmoTranslation(Id _id, float _translation_[3], bool _local)
 bool Im3d::GizmoRotation(Id _id, float _rotation_[3*3], bool _local)
 {
 	Context& ctx = GetContext();
+	
+	Vec3 origin = ctx.getMatrix().getTranslation();
+	float worldRadius = ctx.pixelsToWorldSize(origin, ctx.m_gizmoHeightPixels);
+	#if IM3D_CULL_GIZMOS
+		if (!ctx.isVisible(origin, worldRadius)) {
+			return false;
+		}
+	#endif
+
 	Id currentId = ctx.m_activeId; // store currentId to detect if the gizmo becomes active during this call
 	ctx.pushId(_id);
 	ctx.m_appId = _id;
@@ -717,9 +803,6 @@ bool Im3d::GizmoRotation(Id _id, float _rotation_[3*3], bool _local)
 	Mat3& storedRotation = ctx.m_gizmoStateMat3;
 	Mat3* outMat3 = (Mat3*)_rotation_;
 	Vec3 euler = ToEulerXYZ(*outMat3);
-	Vec3 origin = ctx.getMatrix().getTranslation();
-
-	float worldRadius = ctx.pixelsToWorldSize(origin, ctx.m_gizmoHeightPixels);
 	float worldSize = ctx.pixelsToWorldSize(origin, ctx.m_gizmoSizePixels);
 	
 	struct AxisG { Id m_id; Vec3 m_axis; Color m_color; };
@@ -786,17 +869,24 @@ bool Im3d::GizmoRotation(Id _id, float _rotation_[3*3], bool _local)
 bool Im3d::GizmoScale(Id _id, float _scale_[3])
 {
 	Context& ctx = GetContext();
+	
+	Vec3 origin = ctx.getMatrix().getTranslation();
+	float worldHeight = ctx.pixelsToWorldSize(origin, ctx.m_gizmoHeightPixels);
+	#if IM3D_CULL_GIZMOS
+		if (!ctx.isVisible(origin, worldHeight)) {
+			return false;
+		}
+	#endif
+
 	ctx.pushId(_id);
 	ctx.m_appId = _id;
 
 	bool ret = false;
 	Vec3* outVec3 = (Vec3*)_scale_;
-	Vec3 origin = ctx.getMatrix().getTranslation();
 
-	float worldHeight = ctx.pixelsToWorldSize(origin, ctx.m_gizmoHeightPixels);
-	float worldSize = ctx.pixelsToWorldSize(origin, ctx.m_gizmoSizePixels);	
 	float planeSize = worldHeight * (0.5f * 0.5f);
 	float planeOffset = worldHeight * 0.5f;
+	float worldSize = ctx.pixelsToWorldSize(origin, ctx.m_gizmoSizePixels);	
 	
 	struct AxisG { Id m_id; Vec3 m_axis; Color m_color; };
 	AxisG axes[] = {
@@ -980,6 +1070,52 @@ bool Im3d::Gizmo(Id _id, float _translation_[3], float _rotation_[3*3], float _s
 	return ret;
 }
 
+void AppData::setCullFrustum(const Mat4& _viewProj, bool _ndcZNegativeOneToOne)
+{
+	m_cullFrustum[FrustumPlane_Top].x    = _viewProj(3, 0) - _viewProj(1, 0);
+	m_cullFrustum[FrustumPlane_Top].y    = _viewProj(3, 1) - _viewProj(1, 1);
+	m_cullFrustum[FrustumPlane_Top].z    = _viewProj(3, 2) - _viewProj(1, 2);
+	m_cullFrustum[FrustumPlane_Top].w    = -(_viewProj(3, 3) - _viewProj(1, 3));
+	
+	m_cullFrustum[FrustumPlane_Bottom].x = _viewProj(3, 0) + _viewProj(1, 0);
+	m_cullFrustum[FrustumPlane_Bottom].y = _viewProj(3, 1) + _viewProj(1, 1);
+	m_cullFrustum[FrustumPlane_Bottom].z = _viewProj(3, 2) + _viewProj(1, 2);
+	m_cullFrustum[FrustumPlane_Bottom].w = -(_viewProj(3, 3) + _viewProj(1, 3));
+
+	m_cullFrustum[FrustumPlane_Right].x  = _viewProj(3, 0) - _viewProj(0, 0);
+	m_cullFrustum[FrustumPlane_Right].y  = _viewProj(3, 1) - _viewProj(0, 1);
+	m_cullFrustum[FrustumPlane_Right].z  = _viewProj(3, 2) - _viewProj(0, 2);
+	m_cullFrustum[FrustumPlane_Right].w  = -(_viewProj(3, 3) - _viewProj(0, 3));
+
+	m_cullFrustum[FrustumPlane_Left].x   = _viewProj(3, 0) + _viewProj(0, 0);
+	m_cullFrustum[FrustumPlane_Left].y   = _viewProj(3, 1) + _viewProj(0, 1);
+	m_cullFrustum[FrustumPlane_Left].z   = _viewProj(3, 2) + _viewProj(0, 2);
+	m_cullFrustum[FrustumPlane_Left].w   = -(_viewProj(3, 3) + _viewProj(0, 3));
+
+	m_cullFrustum[FrustumPlane_Far].x    = _viewProj(3, 0) - _viewProj(2, 0);
+	m_cullFrustum[FrustumPlane_Far].y    = _viewProj(3, 1) - _viewProj(2, 1);
+	m_cullFrustum[FrustumPlane_Far].z    = _viewProj(3, 2) - _viewProj(2, 2);
+	m_cullFrustum[FrustumPlane_Far].w    = -(_viewProj(3, 3) - _viewProj(2, 3));
+
+	if (_ndcZNegativeOneToOne) {
+		m_cullFrustum[FrustumPlane_Near].x = _viewProj(3, 0) + _viewProj(2, 0);
+		m_cullFrustum[FrustumPlane_Near].y = _viewProj(3, 1) + _viewProj(2, 1);
+		m_cullFrustum[FrustumPlane_Near].z = _viewProj(3, 2) + _viewProj(2, 2);
+		m_cullFrustum[FrustumPlane_Near].w = -(_viewProj(3, 3) + _viewProj(2, 3));
+	} else {
+		m_cullFrustum[FrustumPlane_Near].x = _viewProj(2, 0);
+		m_cullFrustum[FrustumPlane_Near].y = _viewProj(2, 1);
+		m_cullFrustum[FrustumPlane_Near].z = _viewProj(2, 2);
+		m_cullFrustum[FrustumPlane_Near].w = -(_viewProj(2, 3));
+	}
+
+ // normalize
+	for (int i = 0; i < FrustumPlane_Count; ++i) {
+		float d = 1.0f / Length(Vec3(m_cullFrustum[i]));
+		m_cullFrustum[i] = m_cullFrustum[i] * d;
+	}
+}
+
 /*******************************************************************************
 
                                   Vector
@@ -1040,6 +1176,7 @@ void Vector<T>::resize(U32 _size, const T& _val)
 	while (m_size < _size) {
 		push_back(_val);
 	}
+	m_size = _size;
 }
 
 template <typename T>
@@ -1101,32 +1238,56 @@ void Context::begin(PrimitiveMode _mode)
 void Context::end()
 {
 	IM3D_ASSERT(m_primMode != PrimitiveMode_None); // End() called without Begin*()
-	VertexList* vertexList = getCurrentVertexList();
-	switch (m_primMode) {
-		case PrimitiveMode_Points:
-			break;
-		case PrimitiveMode_Lines:
-			IM3D_ASSERT(m_vertCountThisPrim % 2 == 0);
-			break;
-		case PrimitiveMode_LineStrip:
-			IM3D_ASSERT(m_vertCountThisPrim > 1);
-			break;
-		case PrimitiveMode_LineLoop:
-			IM3D_ASSERT(m_vertCountThisPrim > 1);
-			vertexList->push_back(vertexList->back());
-			vertexList->push_back((*vertexList)[m_firstVertThisPrim]);
-			break;
-		case PrimitiveMode_Triangles:
-			IM3D_ASSERT(m_vertCountThisPrim % 3 == 0);
-			break;
-		case PrimitiveMode_TriangleStrip:
-			IM3D_ASSERT(m_vertCountThisPrim >= 3);
-			break;
-		default:
-			break;
-	};
+	if (m_vertCountThisPrim > 0) {
+		VertexList* vertexList = getCurrentVertexList();
+		switch (m_primMode) {
+			case PrimitiveMode_Points:
+				break;
+			case PrimitiveMode_Lines:
+				IM3D_ASSERT(m_vertCountThisPrim % 2 == 0);
+				break;
+			case PrimitiveMode_LineStrip:
+				IM3D_ASSERT(m_vertCountThisPrim > 1);
+				break;
+			case PrimitiveMode_LineLoop:
+				IM3D_ASSERT(m_vertCountThisPrim > 1);
+				vertexList->push_back(vertexList->back());
+				vertexList->push_back((*vertexList)[m_firstVertThisPrim]);
+				break;
+			case PrimitiveMode_Triangles:
+				IM3D_ASSERT(m_vertCountThisPrim % 3 == 0);
+				break;
+			case PrimitiveMode_TriangleStrip:
+				IM3D_ASSERT(m_vertCountThisPrim >= 3);
+				break;
+			default:
+				break;
+		};
+		#if IM3D_CULL_PRIMITIVES
+		 // \hack force the bounds to be slightly conservative to account for point/line size
+			m_minVertThisPrim = m_minVertThisPrim - Vec3(1.0f);
+			m_maxVertThisPrim = m_maxVertThisPrim + Vec3(1.0f);
+			if (!isVisible(m_minVertThisPrim, m_maxVertThisPrim)) {
+				vertexList->resize(m_firstVertThisPrim, VertexData());
+			}
+		#endif
+	}
 	m_primMode = PrimitiveMode_None;
 	m_primType = DrawPrimitive_Count;
+	#if IM3D_CULL_PRIMITIVES
+	 // \debug draw primitive BBs
+		//if (m_enableCulling) {
+		//	m_enableCulling = false;
+		//	pushColor(Im3d::Color_Magenta);
+		//	pushSize(1.0f);
+		//	pushMatrix(Mat4(1.0f));
+		//	DrawAlignedBox(m_minVertThisPrim, m_maxVertThisPrim);
+		//	popMatrix();
+		//	popColor();
+		//	popSize();
+		//	m_enableCulling = true;
+		//}
+	#endif
 }
 
 void Context::vertex(const Vec3& _position, float _size, Color _color)
@@ -1138,6 +1299,16 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 		vd.m_positionSize = Vec4(m_matrixStack.back() * _position, _size);
 	}
 	vd.m_color.setA(vd.m_color.getA() * m_alphaStack.back());
+
+	#if IM3D_CULL_PRIMITIVES
+		Vec3 p = Vec3(vd.m_positionSize);
+		if (m_vertCountThisPrim == 0) { // p is the first vertex
+			m_minVertThisPrim = m_maxVertThisPrim = p;
+		} else {
+			m_minVertThisPrim = Min(m_minVertThisPrim, p);
+			m_maxVertThisPrim = Max(m_maxVertThisPrim, p);
+		}
+	#endif
 
 	VertexList* vertexList = getCurrentVertexList();
 	switch (m_primMode) {
@@ -1166,6 +1337,46 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 			break;
 	};
 	++m_vertCountThisPrim;
+
+	#if 0 
+	 // per-vertex primitive culling; this method is generally too expensive to be practical (and can't cull line loops).
+
+	 // check if the primitive was visible and rewind vertex data if not
+		switch (m_primMode) {
+			case PrimitiveMode_Points:
+				if (!isVisible(&vertexList->back(), DrawPrimitive_Points)) {
+					vertexList->pop_back();
+					--m_vertCountThisPrim;
+				}
+				break;
+			case PrimitiveMode_LineLoop:
+				break; // can't cull line loops; end() may add an invalid line if any vertices are culled
+			case PrimitiveMode_Lines:
+			case PrimitiveMode_LineStrip:
+				if (m_vertCountThisPrim % 2 == 0) {
+					if (!isVisible(&vertexList->back() - 1, DrawPrimitive_Lines)) {
+						for (int i = 0; i < 2; ++i) {
+							vertexList->pop_back();
+							--m_vertCountThisPrim;
+						}
+					}
+				}
+				break;
+			case PrimitiveMode_Triangles:
+			case PrimitiveMode_TriangleStrip:
+				if (m_vertCountThisPrim % 3 == 0) {
+					if (!isVisible(&vertexList->back() - 2, DrawPrimitive_Triangles)) {
+						for (int i = 0; i < 3; ++i) {
+							vertexList->pop_back();
+							--m_vertCountThisPrim;
+						}
+					}
+				}
+				break;
+			default:
+				break;
+		};
+	#endif
 }
 
 void Context::reset()
@@ -1194,6 +1405,19 @@ void Context::reset()
  // copy keydown array internally so that we can make a delta to detect key presses
 	memcpy(m_keyDownPrev, m_keyDownCurr,       Key_Count); // \todo avoid this copy, use an index
 	memcpy(m_keyDownCurr, m_appData.m_keyDown, Key_Count); // must copy in case m_keyDown is updated after reset (e.g. by an app callback)
+ 
+ // process cull frustum
+	m_cullFrustumCount = 0;
+	for (int i = 0; i < FrustumPlane_Count; ++i) {
+		const Vec4& plane = m_appData.m_cullFrustum[i];
+		if (m_appData.m_projOrtho && i == FrustumPlane_Near) { // skip near plane if perspective
+			continue;
+		}
+		if (isinf(plane.w)) { // may be the case e.g. for the far plane if projection is infinite
+			continue;
+		}
+		m_cullFrustum[m_cullFrustumCount++] = plane;
+	}
 
  // update gizmo modes
 	if (wasKeyPressed(Action_GizmoTranslation)) {
@@ -1307,6 +1531,11 @@ Context::Context()
 	memset(&m_keyDownCurr, 0, sizeof(m_keyDownCurr));
 	memset(&m_keyDownPrev, 0, sizeof(m_keyDownPrev));
 
+ // init cull frustum to INF effectively disables culling
+	for (int i = 0; i < FrustumPlane_Count; ++i) {
+		m_appData.m_cullFrustum[i] = Vec4(INFINITY);
+	}
+
 	pushMatrix(Mat4(1.0f));
 	pushColor(Color_White);
 	pushAlpha(1.0f);
@@ -1371,19 +1600,19 @@ void Context::sort()
 		for (int i = 0 ; i < DrawPrimitive_Count; ++i) {
 			Vector<VertexData>& vertexData = *(m_vertexData[1][layer * DrawPrimitive_Count + i]);
 			if (!vertexData.empty()) {
-				sortData[i].reserve(vertexData.size() / DrawPrimitiveSize[i]);
+				sortData[i].reserve(vertexData.size() / VertsPerDrawPrimitive[i]);
 				for (VertexData* v = vertexData.begin(); v != vertexData.end(); ) {
 					sortData[i].push_back(SortData(0.0f, v));
 					IM3D_ASSERT(v < vertexData.end());
-					for (int j = 0; j < DrawPrimitiveSize[i]; ++j, ++v) {
+					for (int j = 0; j < VertsPerDrawPrimitive[i]; ++j, ++v) {
 					 // sort key is the primitive midpoint distance to view origin
 						sortData[i].back().m_key += Length2(Vec3(v->m_positionSize) - viewOrigin);
 					}
-					sortData[i].back().m_key /= (float)DrawPrimitiveSize[i];
+					sortData[i].back().m_key /= (float)VertsPerDrawPrimitive[i];
 				}
 			 // qsort is not necessarily stable but it doesn't matter assuming the prims are pushed in roughly the same order each frame
 				qsort(sortData[i].data(), sortData[i].size(), sizeof(SortData), SortCmp);
-				Reorder(vertexData, sortData[i].data(), sortData[i].size(), DrawPrimitiveSize[i]);
+				Reorder(vertexData, sortData[i].data(), sortData[i].size(), VertsPerDrawPrimitive[i]);
 			}
 		}
 	
@@ -1424,13 +1653,13 @@ void Context::sort()
 				DrawList dl;
 				dl.m_layerId     = layer;
 				dl.m_primType    = (DrawPrimitiveType)cprim;
-				dl.m_vertexData  = m_vertexData[1][layer * DrawPrimitive_Count + cprim]->data() + (search[cprim] - sortData[cprim].data()) * DrawPrimitiveSize[cprim];
+				dl.m_vertexData  = m_vertexData[1][layer * DrawPrimitive_Count + cprim]->data() + (search[cprim] - sortData[cprim].data()) * VertsPerDrawPrimitive[cprim];
 				dl.m_vertexCount = 0;
 				m_sortedDrawLists.push_back(dl);
 			}
 	
 		 // increment the vertex count for the current draw list
-			m_sortedDrawLists.back().m_vertexCount += DrawPrimitiveSize[cprim];
+			m_sortedDrawLists.back().m_vertexCount += VertsPerDrawPrimitive[cprim];
 			++search[cprim];
 			if (search[cprim] == sortData[cprim].end()) {
 				search[cprim] = 0;
@@ -1450,6 +1679,85 @@ int Context::findLayerIndex(Id _id) const
 		}
 	}
 	return -1;
+}
+
+bool Context::isVisible(const VertexData* _vdata, DrawPrimitiveType _prim)
+{
+	Vec3  pos[3];
+	float size[3];
+	for (int i = 0; i < VertsPerDrawPrimitive[_prim]; ++i) {
+		pos[i]  = Vec3(_vdata[i].m_positionSize);
+		size[i] = _prim == DrawPrimitive_Triangles ? 0.0f : pixelsToWorldSize(pos[i], _vdata[i].m_positionSize.w);
+	}
+	for (int i = 0; i < m_cullFrustumCount; ++i) {
+		const Vec4& plane = m_cullFrustum[i];
+		bool isVisible= false;
+		for (int j = 0; j < VertsPerDrawPrimitive[_prim]; ++j) {
+			isVisible |= Distance(plane, pos[j]) > -size[j];
+		}
+		if (!isVisible) {
+			return false;
+		}
+	}
+	return true;
+}
+
+bool Context::isVisible(const Vec3& _origin, float _radius)
+{
+	for (int i = 0; i < m_cullFrustumCount; ++i) {
+		const Vec4& plane = m_cullFrustum[i];
+		if (Distance(plane, _origin) < -_radius) {
+			return false;
+		}
+	}
+	return true;
+}
+
+bool Context::isVisible(const Vec3& _min, const Vec3& _max)
+{
+#if 0
+ 	const Vec3 points[] = {
+		Vec3(_min.x, _min.y, _min.z),
+		Vec3(_max.x, _min.y, _min.z),
+		Vec3(_max.x, _max.y, _min.z),
+		Vec3(_min.x, _max.y, _min.z),
+
+		Vec3(_min.x, _min.y, _max.z),
+		Vec3(_max.x, _min.y, _max.z),
+		Vec3(_max.x, _max.y, _max.z),
+		Vec3(_min.x, _max.y, _max.z)
+	};
+
+ 	for (int i = 0; i < m_cullFrustumCount; ++i) {
+		const Vec4& plane = m_cullFrustum[i];
+		bool inside = false;
+		for (int j = 0; j < 8; ++j) {
+			if (Distance(plane, points[j]) > 0.0f) {
+				inside = true;
+				break;
+			}
+		}
+		if (!inside) {
+			return false;
+		}
+	}
+	return true;
+#else
+	for (int i = 0; i < m_cullFrustumCount; ++i) {
+		const Vec4& plane = m_cullFrustum[i];
+		float d = 
+			Max(_min.x * plane.x, _max.x * plane.x) +
+			Max(_min.y * plane.y, _max.y * plane.y) +
+			Max(_min.z * plane.z, _max.z * plane.z) -
+			plane.w
+			;
+		if (d < 0.0f) {
+			return false;
+		}
+		
+	}
+	return true;
+#endif
 }
 
 Context::VertexList* Context::getCurrentVertexList()
@@ -1873,7 +2181,7 @@ U32 Context::getPrimitiveCount(DrawPrimitiveType _type) const
 		U32 j = i * DrawPrimitive_Count + _type;
 		ret += m_vertexData[0][j]->size() + m_vertexData[1][j]->size();
 	}
-	ret /= DrawPrimitiveSize[_type];
+	ret /= VertsPerDrawPrimitive[_type];
 	return ret;
 }
 

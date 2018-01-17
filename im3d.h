@@ -4,15 +4,15 @@
 
 #include "im3d_config.h"
 
-#define IM3D_VERSION "1.08"
+#define IM3D_VERSION "1.09"
 
 #ifndef IM3D_ASSERT
 	#include <cassert>
 	#define IM3D_ASSERT(e) assert(e)
 #endif
 
-#ifndef IM3D_VERTEX_ALIGNEMENT
-	#define IM3D_VERTEX_ALIGNEMENT 4
+#ifndef IM3D_VERTEX_ALIGNMENT
+	#define IM3D_VERTEX_ALIGNMENT 4
 #endif
 
 namespace Im3d {
@@ -166,6 +166,10 @@ bool  GizmoRotation(Id _id, float _rotation_[3*3], bool _local = false);
 bool  GizmoScale(Id _id, float _scale_[3]);
 bool  Gizmo(Id _id, float _transform_[4*4]);
 bool  Gizmo(Id _id, float _translation_[3], float _rotation_[3*3], float _scale_[3]);
+
+// Visibility tests. The application must set a culling frustum via AppData. 
+bool  IsVisible(const Vec3& _origin, float _radius); // sphere
+bool  IsVisible(const Vec3& _min, const Vec3& _max); // axis-aligned bounding box
 
 // Get/set the current context. All Im3d calls affect the currently bound context.
 Context& GetContext();
@@ -340,7 +344,7 @@ struct Color
 	float getA() const                                                       { return get(0); }
 };
 
-struct alignas(IM3D_VERTEX_ALIGNEMENT) VertexData
+struct alignas(IM3D_VERTEX_ALIGNMENT) VertexData
 {
 	Vec4   m_positionSize; // xyz = position, w = size
 	Color  m_color;        // rgba8 (MSB = r)
@@ -357,13 +361,6 @@ enum DrawPrimitiveType
 	DrawPrimitive_Points,
 
 	DrawPrimitive_Count
-};
-const int DrawPrimitiveSize[DrawPrimitive_Count] = 
-{
- // vertices per draw primitive type
-	3, //DrawPrimitive_Triangles,
-	2, //DrawPrimitive_Lines,
-	1  //DrawPrimitive_Points,
 };
 
 struct DrawList
@@ -394,24 +391,41 @@ enum Key
 
 	Action_Count
 };
+
+enum FrustumPlane
+{
+	FrustumPlane_Near,
+	FrustumPlane_Far,
+	FrustumPlane_Top,
+	FrustumPlane_Right,
+	FrustumPlane_Bottom,
+	FrustumPlane_Left,
+
+	FrustumPlane_Count
+};
+
 struct AppData
 {
-	bool   m_keyDown[Key_Count];  // Application-provided key states.
-
-	Vec3   m_cursorRayOrigin;     // World space cursor ray origin.
-	Vec3   m_cursorRayDirection;  // World space cursor ray direction.
-	Vec3   m_worldUp;             // World space 'up' vector.
-	Vec3   m_viewOrigin;          // World space render origin (camera position).
-	Vec2   m_viewportSize;        // Viewport size (pixels).
-	float  m_projScaleY;          // Scale factor used to convert from pixel size -> world scale; use tan(fov) for perspective projections, far plane height for ortho.
-	bool   m_projOrtho;           // If the projection matrix is orthographic.
-	float  m_deltaTime;           // Time since previous frame (seconds).
-	float  m_snapTranslation;     // Snap value for translation gizmos (world units). 0 = disabled.
-	float  m_snapRotation;        // Snap value for rotation gizmos (radians). 0 = disabled.
-	float  m_snapScale;           // Snap value for scale gizmos. 0 = disabled.
-	void*  m_appData;             // App-specific data (useful for passing app context to drawCallback).
+	bool   m_keyDown[Key_Count];               // Key states.
+	Vec4   m_cullFrustum[FrustumPlane_Count];  // Frustum planes for culling (if culling enabled).
+	Vec3   m_cursorRayOrigin;                  // World space cursor ray origin.
+	Vec3   m_cursorRayDirection;               // World space cursor ray direction.
+	Vec3   m_worldUp;                          // World space 'up' vector.
+	Vec3   m_viewOrigin;                       // World space render origin (camera position).
+	Vec2   m_viewportSize;                     // Viewport size (pixels).
+	float  m_projScaleY;                       // Scale factor used to convert from pixel size -> world scale; use tan(fov) for perspective projections, far plane height for ortho.
+	bool   m_projOrtho;                        // If the projection matrix is orthographic.
+	float  m_deltaTime;                        // Time since previous frame (seconds).
+	float  m_snapTranslation;                  // Snap value for translation gizmos (world units). 0 = disabled.
+	float  m_snapRotation;                     // Snap value for rotation gizmos (radians). 0 = disabled.
+	float  m_snapScale;                        // Snap value for scale gizmos. 0 = disabled.
+	void*  m_appData;                          // App-specific data.
 
 	DrawPrimitivesCallback* drawCallback; // e.g. void Im3d_Draw(const DrawList& _drawList)
+
+	// Extract cull frustum planes from the view-projection matrix. 
+	// Set _ndcZNegativeOneToOne = true if the proj matrix maps z from [-1,1] (OpenGL style).
+	void setCullFrustum(const Mat4& _viewProj, bool _ndcZNegativeOneToOne);
 };
 
 // Minimal vector.
@@ -556,6 +570,11 @@ public:
 	bool isKeyDown(Key _key) const     { return m_keyDownCurr[_key]; }
 	bool wasKeyPressed(Key _key) const { return m_keyDownCurr[_key] && !m_keyDownPrev[_key]; }
 
+	// Visibiity tests for culling.
+	bool isVisible(const VertexData* _vdata, DrawPrimitiveType _prim); // per-vertex
+	bool isVisible(const Vec3& _origin, float _radius);                // sphere
+	bool isVisible(const Vec3& _min, const Vec3& _max);                // axis-aligned box
+
  // gizmo state
 	bool               m_gizmoLocal;               // Global mode selection for gizmos.
 	GizmoMode          m_gizmoMode;                //               "
@@ -605,11 +624,15 @@ private:
 	DrawPrimitiveType   m_primType;
 	U32                 m_firstVertThisPrim;        // Index of the first vertex pushed during this primitive.
 	U32                 m_vertCountThisPrim;        // # calls to vertex() since the last call to begin().
+	Vec3                m_minVertThisPrim;
+	Vec3                m_maxVertThisPrim;
 
  // app data
 	AppData             m_appData;
 	bool                m_keyDownCurr[Key_Count];   // Key state captured during reset().
 	bool                m_keyDownPrev[Key_Count];   // Key state from previous frame.
+	Vec4                m_cullFrustum[FrustumPlane_Count];  // Optimized frustum planes from m_appData.m_cullFrustum.
+	int                 m_cullFrustumCount;         // # valid frustum planes in m_cullFrustum.
 
 
 	// Sort primitive data.
@@ -699,6 +722,9 @@ inline bool GizmoRotation(const char* _id, float _rotation_[3*3], bool _local)  
 inline bool GizmoScale(const char* _id, float _scale_[3])                                            { return GizmoScale(MakeId(_id), _scale_);                       }
 inline bool Gizmo(const char* _id, float _translation_[3], float _rotation_[3*3], float _scale_[3])  { return Gizmo(MakeId(_id), _translation_, _rotation_, _scale_); }
 inline bool Gizmo(const char* _id, float _transform_[4*4])                                           { return Gizmo(MakeId(_id), _transform_);                        }
+
+inline bool IsVisible(const Vec3& _origin, float _radius)                    { return GetContext().isVisible(_origin, _radius); }
+inline bool IsVisible(const Vec3& _min, const Vec3& _max)                    { return GetContext().isVisible(_min, _max);       }
 
 inline Context& GetContext()                                                 { return *internal::g_CurrentContext; }
 inline void     SetContext(Context& _ctx)                                    { internal::g_CurrentContext = &_ctx; }
