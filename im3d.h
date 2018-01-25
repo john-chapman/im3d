@@ -412,6 +412,7 @@ struct AppData
 	Vec3   m_cursorRayDirection;               // World space cursor ray direction.
 	Vec3   m_worldUp;                          // World space 'up' vector.
 	Vec3   m_viewOrigin;                       // World space render origin (camera position).
+	Vec3   m_viewDirection;                    // World space view direction.
 	Vec2   m_viewportSize;                     // Viewport size (pixels).
 	float  m_projScaleY;                       // Scale factor used to convert from pixel size -> world scale; use tan(fov) for perspective projections, far plane height for ortho.
 	bool   m_projOrtho;                        // If the projection matrix is orthographic.

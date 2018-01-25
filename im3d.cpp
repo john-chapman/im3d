@@ -63,7 +63,7 @@
 	#define if_unlikely(e) if(!!(e))
 #endif
 
-//#define IM3D_GIZMO_DEBUG
+#define IM3D_GIZMO_DEBUG
 
 using namespace Im3d;
 
@@ -740,7 +740,7 @@ bool Im3d::GizmoTranslation(Id _id, float _translation_[3], bool _local)
 		if (planes[3].m_id == ctx.m_activeId) {
 			viewNormal = storedViewNormal;
 		} else {
-			viewNormal = Normalize(drawAt - appData.m_viewOrigin);
+			viewNormal = ctx.getAppData().m_viewDirection;
 		}
 		ret |= ctx.gizmoPlaneTranslation_Behavior(planes[3].m_id, drawAt, viewNormal, worldSize, outVec3);
 		if (currentId != ctx.m_activeId) {
@@ -849,7 +849,7 @@ bool Im3d::GizmoRotation(Id _id, float _rotation_[3*3], bool _local)
 		} 
 	}
 	if (!(ctx.m_activeId == axes[0].m_id || ctx.m_activeId == axes[1].m_id || ctx.m_activeId == axes[2].m_id)) {
-		Vec3 viewNormal = Normalize(origin - ctx.getAppData().m_viewOrigin);
+		Vec3 viewNormal = ctx.getAppData().m_viewDirection;
 		float angle = 0.0f;
 		if (intersects && ctx.gizmoAxislAngle_Behavior(viewId, origin, viewNormal, worldRadius, worldSize, &angle)) {
 			*outMat3 = Rotation(viewNormal, angle) * storedRotation;
@@ -1402,6 +1402,8 @@ void Context::reset()
 	m_sortCalled = false;
 	m_drawCalled = false;
 	
+	m_appData.m_viewDirection = Normalize(m_appData.m_viewDirection);
+
  // copy keydown array internally so that we can make a delta to detect key presses
 	memcpy(m_keyDownPrev, m_keyDownCurr,       Key_Count); // \todo avoid this copy, use an index
 	memcpy(m_keyDownCurr, m_appData.m_keyDown, Key_Count); // must copy in case m_keyDown is updated after reset (e.g. by an app callback)
@@ -1418,7 +1420,7 @@ void Context::reset()
 		}
 		m_cullFrustum[m_cullFrustumCount++] = plane;
 	}
-
+	
  // update gizmo modes
 	if (wasKeyPressed(Action_GizmoTranslation)) {
 		m_gizmoMode = GizmoMode_Translation;
@@ -1841,9 +1843,13 @@ bool Context::gizmoAxisTranslation_Behavior(Id _id, const Vec3& _origin, const V
 
 void Context::gizmoAxisTranslation_Draw(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, Color _color)
 {
-	Color color = _color;
-	float aligned = 1.0f - fabs(Dot(_axis, Normalize(m_appData.m_viewOrigin - _origin)));
+	Vec3 viewDir = m_appData.m_projOrtho
+		? m_appData.m_viewDirection
+		: Normalize(m_appData.m_viewOrigin - _origin)
+		;
+	float aligned = 1.0f - fabs(Dot(_axis, viewDir));
 	aligned = Remap(aligned, 0.05f, 0.1f);
+	Color color = _color;
 	if (_id == m_activeId) {
 		color = Color_GizmoHighlight;
 		pushEnableSorting(false);
@@ -1923,9 +1929,13 @@ bool Context::gizmoPlaneTranslation_Behavior(Id _id, const Vec3& _origin, const 
 }
 void Context::gizmoPlaneTranslation_Draw(Id _id, const Vec3& _origin, const Vec3& _normal, float _worldSize, Color _color)
 {
-	Color color = _color;
-	float aligned = fabs(Dot(_normal, Normalize(getAppData().m_viewOrigin - _origin)));
+	Vec3 viewDir = m_appData.m_projOrtho
+		? m_appData.m_viewDirection
+		: Normalize(m_appData.m_viewOrigin - _origin)
+		;
+	float aligned = fabs(Dot(_normal, viewDir));
 	aligned = Remap(aligned, 0.1f, 0.2f);
+	Color color = _color;
 	color.setA(color.getA() * aligned);
 	pushColor(color);
 		pushAlpha(_id == m_hotId ? 0.7f : 0.1f * getAlpha());
@@ -1937,10 +1947,13 @@ void Context::gizmoPlaneTranslation_Draw(Id _id, const Vec3& _origin, const Vec3
 
 bool Context::gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldRadius, float _worldSize, float* _out_)
 {
-	Ray ray(m_appData.m_cursorRayOrigin, m_appData.m_cursorRayDirection);
-	Vec3 viewDir = Normalize(m_appData.m_viewOrigin - _origin);
+	Vec3 viewDir = m_appData.m_projOrtho
+		? m_appData.m_viewDirection
+		: Normalize(m_appData.m_viewOrigin - _origin)
+		;
 	float aligned = fabs(Dot(_axis, viewDir));
 	float tr = 0.0f;
+	Ray ray(m_appData.m_cursorRayOrigin, m_appData.m_cursorRayDirection);
 	bool intersects = false;
 	Vec3 intersection;
 	if (aligned < 0.05f) {
@@ -2005,7 +2018,10 @@ bool Context::gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& 
 }
 void Context::gizmoAxislAngle_Draw(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldRadius, float _angle, Color _color)
 {
-	Vec3 viewDir = Normalize(m_appData.m_viewOrigin - _origin);
+	Vec3 viewDir = m_appData.m_projOrtho
+		? m_appData.m_viewDirection
+		: Normalize(m_appData.m_viewOrigin - _origin)
+		;
 	float aligned = fabs(Dot(_axis, viewDir));
 	
 	Vec3& storedVec = m_gizmoStateVec3;
@@ -2020,7 +2036,7 @@ void Context::gizmoAxislAngle_Draw(Id _id, const Vec3& _origin, const Vec3& _axi
 			Vec3 intersection = ray.m_origin + ray.m_direction * tr;
 			Vec3 delta = Normalize(intersection - _origin);
 		
-			pushAlpha(Remap(fabs(Dot(Normalize(_origin - m_appData.m_viewOrigin), _axis)), 1.0f, 0.99f));
+			pushAlpha(Remap(aligned, 1.0f, 0.99f));
 			pushEnableSorting(false);
 			begin(PrimitiveMode_Lines);
 				vertex(_origin - _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
@@ -2060,7 +2076,7 @@ void Context::gizmoAxislAngle_Draw(Id _id, const Vec3& _origin, const Vec3& _axi
 		 // post-modify the alpha for parts of the ring occluded by the sphere
 			VertexData& vd = getCurrentVertexList()->back();
 			Vec3 v = vd.m_positionSize;
-			float d = Dot(Normalize(v - _origin), viewDir); 
+			float d = Dot(Normalize(_origin - v), m_appData.m_viewDirection); 
 			d = Max(Remap(d, 0.1f, 0.2f), aligned);
 			vd.m_color.setA(vd.m_color.getA() * d);
 		}
@@ -2126,9 +2142,13 @@ bool Context::gizmoAxisScale_Behavior(Id _id, const Vec3& _origin, const Vec3& _
 }
 void Context::gizmoAxisScale_Draw(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, Color _color)
 {
-	Color color = _color;
-	float aligned = 1.0f - fabs(Dot(_axis, Normalize(m_appData.m_viewOrigin - _origin)));
+	Vec3 viewDir = m_appData.m_projOrtho
+		? m_appData.m_viewDirection
+		: Normalize(m_appData.m_viewOrigin - _origin)
+		;
+	float aligned = 1.0f - fabs(Dot(_axis, viewDir));
 	aligned = Remap(aligned, 0.05f, 0.1f);
+	Color color = _color;
 	if (_id == m_activeId) {
 		color = Color_GizmoHighlight;
 		pushEnableSorting(false);

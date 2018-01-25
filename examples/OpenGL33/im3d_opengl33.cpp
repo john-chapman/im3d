@@ -75,11 +75,12 @@ void Im3d_Update()
 {
 	AppData& ad = GetAppData();
 
-	ad.m_deltaTime    = g_Example->m_deltaTime;
-	ad.m_viewportSize = Vec2((float)g_Example->m_width, (float)g_Example->m_height);
-	ad.m_viewOrigin   = g_Example->m_camPos; // for VR use the head position
-	ad.m_worldUp      = Vec3(0.0f, 1.0f, 0.0f); // used internally for generating orthonormal bases
-	ad.m_projOrtho    = g_Example->m_camOrtho; 
+	ad.m_deltaTime     = g_Example->m_deltaTime;
+	ad.m_viewportSize  = Vec2((float)g_Example->m_width, (float)g_Example->m_height);
+	ad.m_viewOrigin    = g_Example->m_camPos; // for VR use the head position
+	ad.m_viewDirection = g_Example->m_camDir;
+	ad.m_worldUp       = Vec3(0.0f, 1.0f, 0.0f); // used internally for generating orthonormal bases
+	ad.m_projOrtho     = g_Example->m_camOrtho; 
 	
  // m_projScaleY controls how gizmos are scaled in world space to maintain a constant screen height
 	ad.m_projScaleY   = g_Example->m_camOrtho
