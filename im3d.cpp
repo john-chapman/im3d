@@ -516,7 +516,7 @@ void Im3d::DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int 
 }
 void Im3d::DrawPrism(const Vec3& _start, const Vec3& _end, float _radius, int _sides)
 {
-	IM3D_ASSERT(_sides > 2);
+	_sides = Max(_sides, 2);
 	Context& ctx = GetContext();
 	#if IM3D_CULL_PRIMITIVES
 		if (!ctx.isVisible((_start + _end) * 0.5f, Max(Length2(_start - _end), _radius))) {
@@ -571,7 +571,7 @@ void Im3d::DrawArrow(const Vec3& _start, const Vec3& _end, float _headLength, fl
 }
 
 
-static const U32 kFnv1aPrime32 = 0x01000193u;
+static constexpr U32 kFnv1aPrime32 = 0x01000193u;
 static U32 Hash(const char* _buf, int _buflen, U32 _base)
 {
 	U32 ret = _base;
@@ -613,7 +613,8 @@ inline static float Snap(float _val, float _snap)
 	return _val;
 }
 
-inline static Vec3 Snap(const Vec3& _val, float _snap) {
+inline static Vec3 Snap(const Vec3& _val, float _snap) 
+{
 	if (_snap > 0.0f) {
 		return Vec3(floorf(_val.x / _snap) * _snap, floorf(_val.y / _snap) * _snap, floorf(_val.z / _snap) * _snap);
 	}
