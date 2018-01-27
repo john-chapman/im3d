@@ -4,7 +4,7 @@
 
 #include "im3d_config.h"
 
-#define IM3D_VERSION "1.09"
+#define IM3D_VERSION "1.10"
 
 #ifndef IM3D_ASSERT
 	#include <cassert>
@@ -167,7 +167,7 @@ bool  GizmoScale(Id _id, float _scale_[3]);
 bool  Gizmo(Id _id, float _transform_[4*4]);
 bool  Gizmo(Id _id, float _translation_[3], float _rotation_[3*3], float _scale_[3]);
 
-// Visibility tests. The application must set a culling frustum via AppData. 
+// Visibility tests. The application must set a culling frustum via AppData.
 bool  IsVisible(const Vec3& _origin, float _radius); // sphere
 bool  IsVisible(const Vec3& _min, const Vec3& _max); // axis-aligned bounding box
 
@@ -177,7 +177,7 @@ void     SetContext(Context& _ctx);
 
 struct Vec2
 {
-	float x, y; 
+	float x, y;
 	Vec2()                                                                   {}
 	Vec2(float _xy): x(_xy), y(_xy)                                          {}
 	Vec2(float _x, float _y): x(_x), y(_y)                                   {}
@@ -188,7 +188,7 @@ struct Vec2
 	#endif
 };
 struct Vec3
-{ 
+{
 	float x, y, z;
 	Vec3()                                                                   {}
 	Vec3(float _xyz): x(_xyz), y(_xyz), z(_xyz)                              {}
@@ -202,7 +202,7 @@ struct Vec3
 	#endif
 };
 struct Vec4
-{ 
+{
 	float x, y, z, w;
 	Vec4()                                                                   {}
 	Vec4(float _xyzw): x(_xyzw), y(_xyzw), z(_xyzw), w(_xyzw)                {}
@@ -237,7 +237,7 @@ struct Mat3
 
 	Vec3 getScale() const;
 	void setScale(const Vec3& _scale);
-	
+
 	float operator()(int _row, int _col) const
 	{
 		#ifdef IM3D_MATRIX_ROW_MAJOR
@@ -248,7 +248,7 @@ struct Mat3
 		return m[i];
 	}
 	float& operator()(int _row, int _col)
-	{ 
+	{
 		#ifdef IM3D_MATRIX_ROW_MAJOR
 			int i = _row * 3 + _col;
 		#else
@@ -256,7 +256,7 @@ struct Mat3
 		#endif
 		return m[i];
 	}
-	
+
 	#ifdef IM3D_MAT3_APP
 		IM3D_MAT3_APP
 	#endif
@@ -288,7 +288,7 @@ struct Mat4
 	void setRotation(const Mat3& _rotation);
 	Vec3 getScale() const;
 	void setScale(const Vec3& _scale);
-	
+
 	float operator()(int _row, int _col) const
 	{
 		#ifdef IM3D_MATRIX_ROW_MAJOR
@@ -299,7 +299,7 @@ struct Mat4
 		return m[i];
 	}
 	float& operator()(int _row, int _col)
-	{ 
+	{
 		#ifdef IM3D_MATRIX_ROW_MAJOR
 			int i = _row * 4 + _col;
 		#else
@@ -307,7 +307,7 @@ struct Mat4
 		#endif
 		return m[i];
 	}
-	
+
 	#ifdef IM3D_MAT4_APP
 		IM3D_MAT4_APP
 	#endif
@@ -412,6 +412,7 @@ struct AppData
 	Vec3   m_cursorRayDirection;               // World space cursor ray direction.
 	Vec3   m_worldUp;                          // World space 'up' vector.
 	Vec3   m_viewOrigin;                       // World space render origin (camera position).
+	Vec3   m_viewDirection;                    // World space view direction.
 	Vec2   m_viewportSize;                     // Viewport size (pixels).
 	float  m_projScaleY;                       // Scale factor used to convert from pixel size -> world scale; use tan(fov) for perspective projections, far plane height for ortho.
 	bool   m_projOrtho;                        // If the projection matrix is orthographic.
@@ -423,7 +424,7 @@ struct AppData
 
 	DrawPrimitivesCallback* drawCallback; // e.g. void Im3d_Draw(const DrawList& _drawList)
 
-	// Extract cull frustum planes from the view-projection matrix. 
+	// Extract cull frustum planes from the view-projection matrix.
 	// Set _ndcZNegativeOneToOne = true if the proj matrix maps z from [-1,1] (OpenGL style).
 	void setCullFrustum(const Mat4& _viewProj, bool _ndcZNegativeOneToOne);
 };
@@ -503,22 +504,22 @@ public:
 	Color       getColor() const                 { return m_colorStack.back();     }
 	void        pushColor(Color _color)          { m_colorStack.push_back(_color); }
 	void        popColor()                       { IM3D_ASSERT(m_colorStack.size() > 1); m_colorStack.pop_back(); }
-	
+
 	void        setAlpha(float _alpha)           { m_alphaStack.back() = _alpha;   }
 	float       getAlpha() const                 { return m_alphaStack.back();     }
 	void        pushAlpha(float _alpha)          { m_alphaStack.push_back(_alpha); }
 	void        popAlpha()                       { IM3D_ASSERT(m_alphaStack.size() > 1); m_alphaStack.pop_back(); }
-	
+
 	void        setSize(float _size)             { m_sizeStack.back() = _size;     }
 	float       getSize() const                  { return m_sizeStack.back();      }
 	void        pushSize(float _size)            { m_sizeStack.push_back(_size);   }
 	void        popSize()                        { IM3D_ASSERT(m_sizeStack.size() > 1); m_sizeStack.pop_back(); }
-	
+
 	void        setEnableSorting(bool _enable);
 	bool        getEnableSorting() const         { return m_enableSortingStack.back(); }
 	void        pushEnableSorting(bool _enable);
 	void        popEnableSorting();
-	
+
 	Id          getLayerId() const               { return m_layerIdStack.back(); }
 	void        pushLayerId(Id _layer);
 	void        popLayerId();
@@ -527,7 +528,7 @@ public:
 	const Mat4& getMatrix() const                { return m_matrixStack.back();    }
 	void        pushMatrix(const Mat4& _mat4)    { m_matrixStack.push_back(_mat4); }
 	void        popMatrix()                      { IM3D_ASSERT(m_matrixStack.size() > 1); m_matrixStack.pop_back(); }
-	
+
 	void        setId(Id _id)                    { m_idStack.back() = _id;   }
 	Id          getId() const                    { return m_idStack.back();  }
 	void        pushId(Id _id)                   { m_idStack.push_back(_id); }
@@ -558,7 +559,7 @@ public:
 	float worldSizeToPixels(const Vec3& _position, float _pixels);
 	// Blend between _min and _max based on distance betwen _position and view origin.
 	int estimateLevelOfDetail(const Vec3& _position, float _worldSize, int _min = 4, int _max = 256);
-	
+
 	// Make _id hot if _depth < m_hotDepth && _intersects.
 	bool makeHot(Id _id, float _depth, bool _intersects);
 	// Make _id active.
@@ -591,7 +592,7 @@ public:
 	float              m_gizmoSizePixels;          // Thickness of gizmo lines.
 
 
- // stats/debugging	
+ // stats/debugging
 
 	// Return the total number of primitives (sorted + unsorted) of the given _type in all layers.
 	U32 getPrimitiveCount(DrawPrimitiveType _type) const;

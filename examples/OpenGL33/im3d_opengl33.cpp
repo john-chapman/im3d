@@ -75,11 +75,12 @@ void Im3d_Update()
 {
 	AppData& ad = GetAppData();
 
-	ad.m_deltaTime    = g_Example->m_deltaTime;
-	ad.m_viewportSize = Vec2((float)g_Example->m_width, (float)g_Example->m_height);
-	ad.m_viewOrigin   = g_Example->m_camPos; // for VR use the head position
-	ad.m_worldUp      = Vec3(0.0f, 1.0f, 0.0f); // used internally for generating orthonormal bases
-	ad.m_projOrtho    = g_Example->m_camOrtho; 
+	ad.m_deltaTime     = g_Example->m_deltaTime;
+	ad.m_viewportSize  = Vec2((float)g_Example->m_width, (float)g_Example->m_height);
+	ad.m_viewOrigin    = g_Example->m_camPos; // for VR use the head position
+	ad.m_viewDirection = g_Example->m_camDir;
+	ad.m_worldUp       = Vec3(0.0f, 1.0f, 0.0f); // used internally for generating orthonormal bases
+	ad.m_projOrtho     = g_Example->m_camOrtho; 
 	
  // m_projScaleY controls how gizmos are scaled in world space to maintain a constant screen height
 	ad.m_projScaleY   = g_Example->m_camOrtho
@@ -126,8 +127,8 @@ void Im3d_Update()
 	ad.m_keyDown[Im3d::Key_S/*Action_GizmoScale*/]       = ctrlDown && (GetAsyncKeyState(0x53) & 0x8000) != 0;
 
  // Enable gizmo snapping by setting the translation/rotation/scale increments to be > 0
-	ad.m_snapTranslation = ctrlDown ? 0.1f : 0.0f;
-	ad.m_snapRotation    = ctrlDown ? Im3d::Radians(15.0f) : 0.0f;
+	ad.m_snapTranslation = ctrlDown ? 0.5f : 0.0f;
+	ad.m_snapRotation    = ctrlDown ? Im3d::Radians(30.0f) : 0.0f;
 	ad.m_snapScale       = ctrlDown ? 0.5f : 0.0f;
 
 	Im3d::NewFrame();
