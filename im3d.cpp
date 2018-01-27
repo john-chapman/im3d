@@ -63,7 +63,9 @@
 	#define if_unlikely(e) if(!!(e))
 #endif
 
-#define IM3D_GIZMO_DEBUG
+// Internal config/debugging
+#define IM3D_RELATIVE_SNAP 0          // snap relative to the gizmo stored position/rotation/scale (else snap is absolute)
+#define IM3D_GIZMO_DEBUG   0          // draw debug bounds for gizmo intersections
 
 using namespace Im3d;
 
@@ -1794,11 +1796,23 @@ int Context::estimateLevelOfDetail(const Vec3& _position, float _worldSize, int 
 
 bool Context::gizmoAxisTranslation_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, Vec3* _out_)
 {
+	if (_id != m_hotId) {
+	 // disable behavior when aligned
+		Vec3 viewDir = m_appData.m_projOrtho
+			? m_appData.m_viewDirection
+			: Normalize(m_appData.m_viewOrigin - _origin)
+			;
+		float aligned = 1.0f - fabs(Dot(_axis, viewDir));
+		if (aligned < 0.01f) {
+			return false;
+		}
+	}
+
 	Ray ray(m_appData.m_cursorRayOrigin, m_appData.m_cursorRayDirection);
 	Line axisLine(_origin, _axis);
 	Capsule axisCapsule(_origin + _axis * (0.2f * _worldHeight), _origin + _axis * _worldHeight, _worldSize);
 
-	#ifdef IM3D_GIZMO_DEBUG
+	#if IM3D_GIZMO_DEBUG
 		if (_id == m_hotId) {
 			PushDrawState();
 			EnableSorting(false);
@@ -1815,9 +1829,14 @@ bool Context::gizmoAxisTranslation_Behavior(Id _id, const Vec3& _origin, const V
 		if (isKeyDown(Action_Select)) {
 			float tr, tl;
 			Nearest(ray, axisLine, tr, tl);
-			tl = Snap(tl, m_appData.m_snapTranslation);
-			Vec3 snappedOrigin = Snap(storedPosition, m_appData.m_snapTranslation); // always snap the origin = prevent issues when enabling snap after the gizmo became hot
-			*_out_ = *_out_ + _axis * tl - snappedOrigin;
+			#if IM3D_RELATIVE_SNAP
+				tl = Snap(tl, m_appData.m_snapTranslation);
+				Vec3 snappedOrigin = Snap(storedPosition, m_appData.m_snapTranslation); // always snap the origin = prevent issues when enabling snap after the gizmo became hot
+				*_out_ = *_out_ + _axis * tl - snappedOrigin;
+			#else
+				*_out_ = Snap(*_out_ + _axis * tl - storedPosition, m_appData.m_snapTranslation);
+			#endif
+			
 			return true;
 		} else {
 			makeActive(Id_Invalid);
@@ -1879,7 +1898,7 @@ bool Context::gizmoPlaneTranslation_Behavior(Id _id, const Vec3& _origin, const 
 	Ray ray(m_appData.m_cursorRayOrigin, m_appData.m_cursorRayDirection);
 	Plane plane(_normal, _origin);
 
-	#ifdef IM3D_GIZMO_DEBUG
+	#if IM3D_GIZMO_DEBUG
 		if (_id == m_hotId) {
 			PushDrawState();
 			EnableSorting(false);
@@ -1902,13 +1921,17 @@ bool Context::gizmoPlaneTranslation_Behavior(Id _id, const Vec3& _origin, const 
 	}
 	Vec3 intersection = ray.m_origin + ray.m_direction * tr;
 	intersects &= AllLess(Abs(intersection - _origin), Vec3(_worldSize));
-	intersection = Snap(intersection, plane, m_appData.m_snapTranslation);
 	
 	Vec3& storedPosition = m_gizmoStateVec3;
 	
 	if (_id == m_activeId) {
 		if (isKeyDown(Action_Select)) {
-			*_out_ = intersection + storedPosition;
+			#if IM3D_RELATIVE_SNAP
+				intersection = Snap(intersection, plane, m_appData.m_snapTranslation);
+				*_out_ = intersection + storedPosition;
+			#else
+				*_out_ = Snap(intersection + storedPosition, plane, m_appData.m_snapTranslation);
+			#endif
 			return true;
 		} else {
 			makeActive(Id_Invalid);
@@ -1964,7 +1987,7 @@ bool Context::gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& 
 		Capsule capsule(_origin + capsuleAxis * _worldRadius, _origin - capsuleAxis * _worldRadius, _worldSize * 0.5f);
 		intersects = Intersect(ray, capsule, tr, t1);
 		intersection = ray.m_origin + ray.m_direction * tr;
-		#ifdef IM3D_GIZMO_DEBUG
+		#if IM3D_GIZMO_DEBUG
 			if (_id == m_hotId) {
 				PushDrawState();
 				SetColor(Im3d::Color_Magenta);
@@ -1995,7 +2018,11 @@ bool Context::gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& 
 			Vec3 delta = Normalize(intersection - _origin);
 			float sign = Dot(Cross(storedVec, delta), _axis);
 			float angle = acosf(Clamp(Dot(delta, storedVec), -1.0f, 1.0f));
-			*_out_ = storedAngle + copysignf(Snap(angle, m_appData.m_snapRotation), sign);
+			#if IM3D_RELATIVE_SNAP
+				*_out_ = storedAngle + copysignf(Snap(angle, m_appData.m_snapRotation), sign);
+			#else
+				*_out_ = Snap(storedAngle + copysignf(angle, sign), m_appData.m_snapRotation);
+			#endif
 			return true;
 		} else {
 			makeActive(Id_Invalid);
@@ -2093,7 +2120,7 @@ bool Context::gizmoAxisScale_Behavior(Id _id, const Vec3& _origin, const Vec3& _
 	Line axisLine(_origin, _axis);
 	Capsule axisCapsule(_origin + _axis * (0.2f * _worldHeight), _origin + _axis * _worldHeight, _worldSize);
 
-	#ifdef IM3D_GIZMO_DEBUG
+	#if IM3D_GIZMO_DEBUG
 		if (_id == m_hotId) {
 			PushDrawState();
 			EnableSorting(false);
@@ -2113,9 +2140,16 @@ bool Context::gizmoAxisScale_Behavior(Id _id, const Vec3& _origin, const Vec3& _
 			Nearest(ray, axisLine, tr, tl);
 			Vec3 intersection = _axis * tl;
 			Vec3 delta = intersection - storedPosition;
-			float scale = Snap(Length(delta) / _worldHeight, m_appData.m_snapTranslation);
 			float sign = Dot(delta, _axis);
-			*_out_ = storedScale * Max(1.0f + copysignf(scale, sign), 1e-3f);
+			#if 1
+			 // relative snap
+				float scale = Snap(Length(delta) / _worldHeight, m_appData.m_snapScale);
+				*_out_ = storedScale * Max(1.0f + copysignf(scale, sign), 1e-3f);
+			#else
+			 // absolute snap
+				float scale = Length(delta) / _worldHeight;
+				*_out_ = Max(Snap(storedScale * (1.0f + copysignf(scale, sign)), m_appData.m_snapScale), 1e-3f);
+			#endif
 			return true;
 		} else {
 			makeActive(Id_Invalid);
