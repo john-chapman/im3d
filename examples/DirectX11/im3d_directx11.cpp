@@ -54,7 +54,7 @@ void Im3d_Draw(const Im3d::DrawList& _drawList)
 	if (_drawList.m_layerId == Im3d::MakeId("NamedLayer")) {
 	 // The application may group primitives into layers, which can be used to change the draw state (e.g. enable depth testing, use a different shader)
 	}
-	
+
  // setting the framebuffer, viewport and pipeline states can (and should) be done prior to calling Im3d::Draw
 	D3D11_VIEWPORT viewport = {
 		0.0f, 0.0f, // TopLeftX, TopLeftY
@@ -76,16 +76,16 @@ void Im3d_Draw(const Im3d::DrawList& _drawList)
  // upload vertex data
 	static U32 s_vertexBufferSize = 0;
 	if (!g_Im3dVertexBuffer || s_vertexBufferSize < _drawList.m_vertexCount) {
-		if (g_Im3dVertexBuffer) { 
-			g_Im3dVertexBuffer->Release(); 
-			g_Im3dVertexBuffer = nullptr;	
+		if (g_Im3dVertexBuffer) {
+			g_Im3dVertexBuffer->Release();
+			g_Im3dVertexBuffer = nullptr;
 		}
 		s_vertexBufferSize = _drawList.m_vertexCount;
 		g_Im3dVertexBuffer = CreateVertexBuffer(s_vertexBufferSize * sizeof(Im3d::VertexData), D3D11_USAGE_DYNAMIC);
 	}
 	memcpy(MapBuffer(g_Im3dVertexBuffer, D3D11_MAP_WRITE_DISCARD), _drawList.m_vertexData, _drawList.m_vertexCount * sizeof(Im3d::VertexData));
 	UnmapBuffer(g_Im3dVertexBuffer);
-	
+
  // select shader/primitive topo
 	switch (_drawList.m_primType) {
 		case Im3d::DrawPrimitive_Points:
@@ -116,7 +116,7 @@ void Im3d_Draw(const Im3d::DrawList& _drawList)
 	UINT offset = 0;
 	ctx->IASetVertexBuffers(0, 1, &g_Im3dVertexBuffer, &stride, &offset);
 	ctx->IASetInputLayout(g_Im3dInputLayout);
-	ctx->VSSetConstantBuffers(0, 1, &g_Im3dConstantBuffer);		
+	ctx->VSSetConstantBuffers(0, 1, &g_Im3dConstantBuffer);
 	ctx->Draw(_drawList.m_vertexCount, 0);
 
 	ctx->VSSetShader(nullptr, nullptr, 0);
@@ -131,17 +131,18 @@ void Im3d_Update()
 {
 	AppData& ad = GetAppData();
 
-	ad.m_deltaTime    = g_Example->m_deltaTime;
-	ad.m_viewportSize = Vec2((float)g_Example->m_width, (float)g_Example->m_height);
-	ad.m_viewOrigin   = g_Example->m_camPos; // for VR use the head position
-	ad.m_worldUp      = Vec3(0.0f, 1.0f, 0.0f); // used internally for generating orthonormal bases
-	ad.m_projOrtho    = g_Example->m_camOrtho;
+	ad.m_deltaTime     = g_Example->m_deltaTime;
+	ad.m_viewportSize  = Vec2((float)g_Example->m_width, (float)g_Example->m_height);
+	ad.m_viewOrigin    = g_Example->m_camPos; // for VR use the head position
+	ad.m_viewDirection = g_Example->m_camDir;
+	ad.m_worldUp       = Vec3(0.0f, 1.0f, 0.0f); // used internally for generating orthonormal bases
+	ad.m_projOrtho     = g_Example->m_camOrtho;
 
- // m_projScaleY controls how gizmos are scaled in world space to maintain a constant screen height 
+ // m_projScaleY controls how gizmos are scaled in world space to maintain a constant screen height
 	ad.m_projScaleY = g_Example->m_camOrtho
 		? 2.0f / g_Example->m_camProj(1, 1) // use far plane height for an ortho projection
 		: tanf(g_Example->m_camFovRad * 0.5f) * 2.0f // or vertical fov for a perspective projection
-		;  
+		;
 
  // World space cursor ray from mouse position; for VR this might be the position/orientation of the HMD or a tracked controller.
 	Vec2 cursorPos = g_Example->getWindowRelativeCursor();
@@ -154,7 +155,7 @@ void Im3d_Update()
 		rayOrigin.z  = 0.0f;
 		rayOrigin    = g_Example->m_camWorld * Vec4(rayOrigin, 1.0f);
 		rayDirection = g_Example->m_camWorld * Vec4(0.0f, 0.0f, -1.0f, 0.0f);
-		 
+
 	} else {
 		rayOrigin = ad.m_viewOrigin;
 		rayDirection.x  = cursorPos.x / g_Example->m_camProj(0, 0);
@@ -180,10 +181,10 @@ void Im3d_Update()
 	ad.m_keyDown[Im3d::Key_T/*Action_GizmoTranslation*/] = ctrlDown && (GetAsyncKeyState(0x54) & 0x8000) != 0;
 	ad.m_keyDown[Im3d::Key_R/*Action_GizmoRotation*/]    = ctrlDown && (GetAsyncKeyState(0x52) & 0x8000) != 0;
 	ad.m_keyDown[Im3d::Key_S/*Action_GizmoScale*/]       = ctrlDown && (GetAsyncKeyState(0x53) & 0x8000) != 0;
-	
+
  // Enable gizmo snapping by setting the translation/rotation/scale increments to be > 0
 	ad.m_snapTranslation = ctrlDown ? 0.1f : 0.0f;
-	ad.m_snapRotation    = ctrlDown ? Im3d::Radians(15.0f) : 0.0f;
+	ad.m_snapRotation    = ctrlDown ? Im3d::Radians(30.0f) : 0.0f;
 	ad.m_snapScale       = ctrlDown ? 0.5f : 0.0f;
 
 	Im3d::NewFrame();
@@ -200,7 +201,7 @@ bool Im3d_Init()
 			return false;
 		}
 		dxAssert(d3d->CreateVertexShader((DWORD*)g_Im3dShaderPoints.m_vsBlob->GetBufferPointer(), g_Im3dShaderPoints.m_vsBlob->GetBufferSize(), nullptr, &g_Im3dShaderPoints.m_vs));
-	
+
 		g_Im3dShaderPoints.m_gsBlob = LoadCompileShader("gs_" IM3D_DX11_VSHADER, "im3d.hlsl", "GEOMETRY_SHADER\0POINTS\0");
 		if (!g_Im3dShaderPoints.m_gsBlob) {
 			return false;
@@ -219,13 +220,13 @@ bool Im3d_Init()
 			return false;
 		}
 		dxAssert(d3d->CreateVertexShader((DWORD*)g_Im3dShaderLines.m_vsBlob->GetBufferPointer(), g_Im3dShaderLines.m_vsBlob->GetBufferSize(), nullptr, &g_Im3dShaderLines.m_vs));
-		
+
 		g_Im3dShaderLines.m_gsBlob = LoadCompileShader("gs_" IM3D_DX11_VSHADER, "im3d.hlsl", "GEOMETRY_SHADER\0LINES\0");
 		if (!g_Im3dShaderLines.m_gsBlob) {
 			return false;
 		}
 		dxAssert(d3d->CreateGeometryShader((DWORD*)g_Im3dShaderLines.m_gsBlob->GetBufferPointer(), g_Im3dShaderLines.m_gsBlob->GetBufferSize(), nullptr, &g_Im3dShaderLines.m_gs));
-		
+
 		g_Im3dShaderLines.m_psBlob = LoadCompileShader("ps_" IM3D_DX11_VSHADER, "im3d.hlsl", "PIXEL_SHADER\0LINES\0");
 		if (!g_Im3dShaderLines.m_psBlob) {
 			return false;
@@ -238,7 +239,7 @@ bool Im3d_Init()
 			return false;
 		}
 		dxAssert(d3d->CreateVertexShader((DWORD*)g_Im3dShaderTriangles.m_vsBlob->GetBufferPointer(), g_Im3dShaderTriangles.m_vsBlob->GetBufferSize(), nullptr, &g_Im3dShaderTriangles.m_vs));
-	
+
 		g_Im3dShaderTriangles.m_psBlob = LoadCompileShader("ps_" IM3D_DX11_VSHADER, "im3d.hlsl", "PIXEL_SHADER\0TRIANGLES\0");
 		if (!g_Im3dShaderTriangles.m_psBlob) {
 			return false;
@@ -276,9 +277,9 @@ bool Im3d_Init()
 		desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 		dxAssert(d3d->CreateBlendState(&desc, &g_Im3dBlendState));
 	}
-	
+
 	g_Im3dConstantBuffer = CreateConstantBuffer(sizeof(Mat4) + sizeof(Vec4), D3D11_USAGE_DYNAMIC);
-	
+
 	GetAppData().drawCallback = &Im3d_Draw;
 
 	return true;
