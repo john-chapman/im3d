@@ -224,67 +224,50 @@ static const char* StripPath(const char* _path)
 		
 		static bool InitOpenGL(int _vmaj, int _vmin)
 		{
-		 // create dummy context for extension loading
-			static ATOM wndclassex = 0;
-			if (wndclassex == 0) {
-				WNDCLASSEX wc;
-				memset(&wc, 0, sizeof(wc));
-				wc.cbSize = sizeof(wc);
-				wc.style = CS_OWNDC;// | CS_HREDRAW | CS_VREDRAW;
-				wc.lpfnWndProc = DefWindowProc;
-				wc.hInstance = GetModuleHandle(0);
-				wc.lpszClassName = "Im3dTestApp_GlDummy";
-				wc.hCursor = LoadCursor(0, IDC_ARROW);
-				winAssert(wndclassex = RegisterClassEx(&wc));
-			}
-			HWND hwndDummy = CreateWindowEx(0, MAKEINTATOM(wndclassex), 0, 0, 0, 0, 1, 1, nullptr, nullptr, GetModuleHandle(0), nullptr);
-			winAssert(hwndDummy);
-			HDC hdcDummy = 0;
-			winAssert(hdcDummy = GetDC(hwndDummy));	
-			PIXELFORMATDESCRIPTOR pfd;
-			memset(&pfd, 0, sizeof(pfd));
-			winAssert(SetPixelFormat(hdcDummy, 1, &pfd));
-			HGLRC hglrcDummy = 0;
-			winAssert(hglrcDummy = wglCreateContext(hdcDummy));
-			winAssert(wglMakeCurrent(hdcDummy, hglrcDummy));
+			HWND hwnd = g_Example->m_hwnd;
+			winAssert(g_Example->m_hdc = GetDC(hwnd));
+			HDC hdc = g_Example->m_hdc;
+
+		 // set the window pixel format
+			PIXELFORMATDESCRIPTOR pfd = {};
+			pfd.nSize        = sizeof(PIXELFORMATDESCRIPTOR);
+			pfd.nVersion     = 1;
+			pfd.dwFlags      = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER | PFD_GENERIC_ACCELERATED;
+			pfd.iPixelType   = PFD_TYPE_RGBA;
+			pfd.cColorBits   = 24;
+			pfd.cDepthBits   = 24;
+			pfd.dwDamageMask = 8;
+			int pformat = 0;
+			winAssert(pformat = ChoosePixelFormat(hdc, &pfd));
+			winAssert(SetPixelFormat(hdc, pformat, &pfd));
 			
-		// check the platform supports the requested GL version
+		 // create dummy context to load wgl extensions
+			HGLRC hglrc = 0;
+			winAssert(hglrc = wglCreateContext(hdc));
+			winAssert(wglMakeCurrent(hdc, hglrc));
+		
+		 // check the platform supports the requested GL version
 			GLint platformVMaj, platformVMin;
 			glAssert(glGetIntegerv(GL_MAJOR_VERSION, &platformVMaj));
 			glAssert(glGetIntegerv(GL_MINOR_VERSION, &platformVMin));
+			_vmaj = _vmaj < 0 ? platformVMaj : _vmaj;
+			_vmin = _vmin < 0 ? platformVMin : _vmin;
 			if (platformVMaj < _vmaj || (platformVMaj >= _vmaj && platformVMin < _vmin)) {
-				fprintf(stderr, "OpenGL version %d.%d is not available (max version is %d.%d)\n", _vmaj, _vmin, platformVMaj, platformVMin);
-				fprintf(stderr, "\t(This error may occur if the platform has an integrated GPU)\n");
+				fprintf(stderr, "OpenGL version %d.%d is not available (available version is %d.%d).", _vmaj, _vmin, platformVMaj, platformVMin);
+				fprintf(stderr, "This error may occur if the platform has an integrated GPU.");
 				return false;
+				return 0;
 			}
-		
-		// load wgl extensions for true context creation
-			winAssert(wglChoosePixelFormat = (PFNWGLCHOOSEPIXELFORMATARBPROC)wglGetProcAddress("wglChoosePixelFormatARB"));
+			
+		 // load wgl extensions for true context creation
+			static PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs;
 			winAssert(wglCreateContextAttribs = (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB"));
 		
-		// delete the dummy context
+		 // delete the dummy context
 			winAssert(wglMakeCurrent(0, 0));
-			winAssert(wglDeleteContext(hglrcDummy));
-			winAssert(ReleaseDC(hwndDummy, hdcDummy) != 0);
-			winAssert(DestroyWindow(hwndDummy) != 0);
+			winAssert(wglDeleteContext(hglrc));
 		
-		// create true context
-			winAssert(g_Example->m_hdc = GetDC(g_Example->m_hwnd));
-			const int pfattr[] = {
-				WGL_SUPPORT_OPENGL_ARB, 1,
-				WGL_DRAW_TO_WINDOW_ARB, 1,
-				WGL_ACCELERATION_ARB,   WGL_FULL_ACCELERATION_ARB,
-				WGL_PIXEL_TYPE_ARB,     WGL_TYPE_RGBA_ARB,
-				WGL_DOUBLE_BUFFER_ARB,  1,
-				WGL_COLOR_BITS_ARB,     24,
-				WGL_ALPHA_BITS_ARB,     8,
-				WGL_DEPTH_BITS_ARB,     16,
-				WGL_STENCIL_BITS_ARB,   0,
-				0
-			};
-			int pformat = -1, npformat = -1;
-			winAssert(wglChoosePixelFormat(g_Example->m_hdc, pfattr, 0, 1, &pformat, (::UINT*)&npformat));
-			winAssert(SetPixelFormat(g_Example->m_hdc, pformat, &pfd));
+		 // create true context
 			int profileBit = WGL_CONTEXT_CORE_PROFILE_BIT_ARB;
 			//profileBit = WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB;
 			int attr[] = {
@@ -293,10 +276,11 @@ static const char* StripPath(const char* _path)
 				WGL_CONTEXT_PROFILE_MASK_ARB,	profileBit,
 				0
 			};
-			winAssert(g_Example->m_hglrc = wglCreateContextAttribs(g_Example->m_hdc, 0, attr));
+			winAssert(g_Example->m_hglrc = wglCreateContextAttribs(hdc, 0, attr));
+			hglrc = g_Example->m_hglrc;
 		
 		// load extensions
-			if (!wglMakeCurrent(g_Example->m_hdc, g_Example->m_hglrc)) {
+			if (!wglMakeCurrent(hdc, hglrc)) {
 				fprintf(stderr, "wglMakeCurrent failed");
 				return false;
 			}
@@ -956,8 +940,8 @@ Color Im3d::RandColor(float _min, float _max)
 		io.Fonts->GetTexDataAsAlpha8(&txbuf, &txX, &txY);
 		glAssert(glGenTextures(1, &g_ImGuiFontTexture));
 		glAssert(glBindTexture(GL_TEXTURE_2D, g_ImGuiFontTexture));
-		glAssert(glTextureParameteri(g_ImGuiFontTexture, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-		glAssert(glTextureParameteri(g_ImGuiFontTexture, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+		glAssert(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+		glAssert(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
 		glAssert(glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, txX, txY, 0, GL_RED, GL_UNSIGNED_BYTE, (const GLvoid*)txbuf));
 		io.Fonts->TexID = (void*)g_ImGuiFontTexture;
 	
