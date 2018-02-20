@@ -19,9 +19,10 @@ workspace "im3d_directx11"
 	location(_ACTION)
 	configurations { "Debug", "Release" }
 	platforms { "Win32", "Win64" }
-	flags { "C++11", "StaticRuntime" }
+	cppdialect "C++11"
+	flags { "StaticRuntime" }
 
-	filter { "platforms:Win32 or Win64" }
+	filter { "platforms:Win32 or platforms:Win64" }
 		system "windows"
 
 	 -- \todo select graphics lib?

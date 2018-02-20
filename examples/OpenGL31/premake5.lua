@@ -15,13 +15,14 @@ filter { "action:vs*" }
 	defines { "_CRT_SECURE_NO_WARNINGS", "_SCL_SECURE_NO_WARNINGS" }
 	characterset "MBCS" -- force Win32 API to use *A variants (i.e. can pass char* for strings)
 
-workspace "im3d_opengl33"
+workspace "im3d_opengl31"
 	location(_ACTION)
 	configurations { "Debug", "Release" }
 	platforms { "Win32", "Win64" }
-	flags { "C++11", "StaticRuntime" }
+	cppdialect "C++11"
+	flags { "StaticRuntime" }
 
-	filter { "platforms:Win32 or Win64" }
+	filter { "platforms:Win32 or platforms:Win64" }
 		system "windows"
 
 	 -- \todo select graphics lib?
@@ -47,12 +48,13 @@ workspace "im3d_opengl33"
 		IM3D_DIR .. "*.cpp",
 		})
 	
-	project "im3d_opengl33"
+	project "im3d_opengl31"
 		kind "ConsoleApp"
 		language "C++"
 		targetdir ""
 	
-		defines { "IM3D_OPENGL_VMAJ=3", "IM3D_OPENGL_VMIN=3", "IM3D_OPENGL_VSHADER=330" }
+		defines { "IM3D_OPENGL_VMAJ=3", "IM3D_OPENGL_VMIN=1", "IM3D_OPENGL_VSHADER=140" }
+		defines { "IM3D_VERTEX_ALIGNEMENT=16" } -- can also do this via im3d_config.h
 		
 		includedirs({
 			IM3D_DIR,
