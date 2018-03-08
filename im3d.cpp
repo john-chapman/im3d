@@ -48,13 +48,6 @@
 	#error im3d: Compiler not defined
 #endif
 
-// Platform
-#if defined(_WIN32) || defined(_WIN64)
-	#define IM3D_PLATFORM_WIN
-#else
-	#error im3d: Platform not defined
-#endif
-
 #if defined(IM3D_COMPILER_GNU)
 	#define if_likely(e)   if ( __builtin_expect(!!(e), 1) )
 	#define if_unlikely(e) if ( __builtin_expect(!!(e), 0) )
