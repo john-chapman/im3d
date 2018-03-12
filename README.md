@@ -35,7 +35,7 @@ if (Im3d::Gizmo("UnifiedGizmo", &transform)) {
 See [here](https://github.com/john-chapman/im3d/blob/master/examples/common/main.cpp) for more complete examples.
 
 ### Integration
-Im3d has no dependencies other than the C standard lib. A C++11 compatible compiler is required (`alignof` and `alignas` are used internally).
+Im3d has no dependencies other than the C standard lib. A C++11 compatible compiler is required.
 
 Integration is fairly straightforward:
 
