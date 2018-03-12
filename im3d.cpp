@@ -1,5 +1,6 @@
 /*	CHANGE LOG
 	==========
+	2018-03-   (v1.11) - Thread-local context (enable via IM3D_THREAD_LOCAL_CONTEXT).
 	2018-01-27 (v1.10) - Added AppData::m_viewDirection (world space), fixed aligned gizmo fadeout in ortho views.
 	                   - Gizmo snapping is absolute, not relative.
 	2018-01-14 (v1.09) - Culling API.
@@ -1206,7 +1207,7 @@ template class Vector<DrawList>;
 *******************************************************************************/
 
 static Context g_DefaultContext;
-Context* Im3d::internal::g_CurrentContext = &g_DefaultContext;
+IM3D_THREAD_LOCAL Context* Im3d::internal::g_CurrentContext = &g_DefaultContext;
 
 void Context::begin(PrimitiveMode _mode)
 {

@@ -4,7 +4,7 @@
 
 #include "im3d_config.h"
 
-#define IM3D_VERSION "1.10"
+#define IM3D_VERSION "1.11"
 
 #ifndef IM3D_ASSERT
 	#include <cassert>
@@ -646,7 +646,12 @@ private:
 };
 
 namespace internal {
-	extern Context* g_CurrentContext;
+	#if IM3D_THREAD_LOCAL_CONTEXT
+		#define IM3D_THREAD_LOCAL thread_local
+	#else
+		#define IM3D_THREAD_LOCAL
+	#endif
+	extern IM3D_THREAD_LOCAL Context* g_CurrentContext;
 }
 
 inline AppData& GetAppData()                                                 { return GetContext().getAppData();   }
