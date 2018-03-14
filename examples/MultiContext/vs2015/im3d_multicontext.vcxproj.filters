@@ -68,6 +68,7 @@
     <ClCompile Include="..\..\..\im3d.cpp">
       <Filter>im3d</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\OpenGL33\im3d_opengl33.cpp" />
     <ClCompile Include="..\..\common\GL\glew.c">
       <Filter>common\GL</Filter>
     </ClCompile>
@@ -83,9 +84,6 @@
     <ClCompile Include="..\..\common\imgui\imgui_draw.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\common\main.cpp">
-      <Filter>common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\im3d_multithread.cpp" />
+    <ClCompile Include="..\im3d_multicontext.cpp" />
   </ItemGroup>
 </Project>

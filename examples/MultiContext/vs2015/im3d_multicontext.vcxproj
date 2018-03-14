@@ -35,10 +35,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{54C5B1BA-40BE-D00C-69F0-B5915548B018}</ProjectGuid>
+    <ProjectGuid>{216F6004-8D85-5E9A-D6FC-E9BB42522F22}</ProjectGuid>
     <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>im3d_multithread</RootNamespace>
+    <RootNamespace>im3d_multicontext</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -85,35 +85,35 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\</OutDir>
     <IntDir>obj\Win32\Debug\</IntDir>
-    <TargetName>im3d_multithread_debug</TargetName>
+    <TargetName>im3d_multicontext_debug</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug Win64|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\</OutDir>
     <IntDir>obj\Win64\Debug\</IntDir>
-    <TargetName>im3d_multithread_debug</TargetName>
+    <TargetName>im3d_multicontext_debug</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\</OutDir>
     <IntDir>obj\Win32\Release\</IntDir>
-    <TargetName>im3d_multithread</TargetName>
+    <TargetName>im3d_multicontext</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release Win64|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\</OutDir>
     <IntDir>obj\Win64\Release\</IntDir>
-    <TargetName>im3d_multithread</TargetName>
+    <TargetName>im3d_multicontext</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>IM3D_DEBUG;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;IM3D_THREAD_LOCAL_CONTEXT=1;IM3D_OPENGL_VMAJ=3;IM3D_OPENGL_VMIN=3;IM3D_OPENGL_VSHADER=330;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>IM3D_DEBUG;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;IM3D_THREAD_LOCAL_CONTEXT_PTR=1;IM3D_OPENGL_VMAJ=3;IM3D_OPENGL_VMIN=3;IM3D_OPENGL_VSHADER=330;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\..;..\..\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
@@ -129,7 +129,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>IM3D_DEBUG;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;IM3D_THREAD_LOCAL_CONTEXT=1;IM3D_OPENGL_VMAJ=3;IM3D_OPENGL_VMIN=3;IM3D_OPENGL_VSHADER=330;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>IM3D_DEBUG;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;IM3D_THREAD_LOCAL_CONTEXT_PTR=1;IM3D_OPENGL_VMAJ=3;IM3D_OPENGL_VMIN=3;IM3D_OPENGL_VSHADER=330;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\..;..\..\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
@@ -145,7 +145,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;IM3D_THREAD_LOCAL_CONTEXT=1;IM3D_OPENGL_VMAJ=3;IM3D_OPENGL_VMIN=3;IM3D_OPENGL_VSHADER=330;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;IM3D_THREAD_LOCAL_CONTEXT_PTR=1;IM3D_OPENGL_VMAJ=3;IM3D_OPENGL_VMIN=3;IM3D_OPENGL_VSHADER=330;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\..;..\..\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Full</Optimization>
@@ -167,7 +167,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;IM3D_THREAD_LOCAL_CONTEXT=1;IM3D_OPENGL_VMAJ=3;IM3D_OPENGL_VMIN=3;IM3D_OPENGL_VSHADER=330;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;IM3D_OPENGL;GLEW_STATIC;IM3D_THREAD_LOCAL_CONTEXT_PTR=1;IM3D_OPENGL_VMAJ=3;IM3D_OPENGL_VMIN=3;IM3D_OPENGL_VSHADER=330;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\..;..\..\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Full</Optimization>
@@ -204,13 +204,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\im3d.cpp" />
+    <ClCompile Include="..\..\OpenGL33\im3d_opengl33.cpp" />
     <ClCompile Include="..\..\common\GL\glew.c" />
     <ClCompile Include="..\..\common\im3d_example.cpp" />
     <ClCompile Include="..\..\common\imgui\imgui.cpp" />
     <ClCompile Include="..\..\common\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\..\common\imgui\imgui_draw.cpp" />
-    <ClCompile Include="..\..\common\main.cpp" />
-    <ClCompile Include="..\im3d_multithread.cpp" />
+    <ClCompile Include="..\im3d_multicontext.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

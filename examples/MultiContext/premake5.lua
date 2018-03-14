@@ -1,5 +1,6 @@
-local IM3D_DIR  = "../../"
-local EXAMPLE_COMMON_DIR = "../common/"
+local IM3D_DIR           = "../../"
+local EXAMPLE_DIR        = "../"
+local EXAMPLE_COMMON_DIR = EXAMPLE_DIR .. "common/"
 
 filter { "configurations:debug" }
 	defines { "IM3D_DEBUG" }
@@ -15,7 +16,7 @@ filter { "action:vs*" }
 	defines { "_CRT_SECURE_NO_WARNINGS", "_SCL_SECURE_NO_WARNINGS" }
 	characterset "MBCS" -- force Win32 API to use *A variants (i.e. can pass char* for strings)
 
-workspace "im3d_multithread"
+workspace "im3d_multicontext"
 	location(_ACTION)
 	configurations { "Debug", "Release" }
 	platforms { "Win32", "Win64" }
@@ -40,7 +41,7 @@ workspace "im3d_multithread"
 		["im3d"]   = { IM3D_DIR .. "*.h", IM3D_DIR .. "*.cpp" },
 		["imgui"]  = EXAMPLE_COMMON_DIR .. "imgui/**",
 		["common"] = { EXAMPLE_COMMON_DIR .. "*.h", EXAMPLE_COMMON_DIR .. "*.cpp" },
-		["*"]      = "*.cpp"
+		["*"]      = { "*.cpp", EXAMPLE_DIR .. "OpenGL33/*.cpp" },
 		})
 	
 	files({ 
@@ -48,12 +49,12 @@ workspace "im3d_multithread"
 		IM3D_DIR .. "*.cpp",
 		})
 	
-	project "im3d_multithread"
+	project "im3d_multicontext"
 		kind "ConsoleApp"
 		language "C++"
 		targetdir ""
 	
-		defines { "IM3D_THREAD_LOCAL_CONTEXT=1", "IM3D_OPENGL_VMAJ=3", "IM3D_OPENGL_VMIN=3", "IM3D_OPENGL_VSHADER=330" }
+		defines { "IM3D_THREAD_LOCAL_CONTEXT_PTR=1", "IM3D_OPENGL_VMAJ=3", "IM3D_OPENGL_VMIN=3", "IM3D_OPENGL_VSHADER=330" }
 		
 		includedirs({
 			IM3D_DIR,
@@ -65,4 +66,12 @@ workspace "im3d_multithread"
 			EXAMPLE_COMMON_DIR .. "**.c",
 			EXAMPLE_COMMON_DIR .. "**.cpp",
 			"*.cpp"
+			})
+		
+	 -- this example provides its own main
+		removefiles({
+			EXAMPLE_COMMON_DIR .. "main.cpp"
+			})
+		files({
+			EXAMPLE_DIR .. "OpenGL33/im3d_opengl33.cpp"
 			})
