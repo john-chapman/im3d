@@ -10,7 +10,7 @@
 //#define IM3D_FREE(ptr) free(ptr) 
 
 // Use a thread-local context pointer.
-//#define IM3D_THREAD_LOCAL_CONTEXT 1
+//#define IM3D_THREAD_LOCAL_CONTEXT_PTR 1
 
 // Use row-major internal matrix layout. 
 //#define IM3D_MATRIX_ROW_MAJOR 1

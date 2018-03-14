@@ -1,6 +1,7 @@
 /*	CHANGE LOG
 	==========
-	2018-03-   (v1.11) - Thread-local context (enable via IM3D_THREAD_LOCAL_CONTEXT).
+	2018-03-   (v1.11) - Thread-local context ptr (IM3D_THREAD_LOCAL_CONTEXT_PTR).
+	                   - Merge API.
 	2018-01-27 (v1.10) - Added AppData::m_viewDirection (world space), fixed aligned gizmo fadeout in ortho views.
 	                   - Gizmo snapping is absolute, not relative.
 	2018-01-14 (v1.09) - Culling API.
@@ -1153,6 +1154,13 @@ Vector<T>::~Vector()
 }
 
 template <typename T>
+void Vector<T>::append(const T* _v, U32 _count)
+{
+	reserve(m_size + _count);
+	memcpy(end(), _v, sizeof(_v) * _count);
+}
+
+template <typename T>
 void Vector<T>::reserve(U32 _capacity)
 {
 	_capacity = _capacity < 8 ? 8 : _capacity;
@@ -1434,6 +1442,28 @@ void Context::reset()
 	if (wasKeyPressed(Action_GizmoLocal)) {
 		m_gizmoLocal = !m_gizmoLocal;
 		resetId();
+	}
+}
+
+void Context::merge(const Context& _src)
+{
+ // layer IDs
+	for (auto& id : _src.m_layerIdMap) {
+		pushLayerId(id); // add a new layer if id doesn't alrady exist 
+		popLayerId();
+	}
+
+ // vertex data
+	for (U32 i = 0; i < 2; ++i) {
+		auto& vertexData = _src.m_vertexData[i];
+		for (U32 j = 0; j < vertexData.size(); ++j) {
+		 // for each layer in _src, find the matching layer in this
+			Id layerId = _src.m_layerIdMap[j / DrawPrimitive_Count];
+			int layerIndex = findLayerIndex(layerId);
+			IM3D_ASSERT(layerIndex >= 0);
+			U32 k = j % DrawPrimitive_Count;
+			m_vertexData[i][layerIndex * DrawPrimitive_Count + k]->append(*vertexData[j]);
+		}
 	}
 }
 
