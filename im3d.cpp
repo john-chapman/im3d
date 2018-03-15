@@ -1156,15 +1156,20 @@ Vector<T>::~Vector()
 template <typename T>
 void Vector<T>::append(const T* _v, U32 _count)
 {
-	reserve(m_size + _count);
+	if (_count == 0) {
+		return;
+	}
+	U32 sz = m_size + _count;
+	reserve(sz);
 	memcpy(end(), _v, sizeof(_v) * _count);
+	m_size = sz;
 }
 
 template <typename T>
 void Vector<T>::reserve(U32 _capacity)
 {
 	_capacity = _capacity < 8 ? 8 : _capacity;
-	if (_capacity < m_capacity) {
+	if (_capacity <= m_capacity) {
 		return;
 	}
 	T* data = (T*)AlignedMalloc(sizeof(T) * _capacity, alignof(T));
