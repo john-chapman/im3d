@@ -14,10 +14,21 @@
 
 #include <thread>
 
-static const int kThreadCount = 6;
+static const int     kThreadCountMax = 6;
+static bool          g_EnableSorting = false;
+static int           g_ThreadCount   = kThreadCountMax;
+static Im3d::Context g_ThreadContexts[kThreadCountMax];
+static Im3d::Color   g_ThreadColors[kThreadCountMax] = 
+{
+	Im3d::Color_Red,
+	Im3d::Color_Green,
+	Im3d::Color_Blue,
+	Im3d::Color_Magenta,
+	Im3d::Color_Yellow,
+	Im3d::Color_Cyan
+};
 
-static Im3d::Context g_ContextPool[kThreadCount];
-
+static void ThreadDraw(int _threadIndex);
 static void MainThreadDraw();
 
 int main(int, char**)
@@ -26,21 +37,91 @@ int main(int, char**)
 	if (!example.init(-1, -1, "Im3d Example")) {
 		return 1;
 	}
-
+//TODO
+//- add a method on the context to get a debug string (with the ID etc)
+//- update the FAQ with a note about thread safety.
+//- Wiki about the config options.
 
 	while (example.update()) { // calls Im3d_Update() (see im3d_opengl33.cpp)
 	// At this point we have updated the default context and filled its AppData struct. 
 
+	// Each separate context could potentially use different AppData (e.g. different camera settings). Here 
+	// we just copy the default for simplicity.
+		for (auto& ctx : g_ThreadContexts) {
+			ctx.getAppData() = Im3d::GetAppData();
 
+			ctx.reset(); // equivalent to calling Im3d::NewFrame() inside the thread
+		}
+
+	// The frame can now proceed, threads can safely make Im3d calls.
+		std::thread threads[kThreadCountMax];
+		for (int i = 0; i < g_ThreadCount; ++i) {
+			threads[i] = std::thread(&ThreadDraw, i);
+		}		
 		MainThreadDraw();
 
-	// Prior to calling Im3d we need to merge the per-thread contexts into the main thread context.
+	// Towards the end of the frame we need a global sync point so that we can safely merge vertex data from the
+	// per-thread contexts.
+		for (auto& thread : threads) {
+			if (thread.joinable()) {
+				thread.join();
+			}
+		}
+
+	// Prior to calling Im3d::Draw we need to merge the per-thread contexts into the main thread context.
+		for (int i = 0; i < g_ThreadCount; ++i) {
+			auto& ctx = g_ThreadContexts[i];
+
+			#if 1
+				Im3d::Merge(Im3d::GetContext(), ctx);
+			#else
+			 // it's also legal to draw the context directly, however this does not preserve layer ordering and doesn't support sorting between contexts
+				ctx.draw();
+			#endif
+		}
 
 		example.draw(); // calls Im3d_Draw() (see im3d_opengl33.cpp).
 	}
 	example.shutdown();
 	
 	return 0;
+}
+
+void ThreadDraw(int _threadIndex)
+{
+	Im3d::SetContext(g_ThreadContexts[_threadIndex]);
+	//Im3d::NewFrame(); // in this example we call ctx.reset() outside the thread, which is equivalent
+
+	Im3d::RandSeed(_threadIndex); // \todo this is potentially not thread safe
+
+	//Im3d::PushLayerId((Im3d::Id)_threadIndex);
+	Im3d::PushDrawState();
+	Im3d::PushEnableSorting(g_EnableSorting);
+		Im3d::SetColor(g_ThreadColors[_threadIndex]);
+	
+		Im3d::BeginPoints();
+			for (int i = 0; i < 1000; ++i) {
+				Im3d::Vertex(Im3d::RandVec3(-10.0f, 10.0f), Im3d::RandFloat(2.0f, 16.0f));
+			}
+		Im3d::End();
+		
+		Im3d::SetAlpha(0.5f);
+		Im3d::BeginTriangles();
+			Im3d::PushMatrix();
+			for (int i = 0; i < 50; ++i) {				
+				Im3d::Mat4 wm(1.0f);
+				wm.setRotation(Im3d::Rotation(Im3d::Normalize(Im3d::RandVec3(-1.0f, 1.0f)), Im3d::RandFloat(0.0f, 6.0f)));
+				wm.setTranslation(Im3d::RandVec3(-10.0f, 10.0f));
+				Im3d::SetMatrix(wm);
+				Im3d::Vertex(-1.0f,  0.0f, -1.0f);
+				Im3d::Vertex( 0.0f,  2.0f, -1.0f);
+				Im3d::Vertex( 1.0f,  0.0f, -1.0f);
+			}
+			Im3d::PopMatrix();
+		Im3d::End();
+	Im3d::PopEnableSorting();
+	Im3d::PopDrawState();
+	//Im3d::PopLayerId();
 }
 
 void MainThreadDraw()
@@ -63,6 +144,13 @@ void MainThreadDraw()
 		ImGui::TreePop();
 	}
 	ImGui::Spacing();
+
+	ImGui::SetNextTreeNodeOpen(true, ImGuiSetCond_Once);
+	if (ImGui::TreeNode("Threads")) {
+		ImGui::SliderInt("Thread Count", &g_ThreadCount, 0, kThreadCountMax);
+		ImGui::Checkbox("Enable Sorting", &g_EnableSorting);
+		ImGui::TreePop();
+	}
 
 	ImGui::SetNextTreeNodeOpen(true, ImGuiSetCond_Once);
 	if (ImGui::TreeNode("Grid")) {
