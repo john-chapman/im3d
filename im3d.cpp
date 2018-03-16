@@ -1161,7 +1161,7 @@ void Vector<T>::append(const T* _v, U32 _count)
 	}
 	U32 sz = m_size + _count;
 	reserve(sz);
-	memcpy(end(), _v, sizeof(_v) * _count);
+	memcpy(end(), _v, sizeof(T) * _count);
 	m_size = sz;
 }
 
