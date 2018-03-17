@@ -176,7 +176,7 @@ Context& GetContext();
 void     SetContext(Context& _ctx);
 
 // Merge vertex data from _src into _dst_. Layers are preserved.
-void     Merge(Context& _dst_, const Context& _src);
+void     MergeContexts(Context& _dst_, const Context& _src);
 
 struct Vec2
 {
@@ -741,7 +741,7 @@ inline bool IsVisible(const Vec3& _min, const Vec3& _max)                    { r
 inline Context& GetContext()                                                 { return *internal::g_CurrentContext; }
 inline void     SetContext(Context& _ctx)                                    { internal::g_CurrentContext = &_ctx; }
 
-inline void     Merge(Context& _dst_, const Context& _src)                   { _dst_.merge(_src); }
+inline void     MergeContexts(Context& _dst_, const Context& _src)           { _dst_.merge(_src); }
 
 } // namespac Im3d
 

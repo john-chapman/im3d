@@ -1,7 +1,7 @@
 /*	CHANGE LOG
 	==========
 	2018-03-   (v1.11) - Thread-local context ptr (IM3D_THREAD_LOCAL_CONTEXT_PTR).
-	                   - Merge API.
+	                   - MergeContexts API.
 	2018-01-27 (v1.10) - Added AppData::m_viewDirection (world space), fixed aligned gizmo fadeout in ortho views.
 	                   - Gizmo snapping is absolute, not relative.
 	2018-01-14 (v1.09) - Culling API.
