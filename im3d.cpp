@@ -1129,7 +1129,7 @@ static void* AlignedMalloc(size_t _size, size_t _align)
 	size_t grow = (_align - 1) + sizeof(void*);
 	size_t mem = (size_t)IM3D_MALLOC(_size + grow);
 	if (mem) {
-		size_t ret = (mem + grow) / _align * _align;
+		size_t ret = (mem + grow) & (~(_align - 1));
 		IM3D_ASSERT(ret % _align == 0); // aligned correctly
 		IM3D_ASSERT(ret >= mem + sizeof(void*)); // header large enough to store a ptr
 		*((void**)(ret - sizeof(void*))) = (void*)mem;
