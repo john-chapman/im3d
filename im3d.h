@@ -111,6 +111,7 @@ void  SetMatrix(const Mat4& _mat4);
 void  SetIdentity();
 void  MulMatrix(const Mat4& _mat4);
 void  Translate(float _x, float _y, float _z);
+void  Translate(const Vec3& _vec3);
 void  Rotate(const Vec3& _axis, float _angle);
 void  Rotate(const Mat3& _rotation);
 void  Scale(float _x, float _y, float _z);

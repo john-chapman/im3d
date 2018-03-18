@@ -110,6 +110,11 @@ void Im3d::Translate(float _x, float _y, float _z)
 	Context& ctx = GetContext();
 	ctx.setMatrix(ctx.getMatrix() * Translation(Vec3(_x, _y, _z)));
 }
+void Im3d::Translate(const Vec3& _vec3)
+{
+	Context& ctx = GetContext();
+	ctx.setMatrix(ctx.getMatrix() * Translation(_vec3));
+}
 void Im3d::Rotate(const Vec3& _axis, float _angle)
 {
 	Context& ctx = GetContext();
