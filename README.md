@@ -73,3 +73,7 @@ No, the application is free to render the vertex data in any conceivable manner.
 - Check which version you currently have; `IM3D_VERSION` is defined at the top of [im3d.h](https://github.com/john-chapman/im3d/tree/master/im3d.h).
 - Examine the change log in the latest version of [im3d.cpp](https://github.com/john-chapman/im3d/tree/master/im3d.cpp) to see if there have been any API-breaking changes which require modifications on the application side.
 - Overwrite everything *except* `im3d_config.h` if you have made any changes to your copy.
+
+**Is Im3d thread safe?**
+
+Im3d provides no thread safety mechanism per se, however per-thread contexts are fully supported and can be used to achieve thread safety.
