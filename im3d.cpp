@@ -1,5 +1,7 @@
 /*	CHANGE LOG
 	==========
+	2018-03-20 (v1.11) - Thread-local context ptr (IM3D_THREAD_LOCAL_CONTEXT_PTR).
+	                   - MergeContexts API.
 	2018-01-27 (v1.10) - Added AppData::m_viewDirection (world space), fixed aligned gizmo fadeout in ortho views.
 	                   - Gizmo snapping is absolute, not relative.
 	2018-01-14 (v1.09) - Culling API.
@@ -107,6 +109,11 @@ void Im3d::Translate(float _x, float _y, float _z)
 {
 	Context& ctx = GetContext();
 	ctx.setMatrix(ctx.getMatrix() * Translation(Vec3(_x, _y, _z)));
+}
+void Im3d::Translate(const Vec3& _vec3)
+{
+	Context& ctx = GetContext();
+	ctx.setMatrix(ctx.getMatrix() * Translation(_vec3));
 }
 void Im3d::Rotate(const Vec3& _axis, float _angle)
 {
@@ -1127,7 +1134,7 @@ static void* AlignedMalloc(size_t _size, size_t _align)
 	size_t grow = (_align - 1) + sizeof(void*);
 	size_t mem = (size_t)IM3D_MALLOC(_size + grow);
 	if (mem) {
-		size_t ret = (mem + grow) / _align * _align;
+		size_t ret = (mem + grow) & (~(_align - 1));
 		IM3D_ASSERT(ret % _align == 0); // aligned correctly
 		IM3D_ASSERT(ret >= mem + sizeof(void*)); // header large enough to store a ptr
 		*((void**)(ret - sizeof(void*))) = (void*)mem;
@@ -1152,10 +1159,22 @@ Vector<T>::~Vector()
 }
 
 template <typename T>
+void Vector<T>::append(const T* _v, U32 _count)
+{
+	if (_count == 0) {
+		return;
+	}
+	U32 sz = m_size + _count;
+	reserve(sz);
+	memcpy(end(), _v, sizeof(T) * _count);
+	m_size = sz;
+}
+
+template <typename T>
 void Vector<T>::reserve(U32 _capacity)
 {
 	_capacity = _capacity < 8 ? 8 : _capacity;
-	if (_capacity < m_capacity) {
+	if (_capacity <= m_capacity) {
 		return;
 	}
 	T* data = (T*)AlignedMalloc(sizeof(T) * _capacity, alignof(T));
@@ -1206,7 +1225,7 @@ template class Vector<DrawList>;
 *******************************************************************************/
 
 static Context g_DefaultContext;
-Context* Im3d::internal::g_CurrentContext = &g_DefaultContext;
+IM3D_THREAD_LOCAL Context* Im3d::internal::g_CurrentContext = &g_DefaultContext;
 
 void Context::begin(PrimitiveMode _mode)
 {
@@ -1433,6 +1452,28 @@ void Context::reset()
 	if (wasKeyPressed(Action_GizmoLocal)) {
 		m_gizmoLocal = !m_gizmoLocal;
 		resetId();
+	}
+}
+
+void Context::merge(const Context& _src)
+{
+ // layer IDs
+	for (auto& id : _src.m_layerIdMap) {
+		pushLayerId(id); // add a new layer if id doesn't alrady exist 
+		popLayerId();
+	}
+
+ // vertex data
+	for (U32 i = 0; i < 2; ++i) {
+		auto& vertexData = _src.m_vertexData[i];
+		for (U32 j = 0; j < vertexData.size(); ++j) {
+		 // for each layer in _src, find the matching layer in this
+			Id layerId = _src.m_layerIdMap[j / DrawPrimitive_Count];
+			int layerIndex = findLayerIndex(layerId);
+			IM3D_ASSERT(layerIndex >= 0);
+			U32 k = j % DrawPrimitive_Count;
+			m_vertexData[i][layerIndex * DrawPrimitive_Count + k]->append(*vertexData[j]);
+		}
 	}
 }
 

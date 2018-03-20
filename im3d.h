@@ -4,7 +4,7 @@
 
 #include "im3d_config.h"
 
-#define IM3D_VERSION "1.10"
+#define IM3D_VERSION "1.11"
 
 #ifndef IM3D_ASSERT
 	#include <cassert>
@@ -111,6 +111,7 @@ void  SetMatrix(const Mat4& _mat4);
 void  SetIdentity();
 void  MulMatrix(const Mat4& _mat4);
 void  Translate(float _x, float _y, float _z);
+void  Translate(const Vec3& _vec3);
 void  Rotate(const Vec3& _axis, float _angle);
 void  Rotate(const Mat3& _rotation);
 void  Scale(float _x, float _y, float _z);
@@ -174,6 +175,9 @@ bool  IsVisible(const Vec3& _min, const Vec3& _max); // axis-aligned bounding bo
 // Get/set the current context. All Im3d calls affect the currently bound context.
 Context& GetContext();
 void     SetContext(Context& _ctx);
+
+// Merge vertex data from _src into _dst_. Layers are preserved.
+void     MergeContexts(Context& _dst_, const Context& _src);
 
 struct Vec2
 {
@@ -433,12 +437,12 @@ struct AppData
 template <typename T>
 class Vector
 {
-	T*   m_data;
-	U32  m_size;
-	U32  m_capacity;
+	T*   m_data     = nullptr;
+	U32  m_size     = 0;
+	U32  m_capacity = 0;
 
 public:
-	Vector(): m_size(0), m_capacity(0), m_data(0) {}
+	Vector()                                      {}
 	~Vector();
 
 	T&       operator[](U32 _i)                   { IM3D_ASSERT(_i < m_size); return m_data[_i]; }
@@ -448,6 +452,8 @@ public:
 
 	void     push_back(const T& _v)               { T tmp = _v; if (m_size == m_capacity) { reserve(m_capacity + m_capacity / 2); } m_data[m_size++] = tmp; }
 	void     pop_back()                           { IM3D_ASSERT(m_size > 0); --m_size; }
+	void     append(const T* _v, U32 _count);
+	void     append(const Vector<T>& _other)      { append(_other.data(), _other.size()); }
 
 	T*       begin()                              { return m_data; }
 	const T* begin() const                        { return m_data; }
@@ -497,6 +503,7 @@ public:
 	void        vertex(const Vec3& _position )   { vertex(_position, getSize(), getColor()); }
 
 	void        reset();
+	void        merge(const Context& _src);
 	void        draw();
 
 
@@ -646,7 +653,12 @@ private:
 };
 
 namespace internal {
-	extern Context* g_CurrentContext;
+	#if IM3D_THREAD_LOCAL_CONTEXT_PTR
+		#define IM3D_THREAD_LOCAL thread_local
+	#else
+		#define IM3D_THREAD_LOCAL
+	#endif
+	extern IM3D_THREAD_LOCAL Context* g_CurrentContext;
 }
 
 inline AppData& GetAppData()                                                 { return GetContext().getAppData();   }
@@ -729,6 +741,8 @@ inline bool IsVisible(const Vec3& _min, const Vec3& _max)                    { r
 
 inline Context& GetContext()                                                 { return *internal::g_CurrentContext; }
 inline void     SetContext(Context& _ctx)                                    { internal::g_CurrentContext = &_ctx; }
+
+inline void     MergeContexts(Context& _dst_, const Context& _src)           { _dst_.merge(_src); }
 
 } // namespac Im3d
 
