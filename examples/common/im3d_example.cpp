@@ -947,6 +947,8 @@ Color Im3d::RandColor(float _min, float _max)
 	
 		io.RenderDrawListsFn = &ImGui_Draw;
 
+		ImGui::StyleColorsDark();
+
 		return true;
 
 	}
