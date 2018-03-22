@@ -100,6 +100,7 @@ void  PopDrawState();
 
 // Layer id state, subsequent primitives are added to a separate draw list associated with the id (per primitive).
 void  PushLayerId(Id _layer);
+void  PushLayerId(const char* _str); // calls PushLayerId(MakeId(_str))
 void  PopLayerId();
 Id    GetLayerId();
 
@@ -711,6 +712,7 @@ inline void  EnableSorting(bool _enable)                                     { G
 
 inline void  PushLayerId()                                                   { GetContext().pushLayerId(GetContext().getLayerId()); }
 inline void  PushLayerId(Id _layer)                                          { GetContext().pushLayerId(_layer); }
+inline void  PushLayerId(const char* _str)                                   { PushLayerId(MakeId(_str));        }
 inline void  PopLayerId()                                                    { GetContext().popLayerId();        }
 inline Id    GetLayerId()                                                    { return GetContext().getLayerId(); }
 

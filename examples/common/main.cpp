@@ -434,17 +434,17 @@ int main(int, char**)
 		 // achieve some coarse-grained sorting, as below:
 
 		 // Layers are drawn in the order which the application declares them.
-			Im3d::PushLayerId(Im3d::MakeId("DrawFirst")); Im3d::PopLayerId();
-			Im3d::PushLayerId(Im3d::MakeId("DrawSecond")); Im3d::PopLayerId();
+			Im3d::PushLayerId("DrawFirst"); Im3d::PopLayerId();
+			Im3d::PushLayerId("DrawSecond"); Im3d::PopLayerId();
 
-			Im3d::PushLayerId(Im3d::MakeId("DrawSecond"));
+			Im3d::PushLayerId("DrawSecond");
 				Im3d::BeginTriangles();
 					Im3d::Vertex(-0.4f, 0.0f, 0.0f, 16.0f, Im3d::Color_Red);
 					Im3d::Vertex( 0.1f, 1.0f, 0.0f, 16.0f, Im3d::Color_Red);
 					Im3d::Vertex( 0.6f, 0.0f, 0.0f, 16.0f, Im3d::Color_Red);
 				Im3d::End();
 			Im3d::PopLayerId();
-			Im3d::PushLayerId(Im3d::MakeId("DrawFirst"));
+			Im3d::PushLayerId("DrawFirst");
 				Im3d::BeginTriangles();
 					Im3d::Vertex(-0.6f, 0.0f, 0.0f, 16.0f, Im3d::Color_Magenta);
 					Im3d::Vertex(-0.1f, 1.0f, 0.0f, 16.0f, Im3d::Color_Magenta);
