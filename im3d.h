@@ -41,7 +41,6 @@ extern const Color Color_Cyan;
 
 // Get AppData struct from the current context, fill before calling NewFrame().
 AppData& GetAppData();
-
 // Call at the start of each frame, after filling the AppData struct.
 void  NewFrame();
 // Call after all Im3d calls have been made for the current frame.
@@ -98,12 +97,6 @@ void  EnableSorting(bool _enable);
 void  PushDrawState();
 void  PopDrawState();
 
-// Layer id state, subsequent primitives are added to a separate draw list associated with the id (per primitive).
-void  PushLayerId(Id _layer);
-void  PushLayerId(const char* _str); // calls PushLayerId(MakeId(_str))
-void  PopLayerId();
-Id    GetLayerId();
-
 // Transform state (per vertex).
 void  PushMatrix(); // push stack top
 void  PushMatrix(const Mat4& _mat4);
@@ -136,12 +129,13 @@ void  DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int _deta
 void  DrawPrism(const Vec3& _start, const Vec3& _end, float _radius, int _sides);
 void  DrawArrow(const Vec3& _start, const Vec3& _end, float _headLength = -1.0f, float _headThickness = -1.0f);
 
-// Ids are used to uniquely identify gizmos. Each gizmo should have a unique Id during a frame.
+// Ids are used to uniquely identify gizmos and layers. Gizmo should have a unique id during a frame.
+// Note that ids are a hash of the whole id stack, see PushId(), PopId().
 Id    MakeId(const char* _str);
 Id    MakeId(const void* _ptr);
 Id    MakeId(int _i);
 
-// PushId()/PopId() affect the result of subsequent calls to MakeId(), use when creating gizmos in a loop.
+// PushId(), PopId() affect the result of subsequent calls to MakeId(), use when creating gizmos in a loop.
 void  PushId(); // push stack top
 void  PushId(Id _id);
 void  PushId(const char* _str);
@@ -151,6 +145,13 @@ void  PopId();
 Id    GetId();
 Id    GetActiveId(); // GetActiveId() != Id_Invalid means that a gizmo is in use
 Id    GetHotId();
+
+// Layer id state, subsequent primitives are added to a separate draw list associated with the id (per primitive).
+void  PushLayerId(Id _layer);
+void  PushLayerId(const char* _str); // calls PushLayerId(MakeId(_str))
+void  PopLayerId();
+Id    GetLayerId();
+
 
 // Manipulate translation/rotation/scale via a gizmo. Return true if the gizmo is 'active' (if it modified the output parameter).
 // If _local is true, the Gizmo* functions expect that the local matrix is on the matrix stack; in general the application should
@@ -710,12 +711,6 @@ inline void  PushEnableSorting(bool _enable)                                 { G
 inline void  PopEnableSorting()                                              { GetContext().popEnableSorting();         }
 inline void  EnableSorting(bool _enable)                                     { GetContext().setEnableSorting(_enable);  }
 
-inline void  PushLayerId()                                                   { GetContext().pushLayerId(GetContext().getLayerId()); }
-inline void  PushLayerId(Id _layer)                                          { GetContext().pushLayerId(_layer); }
-inline void  PushLayerId(const char* _str)                                   { PushLayerId(MakeId(_str));        }
-inline void  PopLayerId()                                                    { GetContext().popLayerId();        }
-inline Id    GetLayerId()                                                    { return GetContext().getLayerId(); }
-
 inline void  PushMatrix()                                                    { GetContext().pushMatrix(GetContext().getMatrix()); }
 inline void  PushMatrix(const Mat4& _mat4)                                   { GetContext().pushMatrix(_mat4);                    }
 inline void  PopMatrix()                                                     { GetContext().popMatrix();                          }
@@ -731,6 +726,12 @@ inline void  PopId()                                                         { G
 inline Id    GetId()                                                         { return GetContext().getId();               }
 inline Id    GetActiveId()                                                   { return GetContext().m_appActiveId;         }
 inline Id    GetHotId()                                                      { return GetContext().m_appHotId;            }
+
+inline void  PushLayerId()                                                   { GetContext().pushLayerId(GetContext().getLayerId()); }
+inline void  PushLayerId(Id _layer)                                          { GetContext().pushLayerId(_layer); }
+inline void  PushLayerId(const char* _str)                                   { PushLayerId(MakeId(_str));        }
+inline void  PopLayerId()                                                    { GetContext().popLayerId();        }
+inline Id    GetLayerId()                                                    { return GetContext().getLayerId(); }
 
 inline bool GizmoTranslation(const char* _id, float _translation_[3], bool _local)                   { return GizmoTranslation(MakeId(_id), _translation_);           }
 inline bool GizmoRotation(const char* _id, float _rotation_[3*3], bool _local)                       { return GizmoRotation(MakeId(_id), _rotation_, _local);         }
