@@ -1633,14 +1633,16 @@ namespace {
 
 void Context::sort()
 {
+	static IM3D_THREAD_LOCAL Vector<SortData> sortData[DrawPrimitive_Count]; // reduces # allocs
+
 	for (U32 layer = 0; layer < m_layerIdMap.size(); ++layer) {
-		Vector<SortData> sortData[DrawPrimitive_Count];
 		Vec3 viewOrigin = m_appData.m_viewOrigin;
 
 	 // sort each primitive list internally
 		for (int i = 0 ; i < DrawPrimitive_Count; ++i) {
 			Vector<VertexData>& vertexData = *(m_vertexData[1][layer * DrawPrimitive_Count + i]);
 			if (!vertexData.empty()) {
+				sortData[i].clear();
 				sortData[i].reserve(vertexData.size() / VertsPerDrawPrimitive[i]);
 				for (VertexData* v = vertexData.begin(); v != vertexData.end(); ) {
 					sortData[i].push_back(SortData(0.0f, v));
