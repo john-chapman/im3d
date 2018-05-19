@@ -6,7 +6,7 @@
 #endif
 
 #define VertexData \
-	VertexData { \
+	_VertexData { \
 		noperspective float m_edgeDistance; \
 		noperspective float m_size; \
 		smooth vec4 m_color; \
