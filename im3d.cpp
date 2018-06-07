@@ -1,5 +1,6 @@
 /*	CHANGE LOG
 	==========
+	2018-06-07 (v1.12) - Color_ constants are constexpr (fixed issues with static init).
 	2018-03-20 (v1.11) - Thread-local context ptr (IM3D_THREAD_LOCAL_CONTEXT_PTR).
 	                   - MergeContexts API.
 	2018-01-27 (v1.10) - Added AppData::m_viewDirection (world space), fixed aligned gizmo fadeout in ortho views.
@@ -66,17 +67,7 @@
 
 using namespace Im3d;
 
-const Id    Im3d::Id_Invalid    = 0;
-const Color Im3d::Color_Black   = Color(0x000000ff);
-const Color Im3d::Color_White   = Color(0xffffffff);
-const Color Im3d::Color_Red     = Color(0xff0000ff);
-const Color Im3d::Color_Green   = Color(0x00ff00ff);
-const Color Im3d::Color_Blue    = Color(0x0000ffff);
-const Color Im3d::Color_Magenta = Color(0xff00ffff);
-const Color Im3d::Color_Yellow  = Color(0xffff00ff);
-const Color Im3d::Color_Cyan    = Color(0x00ffffff);
-
-static const Color Color_GizmoHighlight = Color(0xffc745ff);
+constexpr Color Color_GizmoHighlight = Color(0xffc745ff);
 
 static const int VertsPerDrawPrimitive[DrawPrimitive_Count] =
 {
@@ -91,6 +82,13 @@ Color::Color(const Vec4& _rgba)
 	v |= (U32)(_rgba.y * 255.0f) << 16;
 	v |= (U32)(_rgba.z * 255.0f) << 8;
 	v |= (U32)(_rgba.w * 255.0f);
+}
+Color::Color(const Vec3& _rgb, float _alpha)
+{
+	v  = (U32)(_rgb.x * 255.0f) << 24;
+	v |= (U32)(_rgb.y * 255.0f) << 16;
+	v |= (U32)(_rgb.z * 255.0f) << 8;
+	v |= (U32)(_alpha * 255.0f);
 }
 Color::Color(float _r, float _g, float _b, float _a)
 {

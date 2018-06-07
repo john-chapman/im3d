@@ -4,7 +4,7 @@
 
 #include "im3d_config.h"
 
-#define IM3D_VERSION "1.11"
+#define IM3D_VERSION "1.12"
 
 #ifndef IM3D_ASSERT
 	#include <cassert>
@@ -18,7 +18,6 @@
 namespace Im3d {
 
 typedef unsigned int U32;
-typedef U32 Id;
 struct Vec2;
 struct Vec3;
 struct Vec4;
@@ -29,15 +28,8 @@ struct VertexData;
 struct AppData;
 class  Context;
 
-extern const Id    Id_Invalid;
-extern const Color Color_Black;
-extern const Color Color_White;
-extern const Color Color_Red;
-extern const Color Color_Green;
-extern const Color Color_Blue;
-extern const Color Color_Magenta;
-extern const Color Color_Yellow;
-extern const Color Color_Cyan;
+typedef U32 Id;
+constexpr Id Id_Invalid = 0;
 
 // Get AppData struct from the current context, fill before calling NewFrame().
 AppData& GetAppData();
@@ -321,10 +313,12 @@ struct Mat4
 struct Color
 {
 	U32 v; // rgba8 (MSB = r)
-	Color(): v(0)                                                            {}
-	Color(U32 _rgba): v(_rgba)                                               {}
-	Color(const Vec4& _rgba);
-	Color(float _r, float _g, float _b, float _a = 1.0f);
+	constexpr Color(): v(0)                                                  {}
+	constexpr Color(U32 _rgba): v(_rgba)                                     {}
+	          Color(const Vec4& _rgba);
+	          Color(const Vec3& _rgb, float _alpha);
+	          Color(float _r, float _g, float _b, float _a = 1.0f);
+	
 	operator U32() const                                                     { return v; }
 
 	void set(int _i, float _val)
@@ -349,6 +343,15 @@ struct Color
 	float getB() const                                                       { return get(1); }
 	float getA() const                                                       { return get(0); }
 };
+
+constexpr Color Color_Black   = Color(0x000000ff);
+constexpr Color Color_White   = Color(0xffffffff);
+constexpr Color Color_Red     = Color(0xff0000ff);
+constexpr Color Color_Green   = Color(0x00ff00ff);
+constexpr Color Color_Blue    = Color(0x0000ffff);
+constexpr Color Color_Magenta = Color(0xff00ffff);
+constexpr Color Color_Yellow  = Color(0xffff00ff);
+constexpr Color Color_Cyan    = Color(0x00ffffff);
 
 struct alignas(IM3D_VERTEX_ALIGNMENT) VertexData
 {
