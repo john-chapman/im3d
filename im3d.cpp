@@ -1639,8 +1639,8 @@ void Context::sort()
 	 // sort each primitive list internally
 		for (int i = 0 ; i < DrawPrimitive_Count; ++i) {
 			Vector<VertexData>& vertexData = *(m_vertexData[1][layer * DrawPrimitive_Count + i]);
+			sortData[i].clear();
 			if (!vertexData.empty()) {
-				sortData[i].clear();
 				sortData[i].reserve(vertexData.size() / VertsPerDrawPrimitive[i]);
 				for (VertexData* v = vertexData.begin(); v != vertexData.end(); ) {
 					sortData[i].push_back(SortData(0.0f, v));
