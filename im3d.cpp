@@ -637,10 +637,15 @@ inline static Vec3 Snap(const Vec3& _pos, const Plane& _plane, float _snap)
 
 	 // snap the vector lengths
 		float ilen = Length(i);
+		float jlen = Length(j);
+
+		if (ilen < 1e-7f || jlen < 1e-7f) { // \hack prevent DBZ when _pos is 0
+			return _pos;
+		}
+
 		i = i / ilen;
 		ilen = floorf(ilen / _snap) * _snap;
 		i = i * ilen;
-		float jlen = Length(j);
 		j = j / jlen;
 		jlen = floorf(jlen / _snap) * _snap;
 		j = j * jlen;
@@ -717,7 +722,7 @@ bool Im3d::GizmoTranslation(Id _id, float _translation_[3], bool _local)
 			ctx.gizmoPlaneTranslation_Draw(plane.m_id, plane.m_origin, axes[i].m_axis, planeSize, Color_GizmoHighlight);
 			axes[i].m_axis = Normalize(Vec3(ctx.getMatrix().getCol(i))); // if local, extract axes from the pushed matrix
 			if (intersects) {
-				ret |= ctx.gizmoPlaneTranslation_Behavior(plane.m_id, ctx.getMatrix() * plane.m_origin, axes[i].m_axis, planeSize, outVec3);
+				ret |= ctx.gizmoPlaneTranslation_Behavior(plane.m_id, ctx.getMatrix() * plane.m_origin, axes[i].m_axis, appData.m_snapTranslation, planeSize, outVec3);
 			}
 		}
 
@@ -727,7 +732,7 @@ bool Im3d::GizmoTranslation(Id _id, float _translation_[3], bool _local)
 			const PlaneG& plane = planes[i];
 			ctx.gizmoPlaneTranslation_Draw(plane.m_id, drawAt + plane.m_origin, axes[i].m_axis, planeSize, Color_GizmoHighlight);
 			if (intersects) {
-				ret |= ctx.gizmoPlaneTranslation_Behavior(plane.m_id, drawAt + plane.m_origin, axes[i].m_axis, planeSize, outVec3);
+				ret |= ctx.gizmoPlaneTranslation_Behavior(plane.m_id, drawAt + plane.m_origin, axes[i].m_axis, appData.m_snapTranslation, planeSize, outVec3);
 			}
 		}
 		ctx.popMatrix();
@@ -745,7 +750,7 @@ bool Im3d::GizmoTranslation(Id _id, float _translation_[3], bool _local)
 		} else {
 			viewNormal = ctx.getAppData().m_viewDirection;
 		}
-		ret |= ctx.gizmoPlaneTranslation_Behavior(planes[3].m_id, drawAt, viewNormal, worldSize, outVec3);
+		ret |= ctx.gizmoPlaneTranslation_Behavior(planes[3].m_id, drawAt, viewNormal, appData.m_snapTranslation, worldSize, outVec3);
 		if (currentId != ctx.m_activeId) {
 		 // gizmo became active, store the view normal
 			storedViewNormal = viewNormal;
@@ -772,7 +777,7 @@ bool Im3d::GizmoTranslation(Id _id, float _translation_[3], bool _local)
 		AxisG& axis = axes[i];
 		ctx.gizmoAxisTranslation_Draw(axis.m_id, drawAt, axis.m_axis, worldHeight, worldSize, axis.m_color);
 		if (intersects) {
-			ret |= ctx.gizmoAxisTranslation_Behavior(axis.m_id, drawAt, axis.m_axis, worldHeight, worldSize, outVec3);
+			ret |= ctx.gizmoAxisTranslation_Behavior(axis.m_id, drawAt, axis.m_axis, appData.m_snapTranslation, worldHeight, worldSize, outVec3);
 		}
 	}
 	ctx.popMatrix();
@@ -820,6 +825,8 @@ bool Im3d::GizmoRotation(Id _id, float _rotation_[3*3], bool _local)
 	Ray ray(ctx.getAppData().m_cursorRayOrigin, ctx.getAppData().m_cursorRayDirection);
 	bool intersects = ctx.m_appHotId == ctx.m_appId || Intersects(ray, boundingSphere);
 
+	const AppData& appData = ctx.getAppData();
+
 	if (_local) {
 	 // extract axes from the pushed matrix
 		for (int i = 0; i < 3; ++i) {
@@ -846,7 +853,7 @@ bool Im3d::GizmoRotation(Id _id, float _rotation_[3*3], bool _local)
 
 		AxisG& axis = axes[i];
 		ctx.gizmoAxislAngle_Draw(axis.m_id, origin, axis.m_axis, worldRadius * 0.9f, euler[i], axis.m_color);
-		if (intersects && ctx.gizmoAxislAngle_Behavior(axis.m_id, origin, axis.m_axis, worldRadius * 0.9f, worldSize, &euler[i])) {
+		if (intersects && ctx.gizmoAxislAngle_Behavior(axis.m_id, origin, axis.m_axis, appData.m_snapRotation, worldRadius * 0.9f, worldSize, &euler[i])) {
 			*outMat3 = Rotation(axis.m_axis, euler[i] - ctx.m_gizmoStateFloat) * storedRotation;
 			ret = true;
 		}
@@ -854,7 +861,7 @@ bool Im3d::GizmoRotation(Id _id, float _rotation_[3*3], bool _local)
 	if (!(ctx.m_activeId == axes[0].m_id || ctx.m_activeId == axes[1].m_id || ctx.m_activeId == axes[2].m_id)) {
 		Vec3 viewNormal = ctx.getAppData().m_viewDirection;
 		float angle = 0.0f;
-		if (intersects && ctx.gizmoAxislAngle_Behavior(viewId, origin, viewNormal, worldRadius, worldSize, &angle)) {
+		if (intersects && ctx.gizmoAxislAngle_Behavior(viewId, origin, viewNormal, appData.m_snapRotation, worldRadius, worldSize, &angle)) {
 			*outMat3 = Rotation(viewNormal, angle) * storedRotation;
 			ret = true;
 		}
@@ -929,7 +936,7 @@ bool Im3d::GizmoScale(Id _id, float _scale_[3])
 					Vec3 intersection = ray.m_origin + ray.m_direction * t0;
 					float sign = Dot(intersection - origin, storedPosition - origin);
 					float scale= copysignf(Length(intersection - origin), sign) / worldHeight;
-					scale = Snap(scale, ctx.getAppData().m_snapScale);
+					scale = Snap(scale, appData.m_snapScale);
 					*outVec3 = storedScale * Vec3(Max(1.0f + copysignf(scale, sign), 1e-4f));
 					ret = true;
 				} else {
@@ -977,7 +984,7 @@ bool Im3d::GizmoScale(Id _id, float _scale_[3])
 		AxisG& axis = axes[i];
 		ctx.gizmoAxisScale_Draw(axis.m_id, origin, axis.m_axis, worldHeight, worldSize, axis.m_color);
 		if (intersects) {
-			ret |= ctx.gizmoAxisScale_Behavior(axis.m_id, origin, axis.m_axis, worldHeight, worldSize, &(*outVec3)[i]);
+			ret |= ctx.gizmoAxisScale_Behavior(axis.m_id, origin, axis.m_axis, appData.m_snapScale, worldHeight, worldSize, &(*outVec3)[i]);
 		}
 	}
 
@@ -1830,7 +1837,7 @@ int Context::estimateLevelOfDetail(const Vec3& _position, float _worldSize, int 
 	return (int)(fmin + (fmax - fmin) * x);
 }
 
-bool Context::gizmoAxisTranslation_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, Vec3* _out_)
+bool Context::gizmoAxisTranslation_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _snap, float _worldHeight, float _worldSize, Vec3* _out_)
 {
 	if (_id != m_hotId) {
 	 // disable behavior when aligned
@@ -1866,11 +1873,9 @@ bool Context::gizmoAxisTranslation_Behavior(Id _id, const Vec3& _origin, const V
 			float tr, tl;
 			Nearest(ray, axisLine, tr, tl);
 			#if IM3D_RELATIVE_SNAP
-				tl = Snap(tl, m_appData.m_snapTranslation);
-				Vec3 snappedOrigin = Snap(storedPosition, m_appData.m_snapTranslation); // always snap the origin = prevent issues when enabling snap after the gizmo became hot
-				*_out_ = *_out_ + _axis * tl - snappedOrigin;
+				*_out_ = *_out_ + Snap(_axis * tl - storedPosition, _snap);
 			#else
-				*_out_ = Snap(*_out_ + _axis * tl - storedPosition, m_appData.m_snapTranslation);
+				*_out_ = Snap(*_out_ + _axis * tl - storedPosition, _snap);
 			#endif
 
 			return true;
@@ -1929,7 +1934,7 @@ void Context::gizmoAxisTranslation_Draw(Id _id, const Vec3& _origin, const Vec3&
 	popColor();
 }
 
-bool Context::gizmoPlaneTranslation_Behavior(Id _id, const Vec3& _origin, const Vec3& _normal, float _worldSize, Vec3* _out_)
+bool Context::gizmoPlaneTranslation_Behavior(Id _id, const Vec3& _origin, const Vec3& _normal, float _snap, float _worldSize, Vec3* _out_)
 {
 	Ray ray(m_appData.m_cursorRayOrigin, m_appData.m_cursorRayDirection);
 	Plane plane(_normal, _origin);
@@ -1963,10 +1968,10 @@ bool Context::gizmoPlaneTranslation_Behavior(Id _id, const Vec3& _origin, const 
 	if (_id == m_activeId) {
 		if (isKeyDown(Action_Select)) {
 			#if IM3D_RELATIVE_SNAP
-				intersection = Snap(intersection, plane, m_appData.m_snapTranslation);
+				intersection = Snap(intersection, plane, _snap);
 				*_out_ = intersection + storedPosition;
 			#else
-				*_out_ = Snap(intersection + storedPosition, plane, m_appData.m_snapTranslation);
+				*_out_ = Snap(intersection + storedPosition, plane, _snap);
 			#endif
 			return true;
 		} else {
@@ -2005,7 +2010,7 @@ void Context::gizmoPlaneTranslation_Draw(Id _id, const Vec3& _origin, const Vec3
 	popColor();
 }
 
-bool Context::gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldRadius, float _worldSize, float* _out_)
+bool Context::gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _snap, float _worldRadius, float _worldSize, float* _out_)
 {
 	Vec3 viewDir = m_appData.m_projOrtho
 		? m_appData.m_viewDirection
@@ -2055,9 +2060,9 @@ bool Context::gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& 
 			float sign = Dot(Cross(storedVec, delta), _axis);
 			float angle = acosf(Clamp(Dot(delta, storedVec), -1.0f, 1.0f));
 			#if IM3D_RELATIVE_SNAP
-				*_out_ = storedAngle + copysignf(Snap(angle, m_appData.m_snapRotation), sign);
+				*_out_ = storedAngle + copysignf(Snap(angle, _snap), sign);
 			#else
-				*_out_ = Snap(storedAngle + copysignf(angle, sign), m_appData.m_snapRotation);
+				*_out_ = Snap(storedAngle + copysignf(angle, sign), _snap);
 			#endif
 			return true;
 		} else {
@@ -2150,7 +2155,7 @@ void Context::gizmoAxislAngle_Draw(Id _id, const Vec3& _origin, const Vec3& _axi
 	popColor();
 }
 
-bool Context::gizmoAxisScale_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, float *_out_)
+bool Context::gizmoAxisScale_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _snap, float _worldHeight, float _worldSize, float *_out_)
 {
 	Ray ray(m_appData.m_cursorRayOrigin, m_appData.m_cursorRayDirection);
 	Line axisLine(_origin, _axis);
@@ -2179,12 +2184,12 @@ bool Context::gizmoAxisScale_Behavior(Id _id, const Vec3& _origin, const Vec3& _
 			float sign = Dot(delta, _axis);
 			#if 1
 			 // relative snap
-				float scale = Snap(Length(delta) / _worldHeight, m_appData.m_snapScale);
+				float scale = Snap(Length(delta) / _worldHeight, _snap);
 				*_out_ = storedScale * Max(1.0f + copysignf(scale, sign), 1e-3f);
 			#else
 			 // absolute snap
 				float scale = Length(delta) / _worldHeight;
-				*_out_ = Max(Snap(storedScale * (1.0f + copysignf(scale, sign)), m_appData.m_snapScale), 1e-3f);
+				*_out_ = Max(Snap(storedScale * (1.0f + copysignf(scale, sign)), _snap), 1e-3f);
 			#endif
 			return true;
 		} else {

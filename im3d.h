@@ -553,16 +553,16 @@ public:
 
  // low-level interface for internal and app-defined gizmos, may be subject to breaking changes
 
-	bool gizmoAxisTranslation_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, Vec3* _out_);
+	bool gizmoAxisTranslation_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _snap, float _worldHeight, float _worldSize, Vec3* _out_);
 	void gizmoAxisTranslation_Draw    (Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, Color _color);
 
-	bool gizmoPlaneTranslation_Behavior(Id _id, const Vec3& _origin, const Vec3& _normal, float _worldSize, Vec3* _out_);
+	bool gizmoPlaneTranslation_Behavior(Id _id, const Vec3& _origin, const Vec3& _normal, float _snap, float _worldSize, Vec3* _out_);
 	void gizmoPlaneTranslation_Draw    (Id _id, const Vec3& _origin, const Vec3& _normal, float _worldSize, Color _color);
 
-	bool gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldRadius, float _worldSize, float* _out_);
+	bool gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _snap, float _worldRadius, float _worldSize, float* _out_);
 	void gizmoAxislAngle_Draw    (Id _id, const Vec3& _origin, const Vec3& _axis, float _worldRadius, float _angle, Color _color);
 
-	bool gizmoAxisScale_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, float *_out_);
+	bool gizmoAxisScale_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _snap, float _worldHeight, float _worldSize, float *_out_);
 	void gizmoAxisScale_Draw    (Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, Color _color);
 
 	// Convert pixels -> world space size based on distance between _position and view origin.
