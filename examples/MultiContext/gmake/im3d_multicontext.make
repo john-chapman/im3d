@@ -13,9 +13,9 @@ endif
 ifeq ($(config),debug_win32)
   RESCOMP = windres
   TARGETDIR = ..
-  TARGET = $(TARGETDIR)/im3d_opengl31_debug.exe
+  TARGET = $(TARGETDIR)/im3d_multicontext_debug.exe
   OBJDIR = obj/Win32/Debug
-  DEFINES += -DIM3D_DEBUG -DIM3D_OPENGL -DGLEW_STATIC -DIM3D_OPENGL_VMAJ=3 -DIM3D_OPENGL_VMIN=1 -DIM3D_OPENGL_VSHADER=140 -DIM3D_VERTEX_ALIGNMENT=16
+  DEFINES += -DIM3D_DEBUG -DIM3D_OPENGL -DGLEW_STATIC -DIM3D_OPENGL_VMAJ=3 -DIM3D_OPENGL_VMIN=3 -DIM3D_OPENGL_VSHADER=330 -DIM3D_THREAD_LOCAL_CONTEXT_PTR=1
   INCLUDES += -I../../.. -I../../common
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
@@ -40,9 +40,9 @@ endif
 ifeq ($(config),debug_win64)
   RESCOMP = windres
   TARGETDIR = ..
-  TARGET = $(TARGETDIR)/im3d_opengl31_debug.exe
+  TARGET = $(TARGETDIR)/im3d_multicontext_debug.exe
   OBJDIR = obj/Win64/Debug
-  DEFINES += -DIM3D_DEBUG -DIM3D_OPENGL -DGLEW_STATIC -DIM3D_OPENGL_VMAJ=3 -DIM3D_OPENGL_VMIN=1 -DIM3D_OPENGL_VSHADER=140 -DIM3D_VERTEX_ALIGNMENT=16
+  DEFINES += -DIM3D_DEBUG -DIM3D_OPENGL -DGLEW_STATIC -DIM3D_OPENGL_VMAJ=3 -DIM3D_OPENGL_VMIN=3 -DIM3D_OPENGL_VSHADER=330 -DIM3D_THREAD_LOCAL_CONTEXT_PTR=1
   INCLUDES += -I../../.. -I../../common
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
@@ -67,9 +67,9 @@ endif
 ifeq ($(config),release_win32)
   RESCOMP = windres
   TARGETDIR = ..
-  TARGET = $(TARGETDIR)/im3d_opengl31.exe
+  TARGET = $(TARGETDIR)/im3d_multicontext.exe
   OBJDIR = obj/Win32/Release
-  DEFINES += -DIM3D_OPENGL -DGLEW_STATIC -DIM3D_OPENGL_VMAJ=3 -DIM3D_OPENGL_VMIN=1 -DIM3D_OPENGL_VSHADER=140 -DIM3D_VERTEX_ALIGNMENT=16
+  DEFINES += -DIM3D_OPENGL -DGLEW_STATIC -DIM3D_OPENGL_VMAJ=3 -DIM3D_OPENGL_VMIN=3 -DIM3D_OPENGL_VSHADER=330 -DIM3D_THREAD_LOCAL_CONTEXT_PTR=1
   INCLUDES += -I../../.. -I../../common
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
@@ -94,9 +94,9 @@ endif
 ifeq ($(config),release_win64)
   RESCOMP = windres
   TARGETDIR = ..
-  TARGET = $(TARGETDIR)/im3d_opengl31.exe
+  TARGET = $(TARGETDIR)/im3d_multicontext.exe
   OBJDIR = obj/Win64/Release
-  DEFINES += -DIM3D_OPENGL -DGLEW_STATIC -DIM3D_OPENGL_VMAJ=3 -DIM3D_OPENGL_VMIN=1 -DIM3D_OPENGL_VSHADER=140 -DIM3D_VERTEX_ALIGNMENT=16
+  DEFINES += -DIM3D_OPENGL -DGLEW_STATIC -DIM3D_OPENGL_VMAJ=3 -DIM3D_OPENGL_VMIN=3 -DIM3D_OPENGL_VSHADER=330 -DIM3D_THREAD_LOCAL_CONTEXT_PTR=1
   INCLUDES += -I../../.. -I../../common
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
@@ -121,9 +121,9 @@ endif
 OBJECTS := \
 	$(OBJDIR)/glew.o \
 	$(OBJDIR)/im3d_example.o \
-	$(OBJDIR)/main.o \
 	$(OBJDIR)/im3d.o \
-	$(OBJDIR)/im3d_opengl31.o \
+	$(OBJDIR)/im3d_multicontext.o \
+	$(OBJDIR)/im3d_opengl33.o \
 	$(OBJDIR)/imgui.o \
 	$(OBJDIR)/imgui_demo.o \
 	$(OBJDIR)/imgui_draw.o \
@@ -141,7 +141,7 @@ ifeq (/bin,$(findstring /bin,$(SHELL)))
 endif
 
 $(TARGET): $(GCH) ${CUSTOMFILES} $(OBJECTS) $(LDDEPS) $(RESOURCES)
-	@echo Linking im3d_opengl31
+	@echo Linking im3d_multicontext
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) mkdir -p $(TARGETDIR)
 else
@@ -151,7 +151,7 @@ endif
 	$(POSTBUILDCMDS)
 
 clean:
-	@echo Cleaning im3d_opengl31
+	@echo Cleaning im3d_multicontext
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) rm -f  $(TARGET)
 	$(SILENT) rm -rf $(OBJDIR)
@@ -194,14 +194,6 @@ else
 	$(SILENT) mkdir $(subst /,\\,$(OBJDIR))
 endif
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/main.o: ../../common/main.cpp
-	@echo $(notdir $<)
-ifeq (posix,$(SHELLTYPE))
-	$(SILENT) mkdir -p $(OBJDIR)
-else
-	$(SILENT) mkdir $(subst /,\\,$(OBJDIR))
-endif
-	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/im3d.o: ../../../im3d.cpp
 	@echo $(notdir $<)
 ifeq (posix,$(SHELLTYPE))
@@ -210,7 +202,15 @@ else
 	$(SILENT) mkdir $(subst /,\\,$(OBJDIR))
 endif
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/im3d_opengl31.o: ../im3d_opengl31.cpp
+$(OBJDIR)/im3d_multicontext.o: ../im3d_multicontext.cpp
+	@echo $(notdir $<)
+ifeq (posix,$(SHELLTYPE))
+	$(SILENT) mkdir -p $(OBJDIR)
+else
+	$(SILENT) mkdir $(subst /,\\,$(OBJDIR))
+endif
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/im3d_opengl33.o: ../../OpenGL33/im3d_opengl33.cpp
 	@echo $(notdir $<)
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) mkdir -p $(OBJDIR)

@@ -20,8 +20,8 @@
 	result into each per-thread context. See the integration examples for how to fill the AppData struct.
 
 	4) Towards the end of the frame, merge each per-thread context into the main thread via Im3d::MergeContexts(), 
-	then call Im3d::Draw(). This requires synchronization to ensure that threads cannot modify either 
-	context during the merge.
+	then call Im3d::EndFrame() and draw the combined draw lists. This requires synchronization to ensure that 
+	threads cannot modify either context during the merge.
 */
 #include "im3d_example.h"
 
@@ -57,7 +57,7 @@ int main(int, char**)
 		g_ThreadGizmoTest[i] = Im3d::Mat4(Im3d::Vec3(threadX, 0.0f, 0.0f), Im3d::Mat3(1.0f), Im3d::Vec3(1.0f));
 	}
 
-	while (example.update()) { // calls Im3d_Update() (see im3d_opengl33.cpp)
+	while (example.update()) { // calls Im3d_NewFrame() (see im3d_opengl33.cpp)
 	// At this point we have updated the default context and filled its AppData struct. 
 
 	// Each separate context could potentially use different AppData (e.g. different cameras/viewports). Here 
@@ -81,20 +81,12 @@ int main(int, char**)
 			threads[i].join();
 		}
 
-	// Prior to calling Im3d::Draw we need to merge the per-thread contexts into the main thread context.
+	// Prior to calling Im3d::EndFrame() we need to merge the per-thread contexts into the main thread context.
 		for (int i = 0; i < g_ThreadCount; ++i) {
-			auto& ctx = g_ThreadContexts[i];
-
-			#if 1
-				Im3d::MergeContexts(Im3d::GetContext(), ctx);
-			#else
-			 // It's also legal to draw the context directly, however this does not preserve layer ordering 
-			 // and doesn't support sorting primitives *between* contexts.
-				ctx.draw();
-			#endif
+			Im3d::MergeContexts(Im3d::GetContext(), g_ThreadContexts[i]);
 		}
 
-		example.draw(); // calls Im3d_Draw() (see im3d_opengl33.cpp).
+		example.draw(); // calls Im3d_EndFrame() (see im3d_opengl33.cpp).
 	}
 	example.shutdown();
 	

@@ -54,8 +54,9 @@ workspace "im3d_multicontext"
 		language "C++"
 		targetdir ""
 	
-		defines { "IM3D_THREAD_LOCAL_CONTEXT_PTR=1", "IM3D_OPENGL_VMAJ=3", "IM3D_OPENGL_VMIN=3", "IM3D_OPENGL_VSHADER=330" }
-		
+		defines { "IM3D_OPENGL_VMAJ=3", "IM3D_OPENGL_VMIN=3", "IM3D_OPENGL_VSHADER=330" }
+		defines { "IM3D_THREAD_LOCAL_CONTEXT_PTR=1" } -- can also do this via im3d_config.h
+
 		includedirs({
 			IM3D_DIR,
 			EXAMPLE_COMMON_DIR,

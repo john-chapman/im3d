@@ -31,6 +31,12 @@ static const char* StripPath(const char* _path)
 
 /******************************************************************************/
 #if defined(IM3D_PLATFORM_WIN)
+	// force Nvidia/AMD drivers to use the discrete GPU
+	extern "C" {
+		__declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+		__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+	}
+
 	static LARGE_INTEGER g_SysTimerFreq;
 
 	const char* Im3d::GetPlatformErrorString(DWORD _err)
@@ -1392,7 +1398,7 @@ bool Example::update()
 		ImGui::Text("Points:    %u ", Im3d::GetContext().getPrimitiveCount(Im3d::DrawPrimitive_Points));
 	ImGui::End();
 
-	Im3d_Update();
+	Im3d_NewFrame();
 	
 	return ret;
 }
@@ -1401,7 +1407,8 @@ void Example::draw()
 {
 	static const Vec4 kClearColor(0.5f, 0.5f, 0.5f, 0.0f);
 
-	Im3d::Draw();
+	Im3d_EndFrame();
+
 	ImGui::Render();
 
 	#if defined(IM3D_PLATFORM_WIN)

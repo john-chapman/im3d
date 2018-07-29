@@ -36,160 +36,6 @@ static ID3D11Buffer*             g_Im3dVertexBuffer;
 
 using namespace Im3d;
 
-// The draw callback is where Im3d draw lists are rendered by the application. Im3d::Draw can potentially
-// call this function multiple times per primtive type.
-// The example below shows the simplest type of draw callback. Variations on this are possible, for example
-// using a depth buffer. See the shader source file for more details.
-// For VR, the easiest option is to call Im3d::Draw() once per eye with the appropriate framebuffer bound,
-// passing the eye view-projection matrix. A more efficient scheme would be to render to both eyes
-// inside the draw callback to avoid uploading the vertex data twice.
-// Note that there is no guarantee that the data in _drawList will exist after this function exits.
-void Im3d_Draw(const Im3d::DrawList& _drawList)
-{
-	AppData& ad = GetAppData();
-
-	ID3D11Device* d3d = g_Example->m_d3dDevice;
-	ID3D11DeviceContext* ctx = g_Example->m_d3dDeviceCtx;
-
-	if (_drawList.m_layerId == Im3d::MakeId("NamedLayer")) {
-	 // The application may group primitives into layers, which can be used to change the draw state (e.g. enable depth testing, use a different shader)
-	}
-
- // setting the framebuffer, viewport and pipeline states can (and should) be done prior to calling Im3d::Draw
-	D3D11_VIEWPORT viewport = {
-		0.0f, 0.0f, // TopLeftX, TopLeftY
-		(float)g_Example->m_width, (float)g_Example->m_height,
-		0.0f, 1.0f // MinDepth, MaxDepth
-		};
-	ctx->RSSetViewports(1, &viewport);
-	ctx->OMSetBlendState(g_Im3dBlendState, nullptr, 0xffffffff);
-	ctx->OMSetDepthStencilState(g_Im3dDepthStencilState, 0);
-	ctx->RSSetState(g_Im3dRasterizerState);
-
- // upload view-proj matrix/viewport size
-	struct Layout { Mat4 m_viewProj; Vec2 m_viewport; };
-	Layout* layout = (Layout*)MapBuffer(g_Im3dConstantBuffer, D3D11_MAP_WRITE_DISCARD);
-	layout->m_viewProj = g_Example->m_camViewProj;
-	layout->m_viewport = ad.m_viewportSize;
-	UnmapBuffer(g_Im3dConstantBuffer);
-
- // upload vertex data
-	static U32 s_vertexBufferSize = 0;
-	if (!g_Im3dVertexBuffer || s_vertexBufferSize < _drawList.m_vertexCount) {
-		if (g_Im3dVertexBuffer) {
-			g_Im3dVertexBuffer->Release();
-			g_Im3dVertexBuffer = nullptr;
-		}
-		s_vertexBufferSize = _drawList.m_vertexCount;
-		g_Im3dVertexBuffer = CreateVertexBuffer(s_vertexBufferSize * sizeof(Im3d::VertexData), D3D11_USAGE_DYNAMIC);
-	}
-	memcpy(MapBuffer(g_Im3dVertexBuffer, D3D11_MAP_WRITE_DISCARD), _drawList.m_vertexData, _drawList.m_vertexCount * sizeof(Im3d::VertexData));
-	UnmapBuffer(g_Im3dVertexBuffer);
-
- // select shader/primitive topo
-	switch (_drawList.m_primType) {
-		case Im3d::DrawPrimitive_Points:
-			ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
-			ctx->VSSetShader(g_Im3dShaderPoints.m_vs, nullptr, 0);
-			ctx->GSSetShader(g_Im3dShaderPoints.m_gs, nullptr, 0);
-			ctx->GSSetConstantBuffers(0, 1, &g_Im3dConstantBuffer);
-			ctx->PSSetShader(g_Im3dShaderPoints.m_ps, nullptr, 0);
-			break;
-		case Im3d::DrawPrimitive_Lines:
-			ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
-			ctx->VSSetShader(g_Im3dShaderLines.m_vs, nullptr, 0);
-			ctx->GSSetShader(g_Im3dShaderLines.m_gs, nullptr, 0);
-			ctx->GSSetConstantBuffers(0, 1, &g_Im3dConstantBuffer);
-			ctx->PSSetShader(g_Im3dShaderLines.m_ps, nullptr, 0);
-			break;
-		case Im3d::DrawPrimitive_Triangles:
-			ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-			ctx->VSSetShader(g_Im3dShaderTriangles.m_vs, nullptr, 0);
-			ctx->PSSetShader(g_Im3dShaderTriangles.m_ps, nullptr, 0);
-			break;
-		default:
-			IM3D_ASSERT(false);
-			return;
-	};
-
-	UINT stride = sizeof(Im3d::VertexData);
-	UINT offset = 0;
-	ctx->IASetVertexBuffers(0, 1, &g_Im3dVertexBuffer, &stride, &offset);
-	ctx->IASetInputLayout(g_Im3dInputLayout);
-	ctx->VSSetConstantBuffers(0, 1, &g_Im3dConstantBuffer);
-	ctx->Draw(_drawList.m_vertexCount, 0);
-
-	ctx->VSSetShader(nullptr, nullptr, 0);
-	ctx->GSSetShader(nullptr, nullptr, 0);
-	ctx->PSSetShader(nullptr, nullptr, 0);
-}
-
-// At the top of each frame, the application must fill the Im3d::AppData struct and then call Im3d::NewFrame().
-// The example below shows how to do this, in particular how to generate the 'cursor ray' from a mouse position
-// which is necessary for interacting with gizmos.
-void Im3d_Update()
-{
-	AppData& ad = GetAppData();
-
-	ad.m_deltaTime     = g_Example->m_deltaTime;
-	ad.m_viewportSize  = Vec2((float)g_Example->m_width, (float)g_Example->m_height);
-	ad.m_viewOrigin    = g_Example->m_camPos; // for VR use the head position
-	ad.m_viewDirection = g_Example->m_camDir;
-	ad.m_worldUp       = Vec3(0.0f, 1.0f, 0.0f); // used internally for generating orthonormal bases
-	ad.m_projOrtho     = g_Example->m_camOrtho;
-
- // m_projScaleY controls how gizmos are scaled in world space to maintain a constant screen height
-	ad.m_projScaleY = g_Example->m_camOrtho
-		? 2.0f / g_Example->m_camProj(1, 1) // use far plane height for an ortho projection
-		: tanf(g_Example->m_camFovRad * 0.5f) * 2.0f // or vertical fov for a perspective projection
-		;
-
- // World space cursor ray from mouse position; for VR this might be the position/orientation of the HMD or a tracked controller.
-	Vec2 cursorPos = g_Example->getWindowRelativeCursor();
-	cursorPos = (cursorPos / ad.m_viewportSize) * 2.0f - 1.0f;
-	cursorPos.y = -cursorPos.y; // window origin is top-left, ndc is bottom-left
-	Vec3 rayOrigin, rayDirection;
-	if (g_Example->m_camOrtho) {
-		rayOrigin.x  = cursorPos.x / g_Example->m_camProj(0, 0);
-		rayOrigin.y  = cursorPos.y / g_Example->m_camProj(1, 1);
-		rayOrigin.z  = 0.0f;
-		rayOrigin    = g_Example->m_camWorld * Vec4(rayOrigin, 1.0f);
-		rayDirection = g_Example->m_camWorld * Vec4(0.0f, 0.0f, -1.0f, 0.0f);
-
-	} else {
-		rayOrigin = ad.m_viewOrigin;
-		rayDirection.x  = cursorPos.x / g_Example->m_camProj(0, 0);
-		rayDirection.y  = cursorPos.y / g_Example->m_camProj(1, 1);
-		rayDirection.z  = -1.0f;
-		rayDirection    = g_Example->m_camWorld * Vec4(Normalize(rayDirection), 0.0f);
-	}
-	ad.m_cursorRayOrigin = rayOrigin;
-	ad.m_cursorRayDirection = rayDirection;
-
- // Set cull frustum planes. This is only required if IM3D_CULL_GIZMOS or IM3D_CULL_PRIMTIIVES is enable via
- // im3d_config.h, or if any of the IsVisible() functions are called.
-	ad.setCullFrustum(g_Example->m_camViewProj, true);
-
- // Fill the key state array; using GetAsyncKeyState here but this could equally well be done via the window proc.
- // All key states have an equivalent (and more descriptive) 'Action_' enum.
-	ad.m_keyDown[Im3d::Mouse_Left/*Im3d::Action_Select*/] = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
-
- // The following key states control which gizmo to use for the generic Gizmo() function. Here using the left ctrl
- // key as an additional predicate.
-	bool ctrlDown = (GetAsyncKeyState(VK_LCONTROL) & 0x8000) != 0;
-	ad.m_keyDown[Im3d::Key_L/*Action_GizmoLocal*/]       = ctrlDown && (GetAsyncKeyState(0x4c) & 0x8000) != 0;
-	ad.m_keyDown[Im3d::Key_T/*Action_GizmoTranslation*/] = ctrlDown && (GetAsyncKeyState(0x54) & 0x8000) != 0;
-	ad.m_keyDown[Im3d::Key_R/*Action_GizmoRotation*/]    = ctrlDown && (GetAsyncKeyState(0x52) & 0x8000) != 0;
-	ad.m_keyDown[Im3d::Key_S/*Action_GizmoScale*/]       = ctrlDown && (GetAsyncKeyState(0x53) & 0x8000) != 0;
-
- // Enable gizmo snapping by setting the translation/rotation/scale increments to be > 0
-	ad.m_snapTranslation = ctrlDown ? 0.1f : 0.0f;
-	ad.m_snapRotation    = ctrlDown ? Im3d::Radians(30.0f) : 0.0f;
-	ad.m_snapScale       = ctrlDown ? 0.5f : 0.0f;
-
-	Im3d::NewFrame();
-}
-
 // Resource init/shutdown will be app specific. In general you'll need one shader for each of the 3
 // draw primitive types (points, lines, triangles), plus some number of vertex buffers.
 bool Im3d_Init()
@@ -280,8 +126,6 @@ bool Im3d_Init()
 
 	g_Im3dConstantBuffer = CreateConstantBuffer(sizeof(Mat4) + sizeof(Vec4), D3D11_USAGE_DYNAMIC);
 
-	GetAppData().drawCallback = &Im3d_Draw;
-
 	return true;
 }
 
@@ -297,4 +141,159 @@ void Im3d_Shutdown()
 	if (g_Im3dDepthStencilState)  g_Im3dDepthStencilState->Release();
 	if (g_Im3dConstantBuffer)     g_Im3dConstantBuffer->Release();
 	if (g_Im3dVertexBuffer)       g_Im3dVertexBuffer->Release();
+}
+
+// At the top of each frame, the application must fill the Im3d::AppData struct and then call Im3d::NewFrame().
+// The example below shows how to do this, in particular how to generate the 'cursor ray' from a mouse position
+// which is necessary for interacting with gizmos.
+void Im3d_NewFrame()
+{
+	AppData& ad = GetAppData();
+
+	ad.m_deltaTime     = g_Example->m_deltaTime;
+	ad.m_viewportSize  = Vec2((float)g_Example->m_width, (float)g_Example->m_height);
+	ad.m_viewOrigin    = g_Example->m_camPos; // for VR use the head position
+	ad.m_viewDirection = g_Example->m_camDir;
+	ad.m_worldUp       = Vec3(0.0f, 1.0f, 0.0f); // used internally for generating orthonormal bases
+	ad.m_projOrtho     = g_Example->m_camOrtho;
+
+ // m_projScaleY controls how gizmos are scaled in world space to maintain a constant screen height
+	ad.m_projScaleY = g_Example->m_camOrtho
+		? 2.0f / g_Example->m_camProj(1, 1) // use far plane height for an ortho projection
+		: tanf(g_Example->m_camFovRad * 0.5f) * 2.0f // or vertical fov for a perspective projection
+		;
+
+ // World space cursor ray from mouse position; for VR this might be the position/orientation of the HMD or a tracked controller.
+	Vec2 cursorPos = g_Example->getWindowRelativeCursor();
+	cursorPos = (cursorPos / ad.m_viewportSize) * 2.0f - 1.0f;
+	cursorPos.y = -cursorPos.y; // window origin is top-left, ndc is bottom-left
+	Vec3 rayOrigin, rayDirection;
+	if (g_Example->m_camOrtho) {
+		rayOrigin.x  = cursorPos.x / g_Example->m_camProj(0, 0);
+		rayOrigin.y  = cursorPos.y / g_Example->m_camProj(1, 1);
+		rayOrigin.z  = 0.0f;
+		rayOrigin    = g_Example->m_camWorld * Vec4(rayOrigin, 1.0f);
+		rayDirection = g_Example->m_camWorld * Vec4(0.0f, 0.0f, -1.0f, 0.0f);
+
+	} else {
+		rayOrigin = ad.m_viewOrigin;
+		rayDirection.x  = cursorPos.x / g_Example->m_camProj(0, 0);
+		rayDirection.y  = cursorPos.y / g_Example->m_camProj(1, 1);
+		rayDirection.z  = -1.0f;
+		rayDirection    = g_Example->m_camWorld * Vec4(Normalize(rayDirection), 0.0f);
+	}
+	ad.m_cursorRayOrigin = rayOrigin;
+	ad.m_cursorRayDirection = rayDirection;
+
+ // Set cull frustum planes. This is only required if IM3D_CULL_GIZMOS or IM3D_CULL_PRIMTIIVES is enable via
+ // im3d_config.h, or if any of the IsVisible() functions are called.
+	ad.setCullFrustum(g_Example->m_camViewProj, true);
+
+ // Fill the key state array; using GetAsyncKeyState here but this could equally well be done via the window proc.
+ // All key states have an equivalent (and more descriptive) 'Action_' enum.
+	ad.m_keyDown[Im3d::Mouse_Left/*Im3d::Action_Select*/] = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+
+ // The following key states control which gizmo to use for the generic Gizmo() function. Here using the left ctrl
+ // key as an additional predicate.
+	bool ctrlDown = (GetAsyncKeyState(VK_LCONTROL) & 0x8000) != 0;
+	ad.m_keyDown[Im3d::Key_L/*Action_GizmoLocal*/]       = ctrlDown && (GetAsyncKeyState(0x4c) & 0x8000) != 0;
+	ad.m_keyDown[Im3d::Key_T/*Action_GizmoTranslation*/] = ctrlDown && (GetAsyncKeyState(0x54) & 0x8000) != 0;
+	ad.m_keyDown[Im3d::Key_R/*Action_GizmoRotation*/]    = ctrlDown && (GetAsyncKeyState(0x52) & 0x8000) != 0;
+	ad.m_keyDown[Im3d::Key_S/*Action_GizmoScale*/]       = ctrlDown && (GetAsyncKeyState(0x53) & 0x8000) != 0;
+
+ // Enable gizmo snapping by setting the translation/rotation/scale increments to be > 0
+	ad.m_snapTranslation = ctrlDown ? 0.1f : 0.0f;
+	ad.m_snapRotation    = ctrlDown ? Im3d::Radians(30.0f) : 0.0f;
+	ad.m_snapScale       = ctrlDown ? 0.5f : 0.0f;
+
+	Im3d::NewFrame();
+}
+
+// After all Im3d calls have been made for a frame, the user must call Im3d::EndFrame() to finalize draw data, then
+// access the draw lists for rendering. Draw lists are only valid between calls to EndFrame() and NewFrame().
+// The example below shows the simplest approach to rendering draw lists; variations on this are possible. See the 
+// shader source file for more details.
+void Im3d_EndFrame()
+{
+	Im3d::EndFrame();
+	
+	AppData& ad = GetAppData();
+
+	ID3D11Device* d3d = g_Example->m_d3dDevice;
+	ID3D11DeviceContext* ctx = g_Example->m_d3dDeviceCtx;
+	
+	D3D11_VIEWPORT viewport = {
+		0.0f, 0.0f, // TopLeftX, TopLeftY
+		(float)g_Example->m_width, (float)g_Example->m_height,
+		0.0f, 1.0f // MinDepth, MaxDepth
+		};
+	ctx->RSSetViewports(1, &viewport);
+	ctx->OMSetBlendState(g_Im3dBlendState, nullptr, 0xffffffff);
+	ctx->OMSetDepthStencilState(g_Im3dDepthStencilState, 0);
+	ctx->RSSetState(g_Im3dRasterizerState);
+
+	for (U32 i = 0, n = Im3d::GetDrawListCount(); i < n; ++i) {
+		auto& drawList = Im3d::GetDrawLists()[i];
+ 
+		if (drawList.m_layerId == Im3d::MakeId("NamedLayer")) {
+		 // The application may group primitives into layers, which can be used to change the draw state (e.g. enable depth testing, use a different shader)
+		}
+	
+	 // upload view-proj matrix/viewport size
+		struct Layout { Mat4 m_viewProj; Vec2 m_viewport; };
+		Layout* layout = (Layout*)MapBuffer(g_Im3dConstantBuffer, D3D11_MAP_WRITE_DISCARD);
+		layout->m_viewProj = g_Example->m_camViewProj;
+		layout->m_viewport = ad.m_viewportSize;
+		UnmapBuffer(g_Im3dConstantBuffer);
+	
+	 // upload vertex data
+		static U32 s_vertexBufferSize = 0;
+		if (!g_Im3dVertexBuffer || s_vertexBufferSize < drawList.m_vertexCount) {
+			if (g_Im3dVertexBuffer) {
+				g_Im3dVertexBuffer->Release();
+				g_Im3dVertexBuffer = nullptr;
+			}
+			s_vertexBufferSize = drawList.m_vertexCount;
+			g_Im3dVertexBuffer = CreateVertexBuffer(s_vertexBufferSize * sizeof(Im3d::VertexData), D3D11_USAGE_DYNAMIC);
+		}
+		memcpy(MapBuffer(g_Im3dVertexBuffer, D3D11_MAP_WRITE_DISCARD), drawList.m_vertexData, drawList.m_vertexCount * sizeof(Im3d::VertexData));
+		UnmapBuffer(g_Im3dVertexBuffer);
+	
+	 // select shader/primitive topo
+		switch (drawList.m_primType) {
+			case Im3d::DrawPrimitive_Points:
+				ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
+				ctx->VSSetShader(g_Im3dShaderPoints.m_vs, nullptr, 0);
+				ctx->GSSetShader(g_Im3dShaderPoints.m_gs, nullptr, 0);
+				ctx->GSSetConstantBuffers(0, 1, &g_Im3dConstantBuffer);
+				ctx->PSSetShader(g_Im3dShaderPoints.m_ps, nullptr, 0);
+				break;
+			case Im3d::DrawPrimitive_Lines:
+				ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+				ctx->VSSetShader(g_Im3dShaderLines.m_vs, nullptr, 0);
+				ctx->GSSetShader(g_Im3dShaderLines.m_gs, nullptr, 0);
+				ctx->GSSetConstantBuffers(0, 1, &g_Im3dConstantBuffer);
+				ctx->PSSetShader(g_Im3dShaderLines.m_ps, nullptr, 0);
+				break;
+			case Im3d::DrawPrimitive_Triangles:
+				ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+				ctx->VSSetShader(g_Im3dShaderTriangles.m_vs, nullptr, 0);
+				ctx->PSSetShader(g_Im3dShaderTriangles.m_ps, nullptr, 0);
+				break;
+			default:
+				IM3D_ASSERT(false);
+				return;
+		};
+	
+		UINT stride = sizeof(Im3d::VertexData);
+		UINT offset = 0;
+		ctx->IASetVertexBuffers(0, 1, &g_Im3dVertexBuffer, &stride, &offset);
+		ctx->IASetInputLayout(g_Im3dInputLayout);
+		ctx->VSSetConstantBuffers(0, 1, &g_Im3dConstantBuffer);
+		ctx->Draw(drawList.m_vertexCount, 0);
+		
+		ctx->VSSetShader(nullptr, nullptr, 0);
+		ctx->GSSetShader(nullptr, nullptr, 0);
+		ctx->PSSetShader(nullptr, nullptr, 0);
+	}
 }

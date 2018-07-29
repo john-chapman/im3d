@@ -4,7 +4,7 @@
 
 #include "im3d_config.h"
 
-#define IM3D_VERSION "1.12"
+#define IM3D_VERSION "1.13"
 
 #ifndef IM3D_ASSERT
 	#include <cassert>
@@ -26,6 +26,7 @@ struct Mat4;
 struct Color;
 struct VertexData;
 struct AppData;
+struct DrawList;
 class  Context;
 
 typedef U32 Id;
@@ -33,10 +34,20 @@ constexpr Id Id_Invalid = 0;
 
 // Get AppData struct from the current context, fill before calling NewFrame().
 AppData& GetAppData();
+
 // Call at the start of each frame, after filling the AppData struct.
 void  NewFrame();
+// Call after all Im3d calls have been made for the current frame, before accessing draw data.
+void  EndFrame();
+
+// Access draw data. Draw lists are valid after calling EndFrame() and before calling NewFrame().
+const DrawList* GetDrawLists();
+U32   GetDrawListCount();
+
+// DEPRECATED (use EndFrame() + GetDrawLists()).
 // Call after all Im3d calls have been made for the current frame.
 void  Draw();
+
 
 // Begin/end primitive. End() must be called before starting each new primitive type.
 void  BeginPoints();
@@ -170,7 +181,7 @@ bool  IsVisible(const Vec3& _min, const Vec3& _max); // axis-aligned bounding bo
 Context& GetContext();
 void     SetContext(Context& _ctx);
 
-// Merge vertex data from _src into _dst_. Layers are preserved.
+// Merge vertex data from _src into _dst_. Layers are preserved. Call before EndFrame().
 void     MergeContexts(Context& _dst_, const Context& _src);
 
 struct Vec2
@@ -509,7 +520,11 @@ public:
 
 	void        reset();
 	void        merge(const Context& _src);
-	void        draw();
+	void        endFrame();
+	void        draw(); // DEPRECATED (see Im3d::Draw)
+
+	const DrawList* getDrawLists() const         { return m_drawLists.data();      }
+	U32         getDrawListCount() const         { return m_drawLists.size();      }
 
 
 	void        setColor(Color _color)           { m_colorStack.back() = _color;   }
@@ -628,9 +643,9 @@ private:
 	int                 m_vertexDataIndex;          // 0, or 1 if sorting enabled.
 	Vector<Id>          m_layerIdMap;               // Map Id -> vertex data index.
 	int                 m_layerIndex;               // Index of the currently active layer in m_layerIdMap.
-	Vector<DrawList>    m_sortedDrawLists;          // Sorted draw lists are stored to avoid multiple calls to sort().
+	Vector<DrawList>    m_drawLists;                // All draw lists for the current frame, available after calling endFrame() before calling reset().
 	bool                m_sortCalled;               // Avoid calling sort() during every call to draw().
-	bool                m_drawCalled;               // For assert, if vertices are pushed after draw() was called.
+	bool                m_endFrameCalled;           // For assert, if vertices are pushed after endFrame() was called.
 
  // primitive state
 	PrimitiveMode       m_primMode;
@@ -668,7 +683,11 @@ namespace internal {
 
 inline AppData& GetAppData()                                                 { return GetContext().getAppData();   }
 inline void     NewFrame()                                                   { GetContext().reset();               }
+inline void     EndFrame()                                                   { GetContext().endFrame();            }
 inline void     Draw()                                                       { GetContext().draw();                }
+
+inline const DrawList* GetDrawLists()                                        { return GetContext().getDrawLists();     }
+inline U32             GetDrawListCount()                                    { return GetContext().getDrawListCount(); }
 
 inline void  BeginPoints()                                                   { GetContext().begin(PrimitiveMode_Points);        }
 inline void  BeginLines()                                                    { GetContext().begin(PrimitiveMode_Lines);         }

@@ -1,5 +1,6 @@
 /*	CHANGE LOG
 	==========
+	2018-07-29 (v1.13) - Deprecated Draw(), instead use EndFrame() followed by GetDrawListCount() + GetDrawLists() to access draw data directly.
 	2018-06-07 (v1.12) - Color_ constants are constexpr (fixed issues with static init).
 	2018-03-20 (v1.11) - Thread-local context ptr (IM3D_THREAD_LOCAL_CONTEXT_PTR).
 	                   - MergeContexts API.
@@ -1234,7 +1235,7 @@ IM3D_THREAD_LOCAL Context* Im3d::internal::g_CurrentContext = &g_DefaultContext;
 
 void Context::begin(PrimitiveMode _mode)
 {
-	IM3D_ASSERT(!m_drawCalled); // Begin*() called after Draw() but before NewFrame(), or forgot to call NewFrame()
+	IM3D_ASSERT(!m_endFrameCalled); // Begin*() called after EndFrame() but before NewFrame(), or forgot to call NewFrame()
 	IM3D_ASSERT(m_primMode == PrimitiveMode_None); // forgot to call End()
 	m_primMode = _mode;
 	m_vertCountThisPrim = 0;
@@ -1420,9 +1421,9 @@ void Context::reset()
 		m_vertexData[0][i]->clear();
 		m_vertexData[1][i]->clear();
 	}
-	m_sortedDrawLists.clear();
+	m_drawLists.clear();
 	m_sortCalled = false;
-	m_drawCalled = false;
+	m_endFrameCalled = false;
 
 	m_appData.m_viewDirection = Normalize(m_appData.m_viewDirection);
 
@@ -1462,6 +1463,8 @@ void Context::reset()
 
 void Context::merge(const Context& _src)
 {
+	IM3D_ASSERT(!m_endFrameCalled && !_src.m_endFrameCalled); // call MergeContexts() before calling EndFrame()
+
  // layer IDs
 	for (auto& id : _src.m_layerIdMap) {
 		pushLayerId(id); // add a new layer if id doesn't alrady exist 
@@ -1482,11 +1485,12 @@ void Context::merge(const Context& _src)
 	}
 }
 
-void Context::draw()
+void Context::endFrame()
 {
-	IM3D_ASSERT(m_appData.drawCallback);
+	IM3D_ASSERT(!m_endFrameCalled); // EndFrame() was called multiple times for this frame
+	m_endFrameCalled = true;
 
- // draw unsorted prims first
+ // draw unsorted primitives first
 	for (U32 i = 0; i < m_vertexData[0].size(); ++i) {
 		if (m_vertexData[0][i]->size() > 0) {
 			DrawList dl;
@@ -1494,19 +1498,26 @@ void Context::draw()
 			dl.m_primType    = (DrawPrimitiveType)(i % DrawPrimitive_Count);
 			dl.m_vertexData  = m_vertexData[0][i]->data();
 			dl.m_vertexCount = m_vertexData[0][i]->size();
-			m_appData.drawCallback(dl);
+			m_drawLists.push_back(dl);
 		}
 	}
+
  // draw sorted primitives second
 	if (!m_sortCalled) {
 		sort();
-		m_sortCalled = true;
 	}
-	for (Im3d::DrawList* dl = m_sortedDrawLists.begin(); dl != m_sortedDrawLists.end(); ++dl) {
-		m_appData.drawCallback(*dl);
+}
+
+void Context::draw()
+{
+	if (m_drawLists.empty()) {
+		endFrame();
 	}
 
-	m_drawCalled = true;
+	IM3D_ASSERT(m_appData.drawCallback);
+	for (auto& drawList : m_drawLists) {
+		m_appData.drawCallback(drawList);
+	}
 }
 
 void Context::pushEnableSorting(bool _enable)
@@ -1555,7 +1566,7 @@ void Context::popLayerId()
 Context::Context()
 {
 	m_sortCalled = false;
-	m_drawCalled = false;
+	m_endFrameCalled = false;
 	m_primMode = PrimitiveMode_None;
 	m_vertexDataIndex = 0; // = sorting disabled
 	m_layerIndex = 0;
@@ -1676,6 +1687,7 @@ void Context::sort()
 				search[i] = sortData[i].begin();
 			}
 		}
+		bool first = true;
 		#define modinc(v) ((v + 1) % DrawPrimitive_Count)
 		while (emptyCount != DrawPrimitive_Count) {
 			while (search[cprim] == 0) {
@@ -1693,9 +1705,9 @@ void Context::sort()
 
 		 // if draw list is empty or the layer or primitive changed, start a new draw list
 			if (
-				m_sortedDrawLists.empty() ||
-				m_sortedDrawLists.back().m_layerId != layer ||
-				m_sortedDrawLists.back().m_primType != mxprim
+				first ||
+				m_drawLists.back().m_layerId != layer ||
+				m_drawLists.back().m_primType != mxprim
 				) {
 				cprim = mxprim;
 				DrawList dl;
@@ -1703,11 +1715,12 @@ void Context::sort()
 				dl.m_primType    = (DrawPrimitiveType)cprim;
 				dl.m_vertexData  = m_vertexData[1][layer * DrawPrimitive_Count + cprim]->data() + (search[cprim] - sortData[cprim].data()) * VertsPerDrawPrimitive[cprim];
 				dl.m_vertexCount = 0;
-				m_sortedDrawLists.push_back(dl);
+				m_drawLists.push_back(dl);
+				first = false;
 			}
 
 		 // increment the vertex count for the current draw list
-			m_sortedDrawLists.back().m_vertexCount += VertsPerDrawPrimitive[cprim];
+			m_drawLists.back().m_vertexCount += VertsPerDrawPrimitive[cprim];
 			++search[cprim];
 			if (search[cprim] == sortData[cprim].end()) {
 				search[cprim] = 0;
@@ -1717,6 +1730,8 @@ void Context::sort()
 		}
 		#undef modinc
 	}
+
+	m_sortCalled = true;
 }
 
 int Context::findLayerIndex(Id _id) const
