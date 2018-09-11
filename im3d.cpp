@@ -1438,7 +1438,7 @@ void Context::reset()
 		if (m_appData.m_projOrtho && i == FrustumPlane_Near) { // skip near plane if perspective
 			continue;
 		}
-		if (isinf(plane.w)) { // may be the case e.g. for the far plane if projection is infinite
+		if (std::isinf(plane.w)) { // may be the case e.g. for the far plane if projection is infinite
 			continue;
 		}
 		m_cullFrustum[m_cullFrustumCount++] = plane;
