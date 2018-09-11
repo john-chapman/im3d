@@ -4,6 +4,8 @@
 # Visual Studio
 **.ilk
 **.pdb
+**.exp
+**.lib
 **/vs*/**
 !**/vs*/*.sln
 !**/vs*/*.vcxproj
