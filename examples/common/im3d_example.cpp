@@ -1215,6 +1215,8 @@ bool Example::init(int _width, int _height, const char* _title)
 		winAssert(QueryPerformanceCounter(&m_currTime));
 	#endif
 
+	ImGui::SetCurrentContext(ImGui::CreateContext()); // can't call this in ImGui_Init() because creating the window ends up calling ImGui::GetIO()
+
 	m_width  = _width;
 	m_height = _height;
 	m_title  = _title;
@@ -1262,6 +1264,9 @@ void Example::shutdown()
 	#endif
 	
 	ShutdownWindow();
+
+	ImGui::EndFrame(); // prevent assert due to locked font atlas in DestroyContext() call below
+	ImGui::DestroyContext();
 }
 
 bool Example::update()
