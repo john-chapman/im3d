@@ -2705,6 +2705,7 @@ bool Im3d::Intersects(const Ray& _ray, const Capsule& _capsule)
 bool Im3d::Intersect(const Ray& _ray, const Capsule& _capsule, float& t0_, float& t1_)
 {
 	//IM3D_ASSERT(false); // \todo implement
+	t0_ = t1_ = 0.0f;
 	return Intersects(_ray, _capsule);
 }
 
