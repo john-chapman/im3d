@@ -2013,7 +2013,8 @@ void Context::gizmoPlaneTranslation_Draw(Id _id, const Vec3& _origin, const Vec3
 		? m_appData.m_viewDirection
 		: Normalize(m_appData.m_viewOrigin - _origin)
 		;
-	float aligned = fabs(Dot(_normal, viewDir));
+	Vec3 n = Mat3(m_matrixStack.back()) * _normal; // _normal may be in local space, need to transform to world space for the dot with viewDir to make sense
+	float aligned = fabs(Dot(n, viewDir));
 	aligned = Remap(aligned, 0.1f, 0.2f);
 	Color color = _color;
 	color.setA(color.getA() * aligned);
