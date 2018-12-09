@@ -1,5 +1,6 @@
 /*	CHANGE LOG
 	==========
+	2018-12-09 (v1.14) - Fixed memory leak in context dtor.
 	2018-07-29 (v1.13) - Deprecated Draw(), instead use EndFrame() followed by GetDrawListCount() + GetDrawLists() to access draw data directly.
 	2018-06-07 (v1.12) - Color_ constants are constexpr (fixed issues with static init).
 	2018-03-20 (v1.11) - Thread-local context ptr (IM3D_THREAD_LOCAL_CONTEXT_PTR).
@@ -1606,6 +1607,7 @@ Context::~Context()
 {
 	for (int i = 0; i < 2; ++i) {
 		while (!m_vertexData[i].empty()) {
+			m_vertexData[i].back()->~Vector(); // manually call dtor (vector is allocated via IM3D_MALLOC during pushLayerId)
 			IM3D_FREE(m_vertexData[i].back());
 			m_vertexData[i].pop_back();
 		}

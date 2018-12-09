@@ -4,7 +4,7 @@
 
 #include "im3d_config.h"
 
-#define IM3D_VERSION "1.13"
+#define IM3D_VERSION "1.14"
 
 #ifndef IM3D_ASSERT
 	#include <cassert>
