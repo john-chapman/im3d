@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="common">
+      <UniqueIdentifier>{AEFEE3F6-9AA0-0ECD-835B-22216F9C951D}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="common\GL">
+      <UniqueIdentifier>{5079AB3B-BCE3-5FB2-0522-115871CB3D07}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="common">
+      <UniqueIdentifier>{AEFEE3F6-9AA0-0ECD-835B-22216F9C951D}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="im3d">
+      <UniqueIdentifier>{F279987C-DEB0-990D-879D-7F1073B3150F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="imgui">
+      <UniqueIdentifier>{0098A80F-6CAC-D0C0-352E-7420A101CDF1}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\im3d.h">
+      <Filter>im3d</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\im3d_config.h">
+      <Filter>im3d</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\im3d_math.h">
+      <Filter>im3d</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\GL\eglew.h">
+      <Filter>common\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\GL\glew.h">
+      <Filter>common\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\GL\glxew.h">
+      <Filter>common\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\GL\wglew.h">
+      <Filter>common\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\im3d_example.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\imgui\imconfig.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\imgui\imgui.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\imgui\imgui_internal.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\imgui\imstb_rectpack.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\imgui\imstb_textedit.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\imgui\imstb_truetype.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\common\teapot.h">
+      <Filter>common</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\im3d.cpp">
+      <Filter>im3d</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\OpenGL33\im3d_opengl33.cpp" />
+    <ClCompile Include="..\..\common\GL\glew.c">
+      <Filter>common\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\im3d_example.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\imgui\imgui.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\imgui\imgui_demo.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\imgui\imgui_draw.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\common\imgui\imgui_widgets.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\im3d_multicontext.cpp" />
+  </ItemGroup>
+</Project>

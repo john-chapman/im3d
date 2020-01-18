@@ -20,8 +20,8 @@ workspace "im3d_opengl31"
 	configurations { "Debug", "Release" }
 	platforms { "Win32", "Win64" }
 	cppdialect "C++11"
-	flags { "StaticRuntime" }
-
+	staticruntime "On"
+	
 	filter { "platforms:Win32 or platforms:Win64" }
 		system "windows"
 
