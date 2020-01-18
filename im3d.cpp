@@ -1,5 +1,6 @@
 /*	CHANGE LOG
 	==========
+	2020-01-18 (v1.15) - Added IM3D_API macro.
 	2018-12-09 (v1.14) - Fixed memory leak in context dtor.
 	2018-07-29 (v1.13) - Deprecated Draw(), instead use EndFrame() followed by GetDrawListCount() + GetDrawLists() to access draw data directly.
 	2018-06-07 (v1.12) - Color_ constants are constexpr (fixed issues with static init).

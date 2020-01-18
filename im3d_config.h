@@ -9,6 +9,9 @@
 //#define IM3D_MALLOC(size) malloc(size)
 //#define IM3D_FREE(ptr) free(ptr) 
 
+// User-defined API declaration (e.g. __declspec(dllexport)).
+//#define IM3D_API
+
 // Use a thread-local context pointer.
 //#define IM3D_THREAD_LOCAL_CONTEXT_PTR 1
 
