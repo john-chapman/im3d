@@ -186,6 +186,8 @@ void Im3d_EndFrame()
 {
 	Im3d::EndFrame();
 
+ // Primitive rendering.
+
 	glAssert(glViewport(0, 0, (GLsizei)g_Example->m_width, (GLsizei)g_Example->m_height));
 	glAssert(glEnable(GL_BLEND));
 	glAssert(glBlendEquation(GL_FUNC_ADD));
@@ -254,4 +256,8 @@ void Im3d_EndFrame()
 			remainingPrimCount -= passPrimCount;
 		}
 	}
+
+ // Text rendering.
+ // This is common to all examples since we're using ImGui to draw the text lists, see im3d_example.cpp.
+	g_Example->drawTextDrawListsImGui(Im3d::GetTextDrawLists(), Im3d::GetTextDrawListCount());
 }

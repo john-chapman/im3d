@@ -1,6 +1,4 @@
 #pragma once
-#ifndef im3d_config_h
-#define im3d_config_h
 
 // User-defined assertion handler (default is cassert assert()).
 //#define IM3D_ASSERT(e) assert(e)
@@ -43,6 +41,3 @@
 //#define IM3D_MAT4_APP \
 //	Mat4(const glm::mat4& _m)          { for (int i = 0; i < 16; ++i) m[i] = *(&(_m[0][0]) + i); } \
 //	operator glm::mat4() const         { glm::mat4 ret; for (int i = 0; i < 16; ++i) *(&(ret[0][0]) + i) = m[i]; return ret; }
-
-	
-#endif // im3d_config_h

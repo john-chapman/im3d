@@ -1,10 +1,8 @@
 #pragma once
-#ifndef im3d_h
-#define im3d_h
 
 #include "im3d_config.h"
 
-#define IM3D_VERSION "1.15"
+#define IM3D_VERSION "1.16"
 
 #ifndef IM3D_API
 	#define IM3D_API
@@ -19,6 +17,8 @@
 	#define IM3D_VERTEX_ALIGNMENT 4
 #endif
 
+#include <cstdarg> // va_list
+
 namespace Im3d {
 
 typedef unsigned int U32;
@@ -31,7 +31,8 @@ struct Color;
 struct VertexData;
 struct AppData;
 struct DrawList;
-class  Context;
+struct TextDrawList;
+struct Context;
 
 typedef U32 Id;
 constexpr Id Id_Invalid = 0;
@@ -47,6 +48,10 @@ IM3D_API void EndFrame();
 // Access draw data. Draw lists are valid after calling EndFrame() and before calling NewFrame().
 IM3D_API const DrawList* GetDrawLists();
 IM3D_API U32 GetDrawListCount();
+
+// Access to text draw data. Draw lists are valid after calling EndFrame() and before calling NewFrame().
+IM3D_API const TextDrawList* GetTextDrawLists();
+IM3D_API U32 GetTextDrawListCount();
 
 // DEPRECATED (use EndFrame() + GetDrawLists()).
 // Call after all Im3d calls have been made for the current frame.
@@ -135,6 +140,10 @@ IM3D_API void DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, 
 IM3D_API void DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int _detail = -1);
 IM3D_API void DrawPrism(const Vec3& _start, const Vec3& _end, float _radius, int _sides);
 IM3D_API void DrawArrow(const Vec3& _start, const Vec3& _end, float _headLength = -1.0f, float _headThickness = -1.0f);
+
+// Add text. See TextFlags_ enum for _textFlags. _size is a hint to the application-side text rendering.
+IM3D_API void Text(const Vec3& _position, U32 _textFlags, const char* _text, ...); // use the current draw state for size/color
+IM3D_API void Text(const Vec3& _position, float _size, Color _color, U32 _textFlags, const char* _text, ...);
 
 // Ids are used to uniquely identify gizmos and layers. Gizmo should have a unique id during a frame.
 // Note that ids are a hash of the whole id stack, see PushId(), PopId().
@@ -357,6 +366,16 @@ struct IM3D_API Color
 	float getG() const                                                       { return get(2); }
 	float getB() const                                                       { return get(1); }
 	float getA() const                                                       { return get(0); }
+
+	U32 getABGR() const
+	{
+		return 0
+			| ((v & (0xff << 24)) >> 24) // r
+			| ((v & (0xff << 16)) >>  8) // g
+			| ((v & (0xff <<  8)) <<  8) // b
+			| ((v & (0xff      )) << 24) // b
+			;
+	}
 };
 
 constexpr Color Color_Black   = Color(0x000000ff);
@@ -395,6 +414,33 @@ struct DrawList
 	U32               m_vertexCount;
 };
 typedef void (DrawPrimitivesCallback)(const DrawList& _drawList);
+
+enum TextFlags
+{
+	TextFlags_AlignLeft    = (1 << 0),
+	TextFlags_AlignRight   = (1 << 1),
+	TextFlags_AlignTop     = (1 << 3),
+	TextFlags_AlignBottom  = (1 << 4),
+
+	TextFlags_Default      = 0 // align center
+};
+
+struct alignas(IM3D_VERTEX_ALIGNMENT) TextData
+{
+	Vec4      m_positionSize;     // xyz = position, w = size
+	Color     m_color;            // rgba8 (MSB = r)
+	U32       m_flags;            // TextFlags
+	U32       m_textLength;       // # chars in the text, excluding null terminator
+	U32       m_textBufferOffset; // start of the text in the draw list's text buffer
+};
+
+struct TextDrawList
+{
+	Id              m_layerId;
+	const TextData* m_textData;
+	U32             m_textDataCount;
+	const char*     m_textBuffer;
+};
 
 enum Key
 {
@@ -455,13 +501,8 @@ struct AppData
 
 // Minimal vector.
 template <typename T>
-class Vector
+struct Vector
 {
-	T*   m_data     = nullptr;
-	U32  m_size     = 0;
-	U32  m_capacity = 0;
-
-public:
 	Vector()                                      {}
 	~Vector();
 
@@ -470,6 +511,7 @@ public:
 	T*       data()                               { return m_data; }
 	const T* data() const                         { return m_data; }
 
+	T&       push_back()                          { if (m_size == m_capacity) { reserve(m_capacity + m_capacity / 2); } return m_data[m_size++]; }
 	void     push_back(const T& _v)               { T tmp = _v; if (m_size == m_capacity) { reserve(m_capacity + m_capacity / 2); } m_data[m_size++] = tmp; }
 	void     pop_back()                           { IM3D_ASSERT(m_size > 0); --m_size; }
 	void     append(const T* _v, U32 _count);
@@ -491,8 +533,15 @@ public:
 	void     clear()                              { m_size = 0; }
 	void     reserve(U32 _capacity);
 	void     resize(U32 _size, const T& _val);
+	void     resize(U32 _size);
 
 	static void swap(Vector<T>& _a_, Vector<T>& _b_);
+
+private:
+
+	T*   m_data     = nullptr;
+	U32  m_size     = 0;
+	U32  m_capacity = 0;
 };
 
 
@@ -514,13 +563,15 @@ enum GizmoMode
 };
 
 // Context stores all relevant state - main interface affects the context currently bound via SetCurrentContext().
-class IM3D_API Context
+struct IM3D_API Context
 {
-public:
 	void        begin(PrimitiveMode _mode);
 	void        end();
 	void        vertex(const Vec3& _position, float _size, Color _color);
 	void        vertex(const Vec3& _position )   { vertex(_position, getSize(), getColor()); }
+
+	void        text(const Vec3& _position, float _size, Color _color, TextFlags _flags, const char* _textStart, const char* _textEnd);
+	void        text(const Vec3& _position, float _size, Color _color, TextFlags _flags, const char* _text, va_list _args);
 
 	void        reset();
 	void        merge(const Context& _src);
@@ -529,6 +580,9 @@ public:
 
 	const DrawList* getDrawLists() const         { return m_drawLists.data();      }
 	U32         getDrawListCount() const         { return m_drawLists.size();      }
+
+	const TextDrawList* getTextDrawLists() const { return m_textDrawLists.data();  }
+	U32         getTextDrawListCount() const     { return m_textDrawLists.size();  }
 
 
 	void        setColor(Color _color)           { m_colorStack.back() = _color;   }
@@ -628,6 +682,9 @@ public:
 	// Return the total number of primitives (sorted + unsorted) of the given _type in all layers.
 	U32 getPrimitiveCount(DrawPrimitiveType _type) const;
 
+	// Return the total number of text primitives in all layers.
+	U32 getTextCount() const;
+
 	// Return the number of layers.
 	U32 getLayerCount() const { return m_layerIdMap.size(); }
 
@@ -650,6 +707,12 @@ private:
 	Vector<DrawList>    m_drawLists;                // All draw lists for the current frame, available after calling endFrame() before calling reset().
 	bool                m_sortCalled;               // Avoid calling sort() during every call to draw().
 	bool                m_endFrameCalled;           // For assert, if vertices are pushed after endFrame() was called.
+
+ // text data: one list per layer
+	typedef Vector<TextData> TextList;
+	Vector<TextList*>    m_textData;
+	Vector<char>         m_textBuffer;
+	Vector<TextDrawList> m_textDrawLists;
 
  // primitive state
 	PrimitiveMode       m_primMode;
@@ -674,6 +737,7 @@ private:
 	int  findLayerIndex(Id _id) const;
 
 	VertexList* getCurrentVertexList();
+	TextList*   getCurrentTextList();
 };
 
 namespace internal {
@@ -692,6 +756,9 @@ inline void     Draw()                                                       { G
 
 inline const DrawList* GetDrawLists()                                        { return GetContext().getDrawLists();     }
 inline U32             GetDrawListCount()                                    { return GetContext().getDrawListCount(); }
+
+inline const TextDrawList* GetTextDrawLists()                                { return GetContext().getTextDrawLists();     }
+inline U32                 GetTextDrawListCount()                            { return GetContext().getTextDrawListCount(); }
 
 inline void  BeginPoints()                                                   { GetContext().begin(PrimitiveMode_Points);        }
 inline void  BeginLines()                                                    { GetContext().begin(PrimitiveMode_Lines);         }
@@ -775,4 +842,3 @@ inline void     MergeContexts(Context& _dst_, const Context& _src)           { _
 
 } // namespac Im3d
 
-#endif // im3d_h

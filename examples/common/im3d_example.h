@@ -1,6 +1,4 @@
 #pragma once
-#ifndef im3d_example_h
-#define im3d_example_h
 
 #include "im3d.h"
 
@@ -189,6 +187,9 @@ struct Example
 		#endif
 	#endif
 
+ // text rendering
+	void drawTextDrawListsImGui(const Im3d::TextDrawList _textDrawLists[], U32 _count);
+
 }; // struct Example
 
 extern Example* g_Example;
@@ -201,5 +202,3 @@ extern bool Im3d_Init();
 extern void Im3d_Shutdown();
 extern void Im3d_NewFrame();
 extern void Im3d_EndFrame();
-
-#endif // im3d_example_h

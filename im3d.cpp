@@ -1,5 +1,6 @@
 /*	CHANGE LOG
 	==========
+	2020-05-12 (v1.16) - Text API.
 	2020-01-18 (v1.15) - Added IM3D_API macro.
 	2018-12-09 (v1.14) - Fixed memory leak in context dtor.
 	2018-07-29 (v1.13) - Deprecated Draw(), instead use EndFrame() followed by GetDrawListCount() + GetDrawLists() to access draw data directly.
@@ -22,9 +23,14 @@
 #include "im3d.h"
 #include "im3d_math.h"
 
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <cfloat>
+
+#ifndef va_copy
+	#define va_copy(_dst, _src) (_dst = _src)
+#endif
 
 #if defined(IM3D_MALLOC) && !defined(IM3D_FREE)
 	#error im3d: IM3D_MALLOC defined without IM3D_FREE; define both or neither
@@ -573,6 +579,23 @@ void Im3d::DrawArrow(const Vec3& _start, const Vec3& _end, float _headLength, fl
 		ctx.vertex(head, _headThickness, ctx.getColor());
 		ctx.vertex(_end, 2.0f, ctx.getColor()); // \hack \todo 2.0f here compensates for the shader antialiasing (which reduces alpha when size < 2)
 	ctx.end();
+}
+
+
+void Im3d::Text(const Vec3& _position, U32 _textFlags, const char* _text, ...)
+{
+	va_list args;
+	va_start(args, _text);
+	GetContext().text(_position, GetSize(), GetColor(), (TextFlags)_textFlags, _text, args);
+	va_end(args);
+}
+
+void Im3d::Text(const Vec3& _position, float _size, Color _color, U32 _textFlags, const char* _text, ...)
+{
+	va_list args;
+	va_start(args, _text);
+	GetContext().text(_position, _size, _color, (TextFlags)_textFlags, _text, args);
+	va_end(args);
 }
 
 
@@ -1197,10 +1220,19 @@ void Vector<T>::reserve(U32 _capacity)
 template <typename T>
 void Vector<T>::resize(U32 _size, const T& _val)
 {
+	IM3D_ASSERT(_size >= m_size); // only support growing the vector
 	reserve(_size);
 	while (m_size < _size) {
 		push_back(_val);
 	}
+	m_size = _size;
+}
+
+template <typename T>
+void Vector<T>::resize(U32 _size)
+{
+	IM3D_ASSERT(_size >= m_size); // only support growing the vector
+	reserve(_size);
 	m_size = _size;
 }
 
@@ -1218,13 +1250,13 @@ void Vector<T>::swap(Vector<T>& _a_, Vector<T>& _b_)
 	_b_.m_size     = size;
 }
 
-template class Vector<bool>;
-template class Vector<char>;
-template class Vector<float>;
-template class Vector<Id>;
-template class Vector<Mat4>;
-template class Vector<Color>;
-template class Vector<DrawList>;
+template struct Vector<bool>;
+template struct Vector<char>;
+template struct Vector<float>;
+template struct Vector<Id>;
+template struct Vector<Mat4>;
+template struct Vector<Color>;
+template struct Vector<DrawList>;
 
 /*******************************************************************************
 
@@ -1404,6 +1436,49 @@ void Context::vertex(const Vec3& _position, float _size, Color _color)
 	#endif
 }
 
+void Context::text(const Vec3& _position, float _size, Color _color, TextFlags _flags, const char* _textStart, const char* _textEnd)
+{
+	TextData& td = getCurrentTextList()->push_back();
+	td.m_positionSize = Vec4(_position, _size);
+	if (m_matrixStack.size() > 1) { // optim, skip the matrix multiplication when the stack size is 1
+		td.m_positionSize = Vec4(m_matrixStack.back() * _position, _size);
+	}
+	td.m_color = _color;
+	td.m_color.setA(td.m_color.getA() * m_alphaStack.back());
+	td.m_flags = _flags;
+	td.m_textBufferOffset = m_textBuffer.size();
+	td.m_textLength = (U32)(_textEnd - _textStart);
+	
+	const U32 copyOffset = m_textBuffer.size();
+	m_textBuffer.resize(copyOffset + td.m_textLength + 1);
+	memcpy(m_textBuffer.data() + copyOffset, _textStart, (size_t)td.m_textLength);
+	m_textBuffer.back() = '\0';
+}
+
+
+void Context::text(const Vec3& _position, float _size, Color _color, TextFlags _flags, const char* _text, va_list _args)
+{
+	TextData& td = getCurrentTextList()->push_back();
+	td.m_positionSize = Vec4(_position, _size);
+	if (m_matrixStack.size() > 1) { // optim, skip the matrix multiplication when the stack size is 1
+		td.m_positionSize = Vec4(m_matrixStack.back() * _position, _size);
+	}
+	td.m_color = _color;
+	td.m_color.setA(td.m_color.getA() * m_alphaStack.back());
+	td.m_flags = _flags;
+	td.m_textBufferOffset = m_textBuffer.size();
+	
+
+	va_list argsCopy;
+	va_copy(argsCopy, _args);
+	td.m_textLength = (U32)vsnprintf(nullptr, 0, _text, argsCopy);
+
+	const U32 copyOffset = m_textBuffer.size();
+	m_textBuffer.resize(copyOffset + td.m_textLength + 1);
+	vsnprintf(m_textBuffer.data() + copyOffset, td.m_textLength + 1, _text, argsCopy);
+	m_textBuffer.back() = '\0';
+}
+
 void Context::reset()
 {
  // all state stacks should be default here, else there was a mismatched Push*()/Pop*()
@@ -1419,11 +1494,18 @@ void Context::reset()
 	m_primMode = PrimitiveMode_None;
 	m_primType = DrawPrimitive_Count;
 
+	IM3D_ASSERT(m_vertexData[0].size() == m_vertexData[1].size());
 	for (U32 i = 0; i < m_vertexData[0].size(); ++i) {
 		m_vertexData[0][i]->clear();
 		m_vertexData[1][i]->clear();
 	}
 	m_drawLists.clear();
+	for (U32 i = 0; i < m_textData.size(); ++i) {
+		m_textData[i]->clear();
+	}
+	m_textDrawLists.clear();
+	m_textBuffer.clear();
+	
 	m_sortCalled = false;
 	m_endFrameCalled = false;
 
@@ -1468,21 +1550,36 @@ void Context::merge(const Context& _src)
 	IM3D_ASSERT(!m_endFrameCalled && !_src.m_endFrameCalled); // call MergeContexts() before calling EndFrame()
 
  // layer IDs
-	for (auto& id : _src.m_layerIdMap) {
+	for (Id id : _src.m_layerIdMap) {
 		pushLayerId(id); // add a new layer if id doesn't alrady exist 
 		popLayerId();
 	}
 
  // vertex data
 	for (U32 i = 0; i < 2; ++i) {
-		auto& vertexData = _src.m_vertexData[i];
+		const auto& vertexData = _src.m_vertexData[i];
 		for (U32 j = 0; j < vertexData.size(); ++j) {
 		 // for each layer in _src, find the matching layer in this
-			Id layerId = _src.m_layerIdMap[j / DrawPrimitive_Count];
-			int layerIndex = findLayerIndex(layerId);
+			const Id layerId = _src.m_layerIdMap[j / DrawPrimitive_Count];
+			const int layerIndex = findLayerIndex(layerId);
 			IM3D_ASSERT(layerIndex >= 0);
 			U32 k = j % DrawPrimitive_Count;
 			m_vertexData[i][layerIndex * DrawPrimitive_Count + k]->append(*vertexData[j]);
+		}
+	}
+
+ // text data
+	for (U32 i = 0; i < _src.m_textData.size(); ++i) {
+		const Id layerId = _src.m_layerIdMap[i];
+		const int layerIndex = findLayerIndex(layerId);
+		IM3D_ASSERT(layerIndex >= 0);
+
+		const U32 textBufferOffset = m_textBuffer.size();
+		m_textBuffer.append(_src.m_textBuffer);
+		const auto& textList = _src.m_textData[i];
+		for (U32 j = 0; j < textList->size(); ++j) {
+			m_textData[i]->push_back((*_src.m_textData[i])[j]);
+			m_textData[i]->back().m_textBufferOffset += textBufferOffset;
 		}
 	}
 }
@@ -1495,18 +1592,27 @@ void Context::endFrame()
  // draw unsorted primitives first
 	for (U32 i = 0; i < m_vertexData[0].size(); ++i) {
 		if (m_vertexData[0][i]->size() > 0) {
-			DrawList dl;
+			DrawList& dl     = m_drawLists.push_back();
 			dl.m_layerId     = m_layerIdMap[i / DrawPrimitive_Count];
 			dl.m_primType    = (DrawPrimitiveType)(i % DrawPrimitive_Count);
 			dl.m_vertexData  = m_vertexData[0][i]->data();
 			dl.m_vertexCount = m_vertexData[0][i]->size();
-			m_drawLists.push_back(dl);
 		}
 	}
 
  // draw sorted primitives second
 	if (!m_sortCalled) {
 		sort();
+	}
+
+	for (U32 i = 0; i < m_textData.size(); ++i) {
+		if (m_textData[i]->size() > 0) {
+			TextDrawList& dl   = m_textDrawLists.push_back();
+			dl.m_layerId       = m_layerIdMap[i];
+			dl.m_textData      = m_textData[i]->data();
+			dl.m_textDataCount = m_textData[i]->size();
+			dl.m_textBuffer    = m_textBuffer.data();
+		}
 	}
 }
 
@@ -1554,6 +1660,8 @@ void Context::pushLayerId(Id _layer)
 			m_vertexData[1].push_back((VertexList*)IM3D_MALLOC(sizeof(VertexList)));
 			*m_vertexData[1].back() = VertexList();
 		}
+		m_textData.push_back((TextList*)IM3D_MALLOC(sizeof(TextList)));
+		*m_textData.back() = TextList();
 	}
 	m_layerIdStack.push_back(_layer);
 	m_layerIndex = idx;
@@ -1829,6 +1937,11 @@ bool Context::isVisible(const Vec3& _min, const Vec3& _max)
 Context::VertexList* Context::getCurrentVertexList()
 {
 	return m_vertexData[m_vertexDataIndex][m_layerIndex * DrawPrimitive_Count + m_primType];
+}
+
+Context::TextList* Context::getCurrentTextList()
+{
+	return m_textData[m_layerIndex];
 }
 
 float Context::pixelsToWorldSize(const Vec3& _position, float _pixels)
@@ -2297,6 +2410,15 @@ U32 Context::getPrimitiveCount(DrawPrimitiveType _type) const
 		ret += m_vertexData[0][j]->size() + m_vertexData[1][j]->size();
 	}
 	ret /= VertsPerDrawPrimitive[_type];
+	return ret;
+}
+
+U32 Context::getTextCount() const
+{
+	U32 ret = 0;
+	for (U32 i = 0; i < m_layerIdMap.size(); ++i) {
+		ret += m_textData[i]->size();
+	}
 	return ret;
 }
 

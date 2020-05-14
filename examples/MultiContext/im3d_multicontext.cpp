@@ -118,6 +118,8 @@ void ThreadDraw(int _threadIndex)
 		Im3d::PopDrawState();
 	#endif
 
+	Im3d::Text(Im3d::Vec3(0.0f, 1.0f, 0.0f), 2.0f, Im3d::Color_White, 0, "Thread %d", _threadIndex);
+
 	Im3d::RandSeed(_threadIndex); // \todo this is potentially not thread safe
 
 	Im3d::PushDrawState();

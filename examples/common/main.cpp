@@ -483,6 +483,61 @@ int main(int, char**)
 			ImGui::TreePop();
 		}
 
+		if (ImGui::TreeNode("Text"))
+		{
+			static Im3d::Vec4 textColor = Im3d::Vec4(1.0f, 1.0f, 1.0f, 1.0f);
+			ImGui::ColorEdit4("Text Color", textColor);
+
+			static float textSize = 1.0f;
+			ImGui::SliderFloat("Text Size", &textSize, 0.0f, 4.0f);
+
+			static Im3d::TextFlags textFlags = Im3d::TextFlags_Default;
+			if (ImGui::RadioButton("Align Center (H)", (textFlags & (Im3d::TextFlags_AlignRight | Im3d::TextFlags_AlignLeft)) == 0))
+			{
+				textFlags = (Im3d::TextFlags)(textFlags & ~Im3d::TextFlags_AlignRight);
+				textFlags = (Im3d::TextFlags)(textFlags & ~Im3d::TextFlags_AlignLeft);
+			}
+			ImGui::SameLine();
+			if (ImGui::RadioButton("Align Left", (textFlags & Im3d::TextFlags_AlignLeft) != 0))
+			{
+				textFlags = (Im3d::TextFlags)(textFlags ^ Im3d::TextFlags_AlignLeft);
+				textFlags = (Im3d::TextFlags)(textFlags & ~Im3d::TextFlags_AlignRight);
+			}
+			ImGui::SameLine();
+			if (ImGui::RadioButton("Align Right", (textFlags & Im3d::TextFlags_AlignRight) != 0))
+			{
+				textFlags = (Im3d::TextFlags)(textFlags ^ Im3d::TextFlags_AlignRight);
+				textFlags = (Im3d::TextFlags)(textFlags & ~Im3d::TextFlags_AlignLeft);
+			}
+
+			if (ImGui::RadioButton("Align Center (V)", (textFlags & (Im3d::TextFlags_AlignBottom | Im3d::TextFlags_AlignTop)) == 0))
+			{
+				textFlags = (Im3d::TextFlags)(textFlags & ~Im3d::TextFlags_AlignBottom);
+				textFlags = (Im3d::TextFlags)(textFlags & ~Im3d::TextFlags_AlignTop);
+			}
+			ImGui::SameLine();			
+			if (ImGui::RadioButton("Align Top", (textFlags & Im3d::TextFlags_AlignTop) != 0))
+			{
+				textFlags = (Im3d::TextFlags)(textFlags ^ Im3d::TextFlags_AlignTop);
+				textFlags = (Im3d::TextFlags)(textFlags & ~Im3d::TextFlags_AlignBottom);
+			}
+			ImGui::SameLine();
+			if (ImGui::RadioButton("Align Bottom", (textFlags & Im3d::TextFlags_AlignBottom) != 0))
+			{
+				textFlags = (Im3d::TextFlags)(textFlags ^ Im3d::TextFlags_AlignBottom);
+				textFlags = (Im3d::TextFlags)(textFlags & ~Im3d::TextFlags_AlignTop);
+			}
+			
+			static float theta = 0.0f;
+			theta += example.m_deltaTime * 0.5f;
+			Im3d::Vec3 position(cosf(theta) * 2.0f, 0.0f, sinf(theta) * 2.0f); 
+
+			Im3d::Text(position, textSize, Im3d::Color(textColor.x, textColor.y, textColor.z, textColor.w), textFlags, "Moving: (%+1.2f, %+1.2f, %+1.2f)", position.x, position.y, position.z);
+			Im3d::Text(Im3d::Vec3(0.0f, 0.0f, 0.0f), textSize, Im3d::Color(textColor.x, textColor.y, textColor.z, textColor.w), textFlags, "Hello, text!");
+
+			ImGui::TreePop();
+		}
+
 		ImGui::End();
 
 		example.draw();

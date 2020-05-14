@@ -167,6 +167,8 @@ void Im3d_EndFrame()
 {
 	Im3d::EndFrame();
 
+ // Primitive rendering.
+
 	glAssert(glViewport(0, 0, (GLsizei)g_Example->m_width, (GLsizei)g_Example->m_height));
 	glAssert(glEnable(GL_BLEND));
 	glAssert(glBlendEquation(GL_FUNC_ADD));
@@ -174,7 +176,7 @@ void Im3d_EndFrame()
 	glAssert(glEnable(GL_PROGRAM_POINT_SIZE));
 		
 	for (U32 i = 0, n = Im3d::GetDrawListCount(); i < n; ++i) {
-		auto& drawList = Im3d::GetDrawLists()[i];
+		const Im3d::DrawList& drawList = Im3d::GetDrawLists()[i];
  
 		if (drawList.m_layerId == Im3d::MakeId("NamedLayer")) {
 		 // The application may group primitives into layers, which can be used to change the draw state (e.g. enable depth testing, use a different shader)
@@ -213,4 +215,8 @@ void Im3d_EndFrame()
 		glAssert(glUniformMatrix4fv(glGetUniformLocation(sh, "uViewProjMatrix"), 1, false, (const GLfloat*)g_Example->m_camViewProj));
 		glAssert(glDrawArrays(prim, 0, (GLsizei)drawList.m_vertexCount));
 	}
+
+ // Text rendering.
+ // This is common to all examples since we're using ImGui to draw the text lists, see im3d_example.cpp.
+	g_Example->drawTextDrawListsImGui(Im3d::GetTextDrawLists(), Im3d::GetTextDrawListCount());
 }

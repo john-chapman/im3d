@@ -216,6 +216,8 @@ void Im3d_NewFrame()
 void Im3d_EndFrame()
 {
 	Im3d::EndFrame();
+
+ // Primitive rendering
 	
 	AppData& ad = GetAppData();
 
@@ -296,4 +298,8 @@ void Im3d_EndFrame()
 		ctx->GSSetShader(nullptr, nullptr, 0);
 		ctx->PSSetShader(nullptr, nullptr, 0);
 	}
+
+ // Text rendering.
+ // This is common to all examples since we're using ImGui to draw the text lists, see im3d_example.cpp.
+	g_Example->drawTextDrawListsImGui(Im3d::GetTextDrawLists(), Im3d::GetTextDrawListCount());
 }
