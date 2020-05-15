@@ -43,76 +43,85 @@ bool Im3d_Init()
 	ID3D11Device* d3d = g_Example->m_d3dDevice;
 	{ // points shader
 		g_Im3dShaderPoints.m_vsBlob = LoadCompileShader("vs_" IM3D_DX11_VSHADER, "im3d.hlsl", "VERTEX_SHADER\0POINTS\0");
-		if (!g_Im3dShaderPoints.m_vsBlob) {
+		if (!g_Im3dShaderPoints.m_vsBlob)
+		{
 			return false;
 		}
 		dxAssert(d3d->CreateVertexShader((DWORD*)g_Im3dShaderPoints.m_vsBlob->GetBufferPointer(), g_Im3dShaderPoints.m_vsBlob->GetBufferSize(), nullptr, &g_Im3dShaderPoints.m_vs));
 
 		g_Im3dShaderPoints.m_gsBlob = LoadCompileShader("gs_" IM3D_DX11_VSHADER, "im3d.hlsl", "GEOMETRY_SHADER\0POINTS\0");
-		if (!g_Im3dShaderPoints.m_gsBlob) {
+		if (!g_Im3dShaderPoints.m_gsBlob)
+		{
 			return false;
 		}
 		dxAssert(d3d->CreateGeometryShader((DWORD*)g_Im3dShaderPoints.m_gsBlob->GetBufferPointer(), g_Im3dShaderPoints.m_gsBlob->GetBufferSize(), nullptr, &g_Im3dShaderPoints.m_gs));
 
 		g_Im3dShaderPoints.m_psBlob = LoadCompileShader("ps_" IM3D_DX11_VSHADER, "im3d.hlsl", "PIXEL_SHADER\0POINTS\0");
-		if (!g_Im3dShaderPoints.m_psBlob) {
+		if (!g_Im3dShaderPoints.m_psBlob)
+		{
 			return false;
 		}
 		dxAssert(d3d->CreatePixelShader((DWORD*)g_Im3dShaderPoints.m_psBlob->GetBufferPointer(), g_Im3dShaderPoints.m_psBlob->GetBufferSize(), nullptr, &g_Im3dShaderPoints.m_ps));
 	}
+
 	{ // lines shader
 		g_Im3dShaderLines.m_vsBlob = LoadCompileShader("vs_" IM3D_DX11_VSHADER, "im3d.hlsl", "VERTEX_SHADER\0LINES\0");
-		if (!g_Im3dShaderLines.m_vsBlob) {
+		if (!g_Im3dShaderLines.m_vsBlob)
+		{
 			return false;
 		}
 		dxAssert(d3d->CreateVertexShader((DWORD*)g_Im3dShaderLines.m_vsBlob->GetBufferPointer(), g_Im3dShaderLines.m_vsBlob->GetBufferSize(), nullptr, &g_Im3dShaderLines.m_vs));
 
 		g_Im3dShaderLines.m_gsBlob = LoadCompileShader("gs_" IM3D_DX11_VSHADER, "im3d.hlsl", "GEOMETRY_SHADER\0LINES\0");
-		if (!g_Im3dShaderLines.m_gsBlob) {
+		if (!g_Im3dShaderLines.m_gsBlob)
+		{
 			return false;
 		}
 		dxAssert(d3d->CreateGeometryShader((DWORD*)g_Im3dShaderLines.m_gsBlob->GetBufferPointer(), g_Im3dShaderLines.m_gsBlob->GetBufferSize(), nullptr, &g_Im3dShaderLines.m_gs));
 
 		g_Im3dShaderLines.m_psBlob = LoadCompileShader("ps_" IM3D_DX11_VSHADER, "im3d.hlsl", "PIXEL_SHADER\0LINES\0");
-		if (!g_Im3dShaderLines.m_psBlob) {
+		if (!g_Im3dShaderLines.m_psBlob)
+		{
 			return false;
 		}
 		dxAssert(d3d->CreatePixelShader((DWORD*)g_Im3dShaderLines.m_psBlob->GetBufferPointer(), g_Im3dShaderLines.m_psBlob->GetBufferSize(), nullptr, &g_Im3dShaderLines.m_ps));
 	}
+
 	{ // triangles shader
 		g_Im3dShaderTriangles.m_vsBlob = LoadCompileShader("vs_" IM3D_DX11_VSHADER, "im3d.hlsl", "VERTEX_SHADER\0TRIANGLES\0");
-		if (!g_Im3dShaderTriangles.m_vsBlob) {
+		if (!g_Im3dShaderTriangles.m_vsBlob)
+		{
 			return false;
 		}
 		dxAssert(d3d->CreateVertexShader((DWORD*)g_Im3dShaderTriangles.m_vsBlob->GetBufferPointer(), g_Im3dShaderTriangles.m_vsBlob->GetBufferSize(), nullptr, &g_Im3dShaderTriangles.m_vs));
 
 		g_Im3dShaderTriangles.m_psBlob = LoadCompileShader("ps_" IM3D_DX11_VSHADER, "im3d.hlsl", "PIXEL_SHADER\0TRIANGLES\0");
-		if (!g_Im3dShaderTriangles.m_psBlob) {
+		if (!g_Im3dShaderTriangles.m_psBlob)
+		{
 			return false;
 		}
 		dxAssert(d3d->CreatePixelShader((DWORD*)g_Im3dShaderTriangles.m_psBlob->GetBufferPointer(), g_Im3dShaderTriangles.m_psBlob->GetBufferSize(), nullptr, &g_Im3dShaderTriangles.m_ps));
 	}
 
-	{
-		D3D11_INPUT_ELEMENT_DESC desc[] = {
-			{ "POSITION_SIZE", 0, DXGI_FORMAT_R32G32B32A32_FLOAT,   0, (UINT)offsetof(Im3d::VertexData, m_positionSize), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "COLOR",         0, DXGI_FORMAT_R8G8B8A8_UNORM,       0, (UINT)offsetof(Im3d::VertexData, m_color),        D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		};
+	{	D3D11_INPUT_ELEMENT_DESC desc[] =
+			{
+				{ "POSITION_SIZE", 0, DXGI_FORMAT_R32G32B32A32_FLOAT,   0, (UINT)offsetof(Im3d::VertexData, m_positionSize), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+				{ "COLOR",         0, DXGI_FORMAT_R8G8B8A8_UNORM,       0, (UINT)offsetof(Im3d::VertexData, m_color),        D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			};
 		dxAssert(d3d->CreateInputLayout(desc, 2, g_Im3dShaderPoints.m_vsBlob->GetBufferPointer(), g_Im3dShaderPoints.m_vsBlob->GetBufferSize(), &g_Im3dInputLayout));
 	}
 
-	{
-		D3D11_RASTERIZER_DESC desc = {};
+	{	D3D11_RASTERIZER_DESC desc = {};
 		desc.FillMode = D3D11_FILL_SOLID;
 		desc.CullMode = D3D11_CULL_NONE; // culling invalid for points/lines (they are view-aligned), valid but optional for triangles
 		dxAssert(d3d->CreateRasterizerState(&desc, &g_Im3dRasterizerState));
 	}
-	{
-		D3D11_DEPTH_STENCIL_DESC desc = {};
+
+	{	D3D11_DEPTH_STENCIL_DESC desc = {};
 		dxAssert(d3d->CreateDepthStencilState(&desc, &g_Im3dDepthStencilState));
 	}
-	{
-		D3D11_BLEND_DESC desc = {};
+
+	{	D3D11_BLEND_DESC desc = {};
 		desc.RenderTarget[0].BlendEnable = true;
 		desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
 		desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
@@ -168,14 +177,17 @@ void Im3d_NewFrame()
 	cursorPos = (cursorPos / ad.m_viewportSize) * 2.0f - 1.0f;
 	cursorPos.y = -cursorPos.y; // window origin is top-left, ndc is bottom-left
 	Vec3 rayOrigin, rayDirection;
-	if (g_Example->m_camOrtho) {
+	if (g_Example->m_camOrtho)
+	{
 		rayOrigin.x  = cursorPos.x / g_Example->m_camProj(0, 0);
 		rayOrigin.y  = cursorPos.y / g_Example->m_camProj(1, 1);
 		rayOrigin.z  = 0.0f;
 		rayOrigin    = g_Example->m_camWorld * Vec4(rayOrigin, 1.0f);
 		rayDirection = g_Example->m_camWorld * Vec4(0.0f, 0.0f, -1.0f, 0.0f);
 
-	} else {
+	}
+	else
+	{
 		rayOrigin = ad.m_viewOrigin;
 		rayDirection.x  = cursorPos.x / g_Example->m_camProj(0, 0);
 		rayDirection.y  = cursorPos.y / g_Example->m_camProj(1, 1);
@@ -224,20 +236,23 @@ void Im3d_EndFrame()
 	ID3D11Device* d3d = g_Example->m_d3dDevice;
 	ID3D11DeviceContext* ctx = g_Example->m_d3dDeviceCtx;
 	
-	D3D11_VIEWPORT viewport = {
-		0.0f, 0.0f, // TopLeftX, TopLeftY
-		(float)g_Example->m_width, (float)g_Example->m_height,
-		0.0f, 1.0f // MinDepth, MaxDepth
+	D3D11_VIEWPORT viewport =
+		{
+			0.0f, 0.0f, // TopLeftX, TopLeftY
+			(float)g_Example->m_width, (float)g_Example->m_height,
+			0.0f, 1.0f // MinDepth, MaxDepth
 		};
 	ctx->RSSetViewports(1, &viewport);
 	ctx->OMSetBlendState(g_Im3dBlendState, nullptr, 0xffffffff);
 	ctx->OMSetDepthStencilState(g_Im3dDepthStencilState, 0);
 	ctx->RSSetState(g_Im3dRasterizerState);
 
-	for (U32 i = 0, n = Im3d::GetDrawListCount(); i < n; ++i) {
+	for (U32 i = 0, n = Im3d::GetDrawListCount(); i < n; ++i)
+	{
 		auto& drawList = Im3d::GetDrawLists()[i];
  
-		if (drawList.m_layerId == Im3d::MakeId("NamedLayer")) {
+		if (drawList.m_layerId == Im3d::MakeId("NamedLayer"))
+		{
 		 // The application may group primitives into layers, which can be used to change the draw state (e.g. enable depth testing, use a different shader)
 		}
 	
@@ -250,8 +265,10 @@ void Im3d_EndFrame()
 	
 	 // upload vertex data
 		static U32 s_vertexBufferSize = 0;
-		if (!g_Im3dVertexBuffer || s_vertexBufferSize < drawList.m_vertexCount) {
-			if (g_Im3dVertexBuffer) {
+		if (!g_Im3dVertexBuffer || s_vertexBufferSize < drawList.m_vertexCount)
+		{
+			if (g_Im3dVertexBuffer)
+			{
 				g_Im3dVertexBuffer->Release();
 				g_Im3dVertexBuffer = nullptr;
 			}
@@ -262,7 +279,8 @@ void Im3d_EndFrame()
 		UnmapBuffer(g_Im3dVertexBuffer);
 	
 	 // select shader/primitive topo
-		switch (drawList.m_primType) {
+		switch (drawList.m_primType)
+		{
 			case Im3d::DrawPrimitive_Points:
 				ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
 				ctx->VSSetShader(g_Im3dShaderPoints.m_vs, nullptr, 0);

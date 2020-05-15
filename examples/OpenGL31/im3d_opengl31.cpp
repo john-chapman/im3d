@@ -21,60 +21,71 @@ bool Im3d_Init()
  // OpenGL uniform buffers require 16 byte alignment for structs - set IM3D_VERTEX_ALIGNMENT in im3d_config.h
 	IM3D_ASSERT(sizeof(Im3d::VertexData) % 16 == 0);
 
-	{
-		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0POINTS\0");
+	{	GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0POINTS\0");
 		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "im3d.glsl", "FRAGMENT_SHADER\0POINTS\0");
-		if (vs && fs) {
+		if (vs && fs)
+		{
 			glAssert(g_Im3dShaderPoints = glCreateProgram());
 			glAssert(glAttachShader(g_Im3dShaderPoints, vs));
 			glAssert(glAttachShader(g_Im3dShaderPoints, fs));
 			bool ret = LinkShaderProgram(g_Im3dShaderPoints);
 			glAssert(glDeleteShader(vs));
 			glAssert(glDeleteShader(fs));
-			if (!ret) {
+			if (!ret)
+			{
 				return false;
 			}
-		} else {
+		}
+		else
+		{
 			return false;
 		}
 		GLuint blockIndex;
 		glAssert(blockIndex = glGetUniformBlockIndex(g_Im3dShaderPoints, "VertexDataBlock"));
 		glAssert(glUniformBlockBinding(g_Im3dShaderPoints, blockIndex, 0));
 	}
-	{
-		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0LINES\0");
+
+	{	GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0LINES\0");
 		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "im3d.glsl", "FRAGMENT_SHADER\0LINES\0");
-		if (vs && fs) {
+		if (vs && fs)
+		{
 			glAssert(g_Im3dShaderLines = glCreateProgram());
 			glAssert(glAttachShader(g_Im3dShaderLines, vs));
 			glAssert(glAttachShader(g_Im3dShaderLines, fs));
 			bool ret = LinkShaderProgram(g_Im3dShaderLines);
 			glAssert(glDeleteShader(vs));
 			glAssert(glDeleteShader(fs));
-			if (!ret) {
+			if (!ret)
+			{
 				return false;
 			}
-		} else {
+		}
+		else
+		{
 			return false;
 		}
 		GLuint blockIndex;
 		glAssert(blockIndex = glGetUniformBlockIndex(g_Im3dShaderLines, "VertexDataBlock"));
 		glAssert(glUniformBlockBinding(g_Im3dShaderLines, blockIndex, 0));
 	}
-	{
-		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0TRIANGLES\0");
+
+	{	GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0TRIANGLES\0");
 		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "im3d.glsl", "FRAGMENT_SHADER\0TRIANGLES\0");
-		if (vs && fs) {
+		if (vs && fs)
+		{
 			glAssert(g_Im3dShaderTriangles = glCreateProgram());
 			glAssert(glAttachShader(g_Im3dShaderTriangles, vs));
 			glAssert(glAttachShader(g_Im3dShaderTriangles, fs));
 			bool ret = LinkShaderProgram(g_Im3dShaderTriangles);
 			glAssert(glDeleteShader(vs));
 			glAssert(glDeleteShader(fs));
-			if (!ret) {
+			if (!ret)
+			{
 				return false;
 			}
-		} else {
+		}
+		else
+		{
 			return false;
 		}
 		GLuint blockIndex;
@@ -82,14 +93,14 @@ bool Im3d_Init()
 		glAssert(glUniformBlockBinding(g_Im3dShaderTriangles, blockIndex, 0));
 	}
 
- // in this example we're using a static buffer as the vertex source with a uniform buffer to provide
- // the shader with the Im3d vertex data
-	Im3d::Vec4 vertexData[] = {
-		Im3d::Vec4(-1.0f, -1.0f, 0.0f, 1.0f),
-		Im3d::Vec4( 1.0f, -1.0f, 0.0f, 1.0f),
-		Im3d::Vec4(-1.0f,  1.0f, 0.0f, 1.0f),
-		Im3d::Vec4( 1.0f,  1.0f, 0.0f, 1.0f)
-	};
+ // In this example we're using a static buffer as the vertex source with a uniform buffer to provide the shader with the Im3d vertex data.
+	Im3d::Vec4 vertexData[] =
+		{
+			Im3d::Vec4(-1.0f, -1.0f, 0.0f, 1.0f),
+			Im3d::Vec4( 1.0f, -1.0f, 0.0f, 1.0f),
+			Im3d::Vec4(-1.0f,  1.0f, 0.0f, 1.0f),
+			Im3d::Vec4( 1.0f,  1.0f, 0.0f, 1.0f)
+		};
 	glAssert(glCreateBuffers(1, &g_Im3dVertexBuffer));;
 	glAssert(glCreateVertexArrays(1, &g_Im3dVertexArray));
 	glAssert(glBindVertexArray(g_Im3dVertexArray));
@@ -129,7 +140,7 @@ void Im3d_NewFrame()
 	ad.m_projOrtho     = g_Example->m_camOrtho;
 
  // m_projScaleY controls how gizmos are scaled in world space to maintain a constant screen height
-	ad.m_projScaleY   = g_Example->m_camOrtho
+	ad.m_projScaleY = g_Example->m_camOrtho
 		? 2.0f / g_Example->m_camProj(1, 1) // use far plane height for an ortho projection
 		: tanf(g_Example->m_camFovRad * 0.5f) * 2.0f // or vertical fov for a perspective projection
 		;
@@ -139,14 +150,17 @@ void Im3d_NewFrame()
 	cursorPos = (cursorPos / ad.m_viewportSize) * 2.0f - 1.0f;
 	cursorPos.y = -cursorPos.y; // window origin is top-left, ndc is bottom-left
 	Vec3 rayOrigin, rayDirection;
-	if (g_Example->m_camOrtho) {
+	if (g_Example->m_camOrtho)
+	{
 		rayOrigin.x  = cursorPos.x / g_Example->m_camProj(0, 0);
 		rayOrigin.y  = cursorPos.y / g_Example->m_camProj(1, 1);
 		rayOrigin.z  = 0.0f;
 		rayOrigin    = g_Example->m_camWorld * Vec4(rayOrigin, 1.0f);
 		rayDirection = g_Example->m_camWorld * Vec4(0.0f, 0.0f, -1.0f, 0.0f);
 
-	} else {
+	}
+	else
+	{
 		rayOrigin = ad.m_viewOrigin;
 		rayDirection.x  = cursorPos.x / g_Example->m_camProj(0, 0);
 		rayDirection.y  = cursorPos.y / g_Example->m_camProj(1, 1);
@@ -193,17 +207,20 @@ void Im3d_EndFrame()
 	glAssert(glBlendEquation(GL_FUNC_ADD));
 	glAssert(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
-	for (U32 i = 0, n = Im3d::GetDrawListCount(); i < n; ++i) {
+	for (U32 i = 0, n = Im3d::GetDrawListCount(); i < n; ++i)
+	{
 		auto& drawList = Im3d::GetDrawLists()[i];
 	
-		if (drawList.m_layerId == Im3d::MakeId("NamedLayer")) {
+		if (drawList.m_layerId == Im3d::MakeId("NamedLayer"))
+		{
 		 // The application may group primitives into layers, which can be used to change the draw state (e.g. enable depth testing, use a different shader)
 		}
 	
 		GLenum prim;
 		GLuint sh;
 		int primVertexCount;
-		switch (drawList.m_primType) {
+		switch (drawList.m_primType)
+		{
 			case Im3d::DrawPrimitive_Points:
 				prim = GL_TRIANGLE_STRIP;
 				primVertexCount = 1;
@@ -241,7 +258,8 @@ void Im3d_EndFrame()
 	
 		int remainingPrimCount = drawList.m_vertexCount / primVertexCount;
 		const Im3d::VertexData* vertexData = drawList.m_vertexData;
-		while (remainingPrimCount > 0) {
+		while (remainingPrimCount > 0)
+		{
 			int passPrimCount = remainingPrimCount < kPrimsPerPass ? remainingPrimCount : kPrimsPerPass;
 			int passVertexCount = passPrimCount * primVertexCount;
 	

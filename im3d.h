@@ -145,8 +145,8 @@ IM3D_API void DrawArrow(const Vec3& _start, const Vec3& _end, float _headLength 
 IM3D_API void Text(const Vec3& _position, U32 _textFlags, const char* _text, ...); // use the current draw state for size/color
 IM3D_API void Text(const Vec3& _position, float _size, Color _color, U32 _textFlags, const char* _text, ...);
 
-// Ids are used to uniquely identify gizmos and layers. Gizmo should have a unique id during a frame.
-// Note that ids are a hash of the whole id stack, see PushId(), PopId().
+// IDs are used to uniquely identify gizmos and layers. Gizmo should have a unique ID during a frame.
+// Note that ids are a hash of the whole ID stack, see PushId(), PopId().
 IM3D_API Id MakeId(const char* _str);
 IM3D_API Id MakeId(const void* _ptr);
 IM3D_API Id MakeId(int _i);
@@ -159,15 +159,12 @@ IM3D_API void PushId(const void* _ptr);
 IM3D_API void PushId(int _i);
 IM3D_API void PopId();
 IM3D_API Id   GetId();
-IM3D_API Id   GetActiveId(); // GetActiveId() != Id_Invalid means that a gizmo is in use
-IM3D_API Id   GetHotId();
 
 // Layer id state, subsequent primitives are added to a separate draw list associated with the id (per primitive).
 IM3D_API void PushLayerId(Id _layer);
 IM3D_API void PushLayerId(const char* _str); // calls PushLayerId(MakeId(_str))
 IM3D_API void PopLayerId();
 IM3D_API Id   GetLayerId();
-
 
 // Manipulate translation/rotation/scale via a gizmo. Return true if the gizmo is 'active' (if it modified the output parameter).
 // If _local is true, the Gizmo* functions expect that the local matrix is on the matrix stack; in general the application should
@@ -179,12 +176,17 @@ IM3D_API bool GizmoScale(const char* _id, float _scale_[3]); // local scale only
 IM3D_API bool Gizmo(const char* _id, float _translation_[3], float _rotation_[3*3], float _scale_[3]); // any of _translation_/_rotation_/_scale_ may be null.
 IM3D_API bool Gizmo(const char* _id, float _transform_[4*4]);
 
-// Gizmo* overloads which take an Id directly. In some cases the app may want to call MakeId() separately, usually to change the gizmo appearance if hot/active.
+// Gizmo* overloads which take an ID directly. In some cases the app may want to call MakeId() separately, usually to change the gizmo appearance if hot/active.
 IM3D_API bool GizmoTranslation(Id _id, float _translation_[3], bool _local = false);
 IM3D_API bool GizmoRotation(Id _id, float _rotation_[3*3], bool _local = false);
 IM3D_API bool GizmoScale(Id _id, float _scale_[3]);
 IM3D_API bool Gizmo(Id _id, float _transform_[4*4]);
 IM3D_API bool Gizmo(Id _id, float _translation_[3], float _rotation_[3*3], float _scale_[3]);
+
+// Active gizmo ID. This will match the _id parameter passed to a Gizmo* function. Return Id_Invalid if no gizmo is in use.
+IM3D_API Id GetActiveId();
+// ID of the current current 'hot' gizmo (nearest intersecting gizmo along the cursor ray).
+IM3D_API Id GetHotId();
 
 // Visibility tests. The application must set a culling frustum via AppData.
 IM3D_API bool IsVisible(const Vec3& _origin, float _radius); // sphere
@@ -197,49 +199,63 @@ IM3D_API void SetContext(Context& _ctx);
 // Merge vertex data from _src into _dst_. Layers are preserved. Call before EndFrame().
 IM3D_API void MergeContexts(Context& _dst_, const Context& _src);
 
+
 struct IM3D_API Vec2
 {
 	float x, y;
+
 	Vec2()                                                                   {}
 	Vec2(float _xy): x(_xy), y(_xy)                                          {}
 	Vec2(float _x, float _y): x(_x), y(_y)                                   {}
+
 	operator float*()                                                        { return &x; }
 	operator const float*() const                                            { return &x; }
+
 	#ifdef IM3D_VEC2_APP
 		IM3D_VEC2_APP
 	#endif
 };
+
 struct IM3D_API Vec3
 {
 	float x, y, z;
+
 	Vec3()                                                                   {}
 	Vec3(float _xyz): x(_xyz), y(_xyz), z(_xyz)                              {}
 	Vec3(float _x, float _y, float _z): x(_x), y(_y), z(_z)                  {}
 	Vec3(const Vec2& _xy, float _z): x(_xy.x), y(_xy.y), z(_z)               {}
 	Vec3(const Vec4& _v); // discards w
+
 	operator float*()                                                        { return &x; }
 	operator const float*() const                                            { return &x; }
+
 	#ifdef IM3D_VEC3_APP
 		IM3D_VEC3_APP
 	#endif
 };
+
 struct IM3D_API Vec4
 {
 	float x, y, z, w;
+
 	Vec4()                                                                   {}
 	Vec4(float _xyzw): x(_xyzw), y(_xyzw), z(_xyzw), w(_xyzw)                {}
 	Vec4(float _x, float _y, float _z, float _w): x(_x), y(_y), z(_z), w(_w) {}
 	Vec4(const Vec3& _xyz, float _w): x(_xyz.x), y(_xyz.y), z(_xyz.z), w(_w) {}
 	Vec4(Color _rgba);
+
 	operator float*()                                                        { return &x; }
 	operator const float*() const                                            { return &x; }
+
 	#ifdef IM3D_VEC4_APP
 		IM3D_VEC4_APP
 	#endif
 };
+
 struct IM3D_API Mat3
 {
 	float m[3*3]; // column-major unless IM3D_MATRIX_ROW_MAJOR defined
+
 	Mat3()                                                                   {}
 	Mat3(float _diagonal);
 	Mat3(
@@ -249,6 +265,7 @@ struct IM3D_API Mat3
 		);
 	Mat3(const Vec3& _colX, const Vec3& _colY, const Vec3& _colZ);
 	Mat3(const Mat4& _mat4); // extract upper 3x3
+
 	operator float*()                                                        { return m; }
 	operator const float*() const                                            { return m; }
 
@@ -283,9 +300,11 @@ struct IM3D_API Mat3
 		IM3D_MAT3_APP
 	#endif
 };
+
 struct IM3D_API Mat4
 {
 	float m[4*4]; // column-major unless IM3D_MATRIX_ROW_MAJOR defined
+
 	Mat4()                                                                   {}
 	Mat4(float _diagonal);
 	Mat4(
@@ -296,6 +315,7 @@ struct IM3D_API Mat4
 		);
 	Mat4(const Mat3& _mat3);
 	Mat4(const Vec3& _translation, const Mat3& _rotation, const Vec3& _scale);
+
 	operator float*()                                                        { return m; }
 	operator const float*() const                                            { return m; }
 
@@ -334,9 +354,11 @@ struct IM3D_API Mat4
 		IM3D_MAT4_APP
 	#endif
 };
+
 struct IM3D_API Color
 {
 	U32 v; // rgba8 (MSB = r)
+
 	constexpr Color(): v(0)                                                  {}
 	constexpr Color(U32 _rgba): v(_rgba)                                     {}
 	          Color(const Vec4& _rgba);
@@ -373,19 +395,28 @@ struct IM3D_API Color
 			| ((v & (0xff << 24)) >> 24) // r
 			| ((v & (0xff << 16)) >>  8) // g
 			| ((v & (0xff <<  8)) <<  8) // b
-			| ((v & (0xff      )) << 24) // b
+			| ((v & (0xff      )) << 24) // a
 			;
 	}
 };
 
 constexpr Color Color_Black   = Color(0x000000ff);
 constexpr Color Color_White   = Color(0xffffffff);
+constexpr Color Color_Gray    = Color(0x808080ff);
 constexpr Color Color_Red     = Color(0xff0000ff);
 constexpr Color Color_Green   = Color(0x00ff00ff);
 constexpr Color Color_Blue    = Color(0x0000ffff);
 constexpr Color Color_Magenta = Color(0xff00ffff);
 constexpr Color Color_Yellow  = Color(0xffff00ff);
 constexpr Color Color_Cyan    = Color(0x00ffffff);
+
+constexpr Color Color_Pink    = Color(0xffc0cbff);
+constexpr Color Color_Orange  = Color(0xffa500ff);
+constexpr Color Color_Gold    = Color(0xffd700ff);
+constexpr Color Color_Brown   = Color(0x8b4513ff);
+constexpr Color Color_Purple  = Color(0x800080ff);
+constexpr Color Color_Teal    = Color(0x008080ff);
+constexpr Color Color_Navy    = Color(0x000080ff);
 
 struct alignas(IM3D_VERTEX_ALIGNMENT) VertexData
 {
@@ -503,37 +534,37 @@ struct AppData
 template <typename T>
 struct Vector
 {
-	Vector()                                      {}
-	~Vector();
+	            Vector()                             {}
+	            ~Vector();
 
-	T&       operator[](U32 _i)                   { IM3D_ASSERT(_i < m_size); return m_data[_i]; }
-	const T& operator[](U32 _i) const             { IM3D_ASSERT(_i < m_size); return m_data[_i]; }
-	T*       data()                               { return m_data; }
-	const T* data() const                         { return m_data; }
+	T&          operator[](U32 _i)                   { IM3D_ASSERT(_i < m_size); return m_data[_i]; }
+	const T&    operator[](U32 _i) const             { IM3D_ASSERT(_i < m_size); return m_data[_i]; }
+	T*          data()                               { return m_data; }
+	const T*    data() const                         { return m_data; }
 
-	T&       push_back()                          { if (m_size == m_capacity) { reserve(m_capacity + m_capacity / 2); } return m_data[m_size++]; }
-	void     push_back(const T& _v)               { T tmp = _v; if (m_size == m_capacity) { reserve(m_capacity + m_capacity / 2); } m_data[m_size++] = tmp; }
-	void     pop_back()                           { IM3D_ASSERT(m_size > 0); --m_size; }
-	void     append(const T* _v, U32 _count);
-	void     append(const Vector<T>& _other)      { append(_other.data(), _other.size()); }
+	T&          push_back()                          { if (m_size == m_capacity) { reserve(m_capacity + m_capacity / 2); } return m_data[m_size++]; }
+	void        push_back(const T& _v)               { T tmp = _v; if (m_size == m_capacity) { reserve(m_capacity + m_capacity / 2); } m_data[m_size++] = tmp; }
+	void        pop_back()                           { IM3D_ASSERT(m_size > 0); --m_size; }
+	void        append(const T* _v, U32 _count);
+	void        append(const Vector<T>& _other)      { append(_other.data(), _other.size()); }
 
-	T*       begin()                              { return m_data; }
-	const T* begin() const                        { return m_data; }
-	T*       end()                                { return m_data + m_size; }
-	const T* end() const                          { return m_data + m_size; }
-	T&       front()                              { IM3D_ASSERT(m_size > 0); return m_data[0]; }
-	const T& front() const                        { IM3D_ASSERT(m_size > 0); return m_data[0]; }
-	T&       back()                               { IM3D_ASSERT(m_size > 0); return m_data[m_size - 1]; }
-	const T& back() const                         { IM3D_ASSERT(m_size > 0); return m_data[m_size - 1]; }
+	T*          begin()                              { return m_data; }
+	const T*    begin() const                        { return m_data; }
+	T*          end()                                { return m_data + m_size; }
+	const T*    end() const                          { return m_data + m_size; }
+	T&          front()                              { IM3D_ASSERT(m_size > 0); return m_data[0]; }
+	const T&    front() const                        { IM3D_ASSERT(m_size > 0); return m_data[0]; }
+	T&          back()                               { IM3D_ASSERT(m_size > 0); return m_data[m_size - 1]; }
+	const T&    back() const                         { IM3D_ASSERT(m_size > 0); return m_data[m_size - 1]; }
 
-	U32      size() const                         { return m_size; }
-	U32      capacity() const                     { return m_capacity; }
-	bool     empty() const                        { return m_size == 0; }
+	U32         size() const                         { return m_size; }
+	U32         capacity() const                     { return m_capacity; }
+	bool        empty() const                        { return m_size == 0; }
 
-	void     clear()                              { m_size = 0; }
-	void     reserve(U32 _capacity);
-	void     resize(U32 _size, const T& _val);
-	void     resize(U32 _size);
+	void        clear()                              { m_size = 0; }
+	void        reserve(U32 _capacity);
+	void        resize(U32 _size, const T& _val);
+	void        resize(U32 _size);
 
 	static void swap(Vector<T>& _a_, Vector<T>& _b_);
 
@@ -565,131 +596,134 @@ enum GizmoMode
 // Context stores all relevant state - main interface affects the context currently bound via SetCurrentContext().
 struct IM3D_API Context
 {
-	void        begin(PrimitiveMode _mode);
-	void        end();
-	void        vertex(const Vec3& _position, float _size, Color _color);
-	void        vertex(const Vec3& _position )   { vertex(_position, getSize(), getColor()); }
+	                    Context();
+	                    ~Context();
 
-	void        text(const Vec3& _position, float _size, Color _color, TextFlags _flags, const char* _textStart, const char* _textEnd);
-	void        text(const Vec3& _position, float _size, Color _color, TextFlags _flags, const char* _text, va_list _args);
+	void                begin(PrimitiveMode _mode);
+	void                end();
 
-	void        reset();
-	void        merge(const Context& _src);
-	void        endFrame();
-	void        draw(); // DEPRECATED (see Im3d::Draw)
+	void                vertex(const Vec3& _position, float _size, Color _color);
+	void                vertex(const Vec3& _position )   { vertex(_position, getSize(), getColor()); }
 
-	const DrawList* getDrawLists() const         { return m_drawLists.data();      }
-	U32         getDrawListCount() const         { return m_drawLists.size();      }
+	void                text(const Vec3& _position, float _size, Color _color, TextFlags _flags, const char* _textStart, const char* _textEnd);
+	void                text(const Vec3& _position, float _size, Color _color, TextFlags _flags, const char* _text, va_list _args);
 
-	const TextDrawList* getTextDrawLists() const { return m_textDrawLists.data();  }
-	U32         getTextDrawListCount() const     { return m_textDrawLists.size();  }
+	void                reset();
+	void                merge(const Context& _src);
+	void                endFrame();
+	void                draw(); // DEPRECATED (see Im3d::Draw)
+
+	const DrawList*     getDrawLists() const             { return m_drawLists.data(); }
+	U32                 getDrawListCount() const         { return m_drawLists.size(); }
+
+	const TextDrawList* getTextDrawLists() const         { return m_textDrawLists.data();  }
+	U32                 getTextDrawListCount() const     { return m_textDrawLists.size();  }
 
 
-	void        setColor(Color _color)           { m_colorStack.back() = _color;   }
-	Color       getColor() const                 { return m_colorStack.back();     }
-	void        pushColor(Color _color)          { m_colorStack.push_back(_color); }
-	void        popColor()                       { IM3D_ASSERT(m_colorStack.size() > 1); m_colorStack.pop_back(); }
+	void                setColor(Color _color)           { m_colorStack.back() = _color;   }
+	Color               getColor() const                 { return m_colorStack.back();     }
+	void                pushColor(Color _color)          { m_colorStack.push_back(_color); }
+	void                popColor()                       { IM3D_ASSERT(m_colorStack.size() > 1); m_colorStack.pop_back(); }
 
-	void        setAlpha(float _alpha)           { m_alphaStack.back() = _alpha;   }
-	float       getAlpha() const                 { return m_alphaStack.back();     }
-	void        pushAlpha(float _alpha)          { m_alphaStack.push_back(_alpha); }
-	void        popAlpha()                       { IM3D_ASSERT(m_alphaStack.size() > 1); m_alphaStack.pop_back(); }
+	void                setAlpha(float _alpha)           { m_alphaStack.back() = _alpha;   }
+	float               getAlpha() const                 { return m_alphaStack.back();     }
+	void                pushAlpha(float _alpha)          { m_alphaStack.push_back(_alpha); }
+	void                popAlpha()                       { IM3D_ASSERT(m_alphaStack.size() > 1); m_alphaStack.pop_back(); }
 
-	void        setSize(float _size)             { m_sizeStack.back() = _size;     }
-	float       getSize() const                  { return m_sizeStack.back();      }
-	void        pushSize(float _size)            { m_sizeStack.push_back(_size);   }
-	void        popSize()                        { IM3D_ASSERT(m_sizeStack.size() > 1); m_sizeStack.pop_back(); }
+	void                setSize(float _size)             { m_sizeStack.back() = _size;     }
+	float               getSize() const                  { return m_sizeStack.back();      }
+	void                pushSize(float _size)            { m_sizeStack.push_back(_size);   }
+	void                popSize()                        { IM3D_ASSERT(m_sizeStack.size() > 1); m_sizeStack.pop_back(); }
 
-	void        setEnableSorting(bool _enable);
-	bool        getEnableSorting() const         { return m_enableSortingStack.back(); }
-	void        pushEnableSorting(bool _enable);
-	void        popEnableSorting();
+	void                setEnableSorting(bool _enable);
+	bool                getEnableSorting() const         { return m_enableSortingStack.back(); }
+	void                pushEnableSorting(bool _enable);
+	void                popEnableSorting();
 
-	Id          getLayerId() const               { return m_layerIdStack.back(); }
-	void        pushLayerId(Id _layer);
-	void        popLayerId();
+	Id                  getLayerId() const               { return m_layerIdStack.back(); }
+	void                pushLayerId(Id _layer);
+	void                popLayerId();
 
-	void        setMatrix(const Mat4& _mat4)     { m_matrixStack.back() = _mat4;   }
-	const Mat4& getMatrix() const                { return m_matrixStack.back();    }
-	void        pushMatrix(const Mat4& _mat4)    { m_matrixStack.push_back(_mat4); }
-	void        popMatrix()                      { IM3D_ASSERT(m_matrixStack.size() > 1); m_matrixStack.pop_back(); }
+	void                setMatrix(const Mat4& _mat4)     { m_matrixStack.back() = _mat4;   }
+	const Mat4&         getMatrix() const                { return m_matrixStack.back();    }
+	void                pushMatrix(const Mat4& _mat4)    { m_matrixStack.push_back(_mat4); }
+	void                popMatrix()                      { IM3D_ASSERT(m_matrixStack.size() > 1); m_matrixStack.pop_back(); }
 
-	void        setId(Id _id)                    { m_idStack.back() = _id;   }
-	Id          getId() const                    { return m_idStack.back();  }
-	void        pushId(Id _id)                   { m_idStack.push_back(_id); }
-	void        popId()                          { IM3D_ASSERT(m_idStack.size() > 1); m_idStack.pop_back(); }
+	void                setId(Id _id)                    { m_idStack.back() = _id;   }
+	Id                  getId() const                    { return m_idStack.back();  }
+	void                pushId(Id _id)                   { m_idStack.push_back(_id); }
+	void                popId()                          { IM3D_ASSERT(m_idStack.size() > 1); m_idStack.pop_back(); }
 
-	AppData&    getAppData()                     { return m_appData; }
+	AppData&            getAppData()                     { return m_appData; }
 
-	Context();
-	~Context();
+ // Low-level interface for internal and app-defined gizmos. May be subject to breaking changes.
 
- // low-level interface for internal and app-defined gizmos, may be subject to breaking changes
+	bool                gizmoAxisTranslation_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _snap, float _worldHeight, float _worldSize, Vec3* _out_);
+	void                gizmoAxisTranslation_Draw(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, Color _color);
 
-	bool gizmoAxisTranslation_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _snap, float _worldHeight, float _worldSize, Vec3* _out_);
-	void gizmoAxisTranslation_Draw    (Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, Color _color);
+	bool                gizmoPlaneTranslation_Behavior(Id _id, const Vec3& _origin, const Vec3& _normal, float _snap, float _worldSize, Vec3* _out_);
+	void                gizmoPlaneTranslation_Draw(Id _id, const Vec3& _origin, const Vec3& _normal, float _worldSize, Color _color);
 
-	bool gizmoPlaneTranslation_Behavior(Id _id, const Vec3& _origin, const Vec3& _normal, float _snap, float _worldSize, Vec3* _out_);
-	void gizmoPlaneTranslation_Draw    (Id _id, const Vec3& _origin, const Vec3& _normal, float _worldSize, Color _color);
+	bool                gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _snap, float _worldRadius, float _worldSize, float* _out_);
+	void                gizmoAxislAngle_Draw(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldRadius, float _angle, Color _color);
 
-	bool gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _snap, float _worldRadius, float _worldSize, float* _out_);
-	void gizmoAxislAngle_Draw    (Id _id, const Vec3& _origin, const Vec3& _axis, float _worldRadius, float _angle, Color _color);
-
-	bool gizmoAxisScale_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _snap, float _worldHeight, float _worldSize, float *_out_);
-	void gizmoAxisScale_Draw    (Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, Color _color);
+	bool                gizmoAxisScale_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _snap, float _worldHeight, float _worldSize, float *_out_);
+	void                gizmoAxisScale_Draw(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, Color _color);
 
 	// Convert pixels -> world space size based on distance between _position and view origin.
-	float pixelsToWorldSize(const Vec3& _position, float _pixels);
+	float               pixelsToWorldSize(const Vec3& _position, float _pixels);
 	// Convert world space size -> pixels based on distance between _position and view origin.
-	float worldSizeToPixels(const Vec3& _position, float _pixels);
+	float               worldSizeToPixels(const Vec3& _position, float _pixels);
 	// Blend between _min and _max based on distance betwen _position and view origin.
-	int estimateLevelOfDetail(const Vec3& _position, float _worldSize, int _min = 4, int _max = 256);
+	int                 estimateLevelOfDetail(const Vec3& _position, float _worldSize, int _min = 4, int _max = 256);
 
 	// Make _id hot if _depth < m_hotDepth && _intersects.
-	bool makeHot(Id _id, float _depth, bool _intersects);
+	bool                makeHot(Id _id, float _depth, bool _intersects);
 	// Make _id active.
-	void makeActive(Id _id);
+	void                makeActive(Id _id);
 	// Reset the acive/hot ids and the hot depth.
-	void resetId();
+	void                resetId();
 
 	// Interpret key state.
-	bool isKeyDown(Key _key) const     { return m_keyDownCurr[_key]; }
-	bool wasKeyPressed(Key _key) const { return m_keyDownCurr[_key] && !m_keyDownPrev[_key]; }
+	bool                isKeyDown(Key _key) const     { return m_keyDownCurr[_key]; }
+	bool                wasKeyPressed(Key _key) const { return m_keyDownCurr[_key] && !m_keyDownPrev[_key]; }
 
 	// Visibiity tests for culling.
-	bool isVisible(const VertexData* _vdata, DrawPrimitiveType _prim); // per-vertex
-	bool isVisible(const Vec3& _origin, float _radius);                // sphere
-	bool isVisible(const Vec3& _min, const Vec3& _max);                // axis-aligned box
+	bool                isVisible(const VertexData* _vdata, DrawPrimitiveType _prim); // per-vertex
+	bool                isVisible(const Vec3& _origin, float _radius);                // sphere
+	bool                isVisible(const Vec3& _min, const Vec3& _max);                // axis-aligned box
 
- // gizmo state
-	bool               m_gizmoLocal;               // Global mode selection for gizmos.
-	GizmoMode          m_gizmoMode;                //               "
-	Id                 m_activeId;                 // Currently active gizmo. If set, this is the same as m_hotId.
-	Id                 m_hotId;
-	Id                 m_appId;
-	Id                 m_appActiveId;
-	Id                 m_appHotId;
-	float              m_hotDepth;                 // Depth of the current hot gizmo along the cursor ray, for handling occlusion.
-	Vec3               m_gizmoStateVec3;           // Stored state for the active gizmo.
-	Mat3               m_gizmoStateMat3;           //               "
-	float              m_gizmoStateFloat;          //               "
-	float              m_gizmoHeightPixels;        // Height/radius of gizmos.
-	float              m_gizmoSizePixels;          // Thickness of gizmo lines.
+ // Gizmo state.
+
+	bool                m_gizmoLocal;         // Global mode selection for gizmos.
+	GizmoMode           m_gizmoMode;          //               "
+	Id                  m_activeId;           // Currently active gizmo. If set, this is the same as m_hotId.
+	Id                  m_hotId;              // ID of the current 'hot' gizmo (nearest intersecting gizmo along the cursor ray). NB this is the id of the *sub* gizmo, not the app-specified ID.
+	float               m_hotDepth;           // Depth of the current hot gizmo along the cursor ray, for handling occlusion.
+	Id                  m_appId;              // Current ID *without* the hashing the ID stack (= _id arg to Gizmo* functions).
+	Id                  m_appActiveId;		  // Copied from m_appId for the current active gizmo.
+	Id                  m_appHotId;			  // Copied from m_appId for the current 'hot' gizmo.
+	Vec3                m_gizmoStateVec3;     // Stored state for the active gizmo.
+	Mat3                m_gizmoStateMat3;     //               "
+	float               m_gizmoStateFloat;    //               "
+	float               m_gizmoHeightPixels;  // Height/radius of gizmos.
+	float               m_gizmoSizePixels;    // Thickness of gizmo lines.
 
 
- // stats/debugging
+ // Stats, debugging.
 
 	// Return the total number of primitives (sorted + unsorted) of the given _type in all layers.
-	U32 getPrimitiveCount(DrawPrimitiveType _type) const;
+	U32                 getPrimitiveCount(DrawPrimitiveType _type) const;
 
 	// Return the total number of text primitives in all layers.
-	U32 getTextCount() const;
+	U32                 getTextCount() const;
 
 	// Return the number of layers.
-	U32 getLayerCount() const { return m_layerIdMap.size(); }
+	U32                 getLayerCount() const { return m_layerIdMap.size(); }
 
 private:
- // state stacks
+
+ // State stacks.
 	Vector<Color>       m_colorStack;
 	Vector<float>       m_alphaStack;
 	Vector<float>       m_sizeStack;
@@ -698,147 +732,148 @@ private:
 	Vector<Id>          m_idStack;
 	Vector<Id>          m_layerIdStack;
 
- // vertex data: one list per layer, per primitive type, *2 for sorted/unsorted
+ // Vertex data: one list per layer, per primitive type, *2 for sorted/unsorted.
 	typedef Vector<VertexData> VertexList;
-	Vector<VertexList*> m_vertexData[2];            // Each layer is DrawPrimitive_Count consecutive lists.
-	int                 m_vertexDataIndex;          // 0, or 1 if sorting enabled.
-	Vector<Id>          m_layerIdMap;               // Map Id -> vertex data index.
-	int                 m_layerIndex;               // Index of the currently active layer in m_layerIdMap.
-	Vector<DrawList>    m_drawLists;                // All draw lists for the current frame, available after calling endFrame() before calling reset().
-	bool                m_sortCalled;               // Avoid calling sort() during every call to draw().
-	bool                m_endFrameCalled;           // For assert, if vertices are pushed after endFrame() was called.
+	Vector<VertexList*> m_vertexData[2];                    // Each layer is DrawPrimitive_Count consecutive lists.
+	int                 m_vertexDataIndex;                  // 0, or 1 if sorting enabled.
+	Vector<Id>          m_layerIdMap;                       // Map Id -> vertex data index.
+	int                 m_layerIndex;                       // Index of the currently active layer in m_layerIdMap.
+	Vector<DrawList>    m_drawLists;                        // All draw lists for the current frame, available after calling endFrame() before calling reset().
+	bool                m_sortCalled;                       // Avoid calling sort() during every call to draw().
+	bool                m_endFrameCalled;                   // For assert, if vertices are pushed after endFrame() was called.
 
- // text data: one list per layer
+ // Text data: one list per layer.
 	typedef Vector<TextData> TextList;
 	Vector<TextList*>    m_textData;
 	Vector<char>         m_textBuffer;
 	Vector<TextDrawList> m_textDrawLists;
 
- // primitive state
+ // Primitive state.
 	PrimitiveMode       m_primMode;
 	DrawPrimitiveType   m_primType;
-	U32                 m_firstVertThisPrim;        // Index of the first vertex pushed during this primitive.
-	U32                 m_vertCountThisPrim;        // # calls to vertex() since the last call to begin().
+	U32                 m_firstVertThisPrim;                // Index of the first vertex pushed during this primitive.
+	U32                 m_vertCountThisPrim;                // # calls to vertex() since the last call to begin().
 	Vec3                m_minVertThisPrim;
 	Vec3                m_maxVertThisPrim;
 
- // app data
+ // App data.
 	AppData             m_appData;
-	bool                m_keyDownCurr[Key_Count];   // Key state captured during reset().
-	bool                m_keyDownPrev[Key_Count];   // Key state from previous frame.
+	bool                m_keyDownCurr[Key_Count];           // Key state captured during reset().
+	bool                m_keyDownPrev[Key_Count];           // Key state from previous frame.
 	Vec4                m_cullFrustum[FrustumPlane_Count];  // Optimized frustum planes from m_appData.m_cullFrustum.
-	int                 m_cullFrustumCount;         // # valid frustum planes in m_cullFrustum.
-
+	int                 m_cullFrustumCount;                 // # valid frustum planes in m_cullFrustum.
 
 	// Sort primitive data.
-	void sort();
+	void                sort();
 
 	// Return -1 if _id not found.
-	int  findLayerIndex(Id _id) const;
+	int                 findLayerIndex(Id _id) const;
 
-	VertexList* getCurrentVertexList();
-	TextList*   getCurrentTextList();
+	// Access the current vertex/text data based on m_layerIndex.
+	VertexList*         getCurrentVertexList();
+	TextList*           getCurrentTextList();
 };
 
 namespace internal {
-	#if IM3D_THREAD_LOCAL_CONTEXT_PTR
-		#define IM3D_THREAD_LOCAL thread_local
-	#else
-		#define IM3D_THREAD_LOCAL
-	#endif
-	extern IM3D_THREAD_LOCAL Context* g_CurrentContext;
+
+#if IM3D_THREAD_LOCAL_CONTEXT_PTR
+	#define IM3D_THREAD_LOCAL thread_local
+#else
+	#define IM3D_THREAD_LOCAL
+#endif
+
+extern IM3D_THREAD_LOCAL Context* g_CurrentContext;
+
 }
 
-inline AppData& GetAppData()                                                 { return GetContext().getAppData();   }
-inline void     NewFrame()                                                   { GetContext().reset();               }
-inline void     EndFrame()                                                   { GetContext().endFrame();            }
-inline void     Draw()                                                       { GetContext().draw();                }
+inline AppData&            GetAppData()                                                                                     { return GetContext().getAppData(); }
+inline void                NewFrame()                                                                                       { GetContext().reset(); }
+inline void                EndFrame()                                                                                       { GetContext().endFrame(); }
+inline void                Draw()                                                                                           { GetContext().draw(); }
 
-inline const DrawList* GetDrawLists()                                        { return GetContext().getDrawLists();     }
-inline U32             GetDrawListCount()                                    { return GetContext().getDrawListCount(); }
+inline const DrawList*     GetDrawLists()                                                                                   { return GetContext().getDrawLists(); }
+inline U32                 GetDrawListCount()                                                                               { return GetContext().getDrawListCount(); }
 
-inline const TextDrawList* GetTextDrawLists()                                { return GetContext().getTextDrawLists();     }
-inline U32                 GetTextDrawListCount()                            { return GetContext().getTextDrawListCount(); }
+inline const TextDrawList* GetTextDrawLists()                                                                               { return GetContext().getTextDrawLists(); }
+inline U32                 GetTextDrawListCount()                                                                           { return GetContext().getTextDrawListCount(); }
 
-inline void  BeginPoints()                                                   { GetContext().begin(PrimitiveMode_Points);        }
-inline void  BeginLines()                                                    { GetContext().begin(PrimitiveMode_Lines);         }
-inline void  BeginLineLoop()                                                 { GetContext().begin(PrimitiveMode_LineLoop);      }
-inline void  BeginLineStrip()                                                { GetContext().begin(PrimitiveMode_LineStrip);     }
-inline void  BeginTriangles()                                                { GetContext().begin(PrimitiveMode_Triangles);     }
-inline void  BeginTriangleStrip()                                            { GetContext().begin(PrimitiveMode_TriangleStrip); }
-inline void  End()                                                           { GetContext().end(); }
+inline void                BeginPoints()                                                                                    { GetContext().begin(PrimitiveMode_Points); }
+inline void                BeginLines()                                                                                     { GetContext().begin(PrimitiveMode_Lines); }
+inline void                BeginLineLoop()                                                                                  { GetContext().begin(PrimitiveMode_LineLoop); }
+inline void                BeginLineStrip()                                                                                 { GetContext().begin(PrimitiveMode_LineStrip); }
+inline void                BeginTriangles()                                                                                 { GetContext().begin(PrimitiveMode_Triangles); }
+inline void                BeginTriangleStrip()                                                                             { GetContext().begin(PrimitiveMode_TriangleStrip); }
+inline void                End()                                                                                            { GetContext().end(); }
 
-inline void  Vertex(const Vec3& _position)                                   { GetContext().vertex(_position, GetContext().getSize(), GetContext().getColor()); }
-inline void  Vertex(const Vec3& _position, Color _color)                     { GetContext().vertex(_position, GetContext().getSize(), _color); }
-inline void  Vertex(const Vec3& _position, float _size)                      { GetContext().vertex(_position, _size, GetContext().getColor()); }
-inline void  Vertex(const Vec3& _position, float _size, Color _color)        { GetContext().vertex(_position, _size, _color); }
-inline void  Vertex(float _x, float _y, float _z)                            { Vertex(Vec3(_x, _y, _z)); }
-inline void  Vertex(float _x, float _y, float _z, Color _color)              { Vertex(Vec3(_x, _y, _z), _color); }
-inline void  Vertex(float _x, float _y, float _z, float _size)               { Vertex(Vec3(_x, _y, _z), _size); }
-inline void  Vertex(float _x, float _y, float _z, float _size, Color _color) { Vertex(Vec3(_x, _y, _z), _size, _color); }
+inline void                Vertex(const Vec3& _position)                                                                    { GetContext().vertex(_position, GetContext().getSize(), GetContext().getColor()); }
+inline void                Vertex(const Vec3& _position, Color _color)                                                      { GetContext().vertex(_position, GetContext().getSize(), _color); }
+inline void                Vertex(const Vec3& _position, float _size)                                                       { GetContext().vertex(_position, _size, GetContext().getColor()); }
+inline void                Vertex(const Vec3& _position, float _size, Color _color)                                         { GetContext().vertex(_position, _size, _color); }
+inline void                Vertex(float _x, float _y, float _z)                                                             { Vertex(Vec3(_x, _y, _z)); }
+inline void                Vertex(float _x, float _y, float _z, Color _color)                                               { Vertex(Vec3(_x, _y, _z), _color); }
+inline void                Vertex(float _x, float _y, float _z, float _size)                                                { Vertex(Vec3(_x, _y, _z), _size); }
+inline void                Vertex(float _x, float _y, float _z, float _size, Color _color)                                  { Vertex(Vec3(_x, _y, _z), _size, _color); }
 
-inline void  PushDrawState()                                                 { Context& ctx = GetContext(); ctx.pushColor(ctx.getColor()); ctx.pushAlpha(ctx.getAlpha()); ctx.pushSize(ctx.getSize()); ctx.pushEnableSorting(ctx.getEnableSorting()); }
-inline void  PopDrawState()                                                  { Context& ctx = GetContext(); ctx.popColor(); ctx.popAlpha(); ctx.popSize(); ctx.popEnableSorting(); }
+inline void                PushDrawState()                                                                                  { Context& ctx = GetContext(); ctx.pushColor(ctx.getColor()); ctx.pushAlpha(ctx.getAlpha()); ctx.pushSize(ctx.getSize()); ctx.pushEnableSorting(ctx.getEnableSorting()); }
+inline void                PopDrawState()                                                                                   { Context& ctx = GetContext(); ctx.popColor(); ctx.popAlpha(); ctx.popSize(); ctx.popEnableSorting(); }
 
-inline void  PushColor()                                                     { GetContext().pushColor(GetContext().getColor()); }
-inline void  PushColor(Color _color)                                         { GetContext().pushColor(_color);                  }
-inline void  PopColor()                                                      { GetContext().popColor();                         }
-inline void  SetColor(Color _color)                                          { GetContext().setColor(_color);                   }
-inline void  SetColor(float _r, float _g, float _b, float _a)                { GetContext().setColor(Color(_r, _g, _b, _a));    }
-inline Color GetColor()                                                      { return GetContext().getColor();                  }
+inline void                PushColor()                                                                                      { GetContext().pushColor(GetContext().getColor()); }
+inline void                PushColor(Color _color)                                                                          { GetContext().pushColor(_color); }
+inline void                PopColor()                                                                                       { GetContext().popColor(); }
+inline void                SetColor(Color _color)                                                                           { GetContext().setColor(_color); }
+inline void                SetColor(float _r, float _g, float _b, float _a)                                                 { GetContext().setColor(Color(_r, _g, _b, _a)); }
+inline Color               GetColor()                                                                                       { return GetContext().getColor(); }
 
-inline void  PushAlpha()                                                     { GetContext().pushAlpha(GetContext().getAlpha()); }
-inline void  PushAlpha(float _alpha)                                         { GetContext().pushAlpha(_alpha);                  }
-inline void  PopAlpha()                                                      { GetContext().popAlpha();                         }
-inline void  SetAlpha(float _alpha)                                          { GetContext().setAlpha(_alpha);                   }
-inline float GetAlpha()                                                      { return GetContext().getAlpha();                  }
+inline void                PushAlpha()                                                                                      { GetContext().pushAlpha(GetContext().getAlpha()); }
+inline void                PushAlpha(float _alpha)                                                                          { GetContext().pushAlpha(_alpha); }
+inline void                PopAlpha()                                                                                       { GetContext().popAlpha(); }
+inline void                SetAlpha(float _alpha)                                                                           { GetContext().setAlpha(_alpha); }
+inline float               GetAlpha()                                                                                       { return GetContext().getAlpha(); }
 
-inline void  PushSize()                                                      { GetContext().pushSize(GetContext().getAlpha());  }
-inline void  PushSize(float _size)                                           { GetContext().pushSize(_size);                    }
-inline void  PopSize()                                                       { GetContext().popSize();                          }
-inline void  SetSize(float _size)                                            { GetContext().setSize(_size);                     }
-inline float GetSize()                                                       { return GetContext().getSize();                   }
+inline void                PushSize()                                                                                       { GetContext().pushSize(GetContext().getAlpha()); }
+inline void                PushSize(float _size)                                                                            { GetContext().pushSize(_size); }
+inline void                PopSize()                                                                                        { GetContext().popSize(); }
+inline void                SetSize(float _size)                                                                             { GetContext().setSize(_size); }
+inline float               GetSize()                                                                                        { return GetContext().getSize(); }
 
-inline void  PushEnableSorting()                                             { GetContext().pushEnableSorting(GetContext().getEnableSorting()); }
-inline void  PushEnableSorting(bool _enable)                                 { GetContext().pushEnableSorting(_enable); }
-inline void  PopEnableSorting()                                              { GetContext().popEnableSorting();         }
-inline void  EnableSorting(bool _enable)                                     { GetContext().setEnableSorting(_enable);  }
+inline void                PushEnableSorting()                                                                              { GetContext().pushEnableSorting(GetContext().getEnableSorting()); }
+inline void                PushEnableSorting(bool _enable)                                                                  { GetContext().pushEnableSorting(_enable); }
+inline void                PopEnableSorting()                                                                               { GetContext().popEnableSorting(); }
+inline void                EnableSorting(bool _enable)                                                                      { GetContext().setEnableSorting(_enable); }
 
-inline void  PushMatrix()                                                    { GetContext().pushMatrix(GetContext().getMatrix()); }
-inline void  PushMatrix(const Mat4& _mat4)                                   { GetContext().pushMatrix(_mat4);                    }
-inline void  PopMatrix()                                                     { GetContext().popMatrix();                          }
-inline void  SetMatrix(const Mat4& _mat4)                                    { GetContext().setMatrix(_mat4);                     }
-inline void  SetIdentity()                                                   { GetContext().setMatrix(Mat4(1.0f));                }
+inline void                PushMatrix()                                                                                     { GetContext().pushMatrix(GetContext().getMatrix()); }
+inline void                PushMatrix(const Mat4& _mat4)                                                                    { GetContext().pushMatrix(_mat4); }
+inline void                PopMatrix()                                                                                      { GetContext().popMatrix(); }
+inline void                SetMatrix(const Mat4& _mat4)                                                                     { GetContext().setMatrix(_mat4); }
+inline void                SetIdentity()                                                                                    { GetContext().setMatrix(Mat4(1.0f)); }
 
-inline void  PushId()                                                        { GetContext().pushId(GetContext().getId()); }
-inline void  PushId(Id _id)                                                  { GetContext().pushId(_id);                  }
-inline void  PushId(const char* _str)                                        { GetContext().pushId(MakeId(_str));         }
-inline void  PushId(const void* _ptr)                                        { GetContext().pushId(MakeId(_ptr));         }
-inline void  PushId(int _i)                                                  { GetContext().pushId(MakeId(_i));           }
-inline void  PopId()                                                         { GetContext().popId();                      }
-inline Id    GetId()                                                         { return GetContext().getId();               }
-inline Id    GetActiveId()                                                   { return GetContext().m_appActiveId;         }
-inline Id    GetHotId()                                                      { return GetContext().m_appHotId;            }
+inline void                PushId()                                                                                         { GetContext().pushId(GetContext().getId()); }
+inline void                PushId(Id _id)                                                                                   { GetContext().pushId(_id); }
+inline void                PushId(const char* _str)                                                                         { GetContext().pushId(MakeId(_str)); }
+inline void                PushId(const void* _ptr)                                                                         { GetContext().pushId(MakeId(_ptr)); }
+inline void                PushId(int _i)                                                                                   { GetContext().pushId(MakeId(_i)); }
+inline void                PopId()                                                                                          { GetContext().popId(); }
+inline Id                  GetId()                                                                                          { return GetContext().getId(); }
 
-inline void  PushLayerId()                                                   { GetContext().pushLayerId(GetContext().getLayerId()); }
-inline void  PushLayerId(Id _layer)                                          { GetContext().pushLayerId(_layer); }
-inline void  PushLayerId(const char* _str)                                   { PushLayerId(MakeId(_str));        }
-inline void  PopLayerId()                                                    { GetContext().popLayerId();        }
-inline Id    GetLayerId()                                                    { return GetContext().getLayerId(); }
+inline void                PushLayerId()                                                                                    { GetContext().pushLayerId(GetContext().getLayerId()); }
+inline void                PushLayerId(Id _layer)                                                                           { GetContext().pushLayerId(_layer); }
+inline void                PushLayerId(const char* _str)                                                                    { PushLayerId(MakeId(_str)); }
+inline void                PopLayerId()                                                                                     { GetContext().popLayerId(); }
+inline Id                  GetLayerId()                                                                                     { return GetContext().getLayerId(); }
 
-inline bool GizmoTranslation(const char* _id, float _translation_[3], bool _local)                   { return GizmoTranslation(MakeId(_id), _translation_, _local);   }
-inline bool GizmoRotation(const char* _id, float _rotation_[3*3], bool _local)                       { return GizmoRotation(MakeId(_id), _rotation_, _local);         }
-inline bool GizmoScale(const char* _id, float _scale_[3])                                            { return GizmoScale(MakeId(_id), _scale_);                       }
-inline bool Gizmo(const char* _id, float _translation_[3], float _rotation_[3*3], float _scale_[3])  { return Gizmo(MakeId(_id), _translation_, _rotation_, _scale_); }
-inline bool Gizmo(const char* _id, float _transform_[4*4])                                           { return Gizmo(MakeId(_id), _transform_);                        }
+inline bool                GizmoTranslation(const char* _id, float _translation_[3], bool _local)                           { return GizmoTranslation(MakeId(_id), _translation_, _local);   }
+inline bool                GizmoRotation(const char* _id, float _rotation_[3*3], bool _local)                               { return GizmoRotation(MakeId(_id), _rotation_, _local);}
+inline bool                GizmoScale(const char* _id, float _scale_[3])                                                    { return GizmoScale(MakeId(_id), _scale_); }
+inline bool                Gizmo(const char* _id, float _translation_[3], float _rotation_[3*3], float _scale_[3])          { return Gizmo(MakeId(_id), _translation_, _rotation_, _scale_); }
+inline bool                Gizmo(const char* _id, float _transform_[4*4])                                                   { return Gizmo(MakeId(_id), _transform_); }
+inline Id                  GetActiveId()                                                                                    { return GetContext().m_appActiveId;}
+inline Id                  GetHotId()                                                                                       { return GetContext().m_appHotId; }
 
-inline bool IsVisible(const Vec3& _origin, float _radius)                    { return GetContext().isVisible(_origin, _radius); }
-inline bool IsVisible(const Vec3& _min, const Vec3& _max)                    { return GetContext().isVisible(_min, _max);       }
+inline bool                IsVisible(const Vec3& _origin, float _radius)                                                    { return GetContext().isVisible(_origin, _radius); }
+inline bool                IsVisible(const Vec3& _min, const Vec3& _max)                                                    { return GetContext().isVisible(_min, _max);}
 
-inline Context& GetContext()                                                 { return *internal::g_CurrentContext; }
-inline void     SetContext(Context& _ctx)                                    { internal::g_CurrentContext = &_ctx; }
-
-inline void     MergeContexts(Context& _dst_, const Context& _src)           { _dst_.merge(_src); }
+inline Context&            GetContext()                                                                                     { return *internal::g_CurrentContext; }
+inline void                SetContext(Context& _ctx)                                                                        { internal::g_CurrentContext = &_ctx; }
+inline void                MergeContexts(Context& _dst_, const Context& _src)                                               { _dst_.merge(_src); }
 
 } // namespac Im3d
-

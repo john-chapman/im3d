@@ -16,8 +16,7 @@ using namespace Im3d;
 // draw primitive types (points, lines, triangles), plus some number of vertex buffers.
 bool Im3d_Init()
 {
-	{
-		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0POINTS\0");
+	{	GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0POINTS\0");
 		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "im3d.glsl", "FRAGMENT_SHADER\0POINTS\0");
 		if (vs && fs) {
 			glAssert(g_Im3dShaderPoints = glCreateProgram());
@@ -26,18 +25,22 @@ bool Im3d_Init()
 			bool ret = LinkShaderProgram(g_Im3dShaderPoints);
 			glAssert(glDeleteShader(vs));
 			glAssert(glDeleteShader(fs));
-			if (!ret) {
+			if (!ret)
+			{
 				return false;
 			}			
-		} else {
+		}
+		else
+		{
 			return false;
 		}
 	}
-	{
-		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0LINES\0");
+
+	{	GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0LINES\0");
 		GLuint gs = LoadCompileShader(GL_GEOMETRY_SHADER, "im3d.glsl", "GEOMETRY_SHADER\0LINES\0");
 		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "im3d.glsl", "FRAGMENT_SHADER\0LINES\0");
-		if (vs && gs && fs) {
+		if (vs && gs && fs)
+		{
 			glAssert(g_Im3dShaderLines = glCreateProgram());
 			glAssert(glAttachShader(g_Im3dShaderLines, vs));
 			glAssert(glAttachShader(g_Im3dShaderLines, gs));
@@ -46,27 +49,34 @@ bool Im3d_Init()
 			glAssert(glDeleteShader(vs));
 			glAssert(glDeleteShader(gs));
 			glAssert(glDeleteShader(fs));
-			if (!ret) {
+			if (!ret)
+			{
 				return false;
 			}
-		} else {
+		}
+		else
+		{
 			return false;
 		}
 	}
-	{
-		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0TRIANGLES\0");
+
+	{	GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "im3d.glsl", "VERTEX_SHADER\0TRIANGLES\0");
 		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "im3d.glsl", "FRAGMENT_SHADER\0TRIANGLES\0");
-		if (vs && fs) {
+		if (vs && fs)
+		{
 			glAssert(g_Im3dShaderTriangles = glCreateProgram());
 			glAssert(glAttachShader(g_Im3dShaderTriangles, vs));
 			glAssert(glAttachShader(g_Im3dShaderTriangles, fs));
 			bool ret = LinkShaderProgram(g_Im3dShaderTriangles);
 			glAssert(glDeleteShader(vs));
 			glAssert(glDeleteShader(fs));
-			if (!ret) {
+			if (!ret)
+			{
 				return false;
 			}		
-		} else {
+		}
+		else
+		{
 			return false;
 		}
 	}
@@ -108,7 +118,7 @@ void Im3d_NewFrame()
 	ad.m_projOrtho     = g_Example->m_camOrtho; 
 	
  // m_projScaleY controls how gizmos are scaled in world space to maintain a constant screen height
-	ad.m_projScaleY   = g_Example->m_camOrtho
+	ad.m_projScaleY = g_Example->m_camOrtho
 		? 2.0f / g_Example->m_camProj(1, 1) // use far plane height for an ortho projection
 		: tanf(g_Example->m_camFovRad * 0.5f) * 2.0f // or vertical fov for a perspective projection
 		;  
@@ -118,14 +128,17 @@ void Im3d_NewFrame()
 	cursorPos = (cursorPos / ad.m_viewportSize) * 2.0f - 1.0f;
 	cursorPos.y = -cursorPos.y; // window origin is top-left, ndc is bottom-left
 	Vec3 rayOrigin, rayDirection;
-	if (g_Example->m_camOrtho) {
+	if (g_Example->m_camOrtho)
+	{
 		rayOrigin.x  = cursorPos.x / g_Example->m_camProj(0, 0);
 		rayOrigin.y  = cursorPos.y / g_Example->m_camProj(1, 1);
 		rayOrigin.z  = 0.0f;
 		rayOrigin    = g_Example->m_camWorld * Vec4(rayOrigin, 1.0f);
 		rayDirection = g_Example->m_camWorld * Vec4(0.0f, 0.0f, -1.0f, 0.0f);
 		 
-	} else {
+	}
+	else
+	{
 		rayOrigin = ad.m_viewOrigin;
 		rayDirection.x  = cursorPos.x / g_Example->m_camProj(0, 0);
 		rayDirection.y  = cursorPos.y / g_Example->m_camProj(1, 1);
@@ -175,16 +188,19 @@ void Im3d_EndFrame()
 	glAssert(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 	glAssert(glEnable(GL_PROGRAM_POINT_SIZE));
 		
-	for (U32 i = 0, n = Im3d::GetDrawListCount(); i < n; ++i) {
+	for (U32 i = 0, n = Im3d::GetDrawListCount(); i < n; ++i)
+	{
 		const Im3d::DrawList& drawList = Im3d::GetDrawLists()[i];
  
-		if (drawList.m_layerId == Im3d::MakeId("NamedLayer")) {
+		if (drawList.m_layerId == Im3d::MakeId("NamedLayer"))
+		{
 		 // The application may group primitives into layers, which can be used to change the draw state (e.g. enable depth testing, use a different shader)
 		}
 	
 		GLenum prim;
 		GLuint sh;
-		switch (drawList.m_primType) {
+		switch (drawList.m_primType)
+		{
 			case Im3d::DrawPrimitive_Points:
 				prim = GL_POINTS;
 				sh = g_Im3dShaderPoints;

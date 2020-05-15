@@ -71,6 +71,7 @@ inline Mat3 operator*(const Mat3& _lhs, const Mat3& _rhs)
 	ret(2, 0) = _lhs(2, 0) * _rhs(0, 0) + _lhs(2, 1) * _rhs(1, 0) + _lhs(2, 2) * _rhs(2, 0);
 	ret(2, 1) = _lhs(2, 0) * _rhs(0, 1) + _lhs(2, 1) * _rhs(1, 1) + _lhs(2, 2) * _rhs(2, 1);
 	ret(2, 2) = _lhs(2, 0) * _rhs(0, 2) + _lhs(2, 1) * _rhs(1, 2) + _lhs(2, 2) * _rhs(2, 2);
+
 	return ret;
 }
 inline Vec3 operator*(const Mat3& _m, const Vec3& _v)
@@ -116,6 +117,7 @@ inline Mat4 operator*(const Mat4& _lhs, const Mat4& _rhs)
 	ret(3, 1) = _lhs(3, 0) * _rhs(0, 1) + _lhs(3, 1) * _rhs(1, 1) + _lhs(3, 2) * _rhs(2, 1) + _lhs(3, 3) * _rhs(3, 1);
 	ret(3, 2) = _lhs(3, 0) * _rhs(0, 2) + _lhs(3, 1) * _rhs(1, 2) + _lhs(3, 2) * _rhs(2, 2) + _lhs(3, 3) * _rhs(3, 2);
 	ret(3, 3) = _lhs(3, 0) * _rhs(0, 3) + _lhs(3, 1) * _rhs(1, 3) + _lhs(3, 2) * _rhs(2, 3) + _lhs(3, 3) * _rhs(3, 3);
+
 	return ret;
 }
 inline Vec3 operator*(const Mat4& _m, const Vec3& _pos)
@@ -194,11 +196,11 @@ struct Capsule
 
 
 // Ray-primitive intersections. Use Intersects() when you don't need t.
-bool  Intersects(const Ray& _ray, const Plane& _plane);
-bool  Intersect (const Ray& _ray, const Plane& _plane, float& t0_);
-bool  Intersects(const Ray& _ray, const Sphere& _sphere);
-bool  Intersect (const Ray& _ray, const Sphere& _sphere, float& t0_, float& t1_);
-bool  Intersects(const Ray& _ray, const Capsule& _capsule);
+bool  Intersects(const Ray& _ray, const Plane&   _plane                          );
+bool  Intersect (const Ray& _ray, const Plane&   _plane,   float& t0_            );
+bool  Intersects(const Ray& _ray, const Sphere&  _sphere                         );
+bool  Intersect (const Ray& _ray, const Sphere&  _sphere,  float& t0_, float& t1_);
+bool  Intersects(const Ray& _ray, const Capsule& _capsule                        );
 bool  Intersect (const Ray& _ray, const Capsule& _capsule, float& t0_, float& t1_);
 
 // Find point t0_ along _line0 nearest to _line1 and t1_ along _line1 nearest to _line0.
@@ -210,7 +212,7 @@ Vec3  Nearest(const Ray& _ray, const LineSegment& _segment, float& tr_);
 
 float Distance2(const Ray& _ray, const LineSegment& _segment);
 
-inline float Distance(const Vec4& _plane, const Vec3& _point) { return _plane.x * _point.x + _plane.y * _point.y + _plane.z * _point.z - _plane.w; }
+inline float Distance(const Vec4& _plane, const Vec3& _point){ return _plane.x * _point.x + _plane.y * _point.y + _plane.z * _point.z - _plane.w; }
 
 constexpr float Pi      = 3.14159265359f;
 constexpr float TwoPi   = 2.0f * Pi;
@@ -244,8 +246,10 @@ inline bool _AllLess(const T& _a, const T& _b, ScalarT)
 template <typename T>
 inline bool _AllLess(const T& _a, const T& _b, CompositeT)
 {
-	for (int i = 0, n = TypeTraits<T>::kSize; i < n; ++i) {
-		if (_a[i] > _b[i]) {
+	for (int i = 0, n = TypeTraits<T>::kSize; i < n; ++i)
+	{
+		if (_a[i] > _b[i])
+		{
 			return false;
 		}
 	}
@@ -276,7 +280,8 @@ template <typename T>
 inline T _Min(const T& _a, const T& _b, CompositeT)
 {
 	T ret;
-	for (int i = 0, n = TypeTraits<T>::kSize; i < n; ++i) {
+	for (int i = 0, n = TypeTraits<T>::kSize; i < n; ++i)
+	{
 		ret[i] = _Min(_a[i], _b[i], ScalarT());
 	}
 	return ret;

@@ -63,112 +63,125 @@ static const char* StripPath(const char* _path)
 		ImGuiIO& imgui = ImGui::GetIO();
 		Example* im3d = g_Example;
 		
-		switch (_umsg) {
-		case WM_SIZE: {
-			int w = (int)LOWORD(_lparam), h = (int)HIWORD(_lparam);
-			if (im3d->m_width != w || im3d->m_height != h) {
-				im3d->m_width = w;
-				im3d->m_height = h;
-			}
-			#if defined(IM3D_DX11)
-			 // DX requires that we reset the backbuffer when the window resizes
-				if (g_Example->m_d3dRenderTarget) {
-					g_Example->m_d3dRenderTarget->Release();
-					g_Example->m_d3dDepthStencil->Release();
-					dxAssert(g_Example->m_dxgiSwapChain->ResizeBuffers(0, (UINT)w, (UINT)h, DXGI_FORMAT_UNKNOWN, 0));
-					ID3D11Texture2D* backBuffer;
-					dxAssert(g_Example->m_dxgiSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBuffer));
-					dxAssert(g_Example->m_d3dDevice->CreateRenderTargetView(backBuffer, nullptr, &g_Example->m_d3dRenderTarget));
-					g_Example->m_d3dDepthStencil = CreateDepthStencil((UINT)w, (UINT)h, DXGI_FORMAT_D24_UNORM_S8_UINT);
-					g_Example->m_d3dDeviceCtx->OMSetRenderTargets(1, &g_Example->m_d3dRenderTarget, g_Example->m_d3dDepthStencil);
-					backBuffer->Release();
+		switch (_umsg)
+		{
+			case WM_SIZE:
+			{
+				int w = (int)LOWORD(_lparam), h = (int)HIWORD(_lparam);
+				if (im3d->m_width != w || im3d->m_height != h)
+				{
+					im3d->m_width = w;
+					im3d->m_height = h;
 				}
+				#if defined(IM3D_DX11)
+				 // DX requires that we reset the backbuffer when the window resizes
+					if (g_Example->m_d3dRenderTarget)
+					{
+						g_Example->m_d3dRenderTarget->Release();
+						g_Example->m_d3dDepthStencil->Release();
+						dxAssert(g_Example->m_dxgiSwapChain->ResizeBuffers(0, (UINT)w, (UINT)h, DXGI_FORMAT_UNKNOWN, 0));
+						ID3D11Texture2D* backBuffer;
+						dxAssert(g_Example->m_dxgiSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBuffer));
+						dxAssert(g_Example->m_d3dDevice->CreateRenderTargetView(backBuffer, nullptr, &g_Example->m_d3dRenderTarget));
+						g_Example->m_d3dDepthStencil = CreateDepthStencil((UINT)w, (UINT)h, DXGI_FORMAT_D24_UNORM_S8_UINT);
+						g_Example->m_d3dDeviceCtx->OMSetRenderTargets(1, &g_Example->m_d3dRenderTarget, g_Example->m_d3dDepthStencil);
+						backBuffer->Release();
+					}
 
-			#endif
-			break;
-		}
-		case WM_SIZING: {
-			RECT* r = (RECT*)_lparam;
-			int w = (int)(r->right - r->left);
-			int h = (int)(r->bottom - r->top);
-			if (im3d->m_width != w || im3d->m_height != h) {
-				im3d->m_width = w;
-				im3d->m_height = h;
+				#endif
+				break;
 			}
-			break;
-		}
-		case WM_LBUTTONDOWN:
-		case WM_LBUTTONUP:
-			imgui.MouseDown[0] = _umsg == WM_LBUTTONDOWN;
-			break;
-		case WM_MBUTTONDOWN:
-		case WM_MBUTTONUP:
-			imgui.MouseDown[2] = _umsg == WM_MBUTTONDOWN;
-			break;
-		case WM_RBUTTONDOWN:
-		case WM_RBUTTONUP:
-			imgui.MouseDown[1] = _umsg == WM_RBUTTONDOWN;
-			break;
-		case WM_MOUSEWHEEL:
-			imgui.MouseWheel = (float)(GET_WHEEL_DELTA_WPARAM(_wparam)) / (float)(WHEEL_DELTA); 
-			break;
-		case WM_MOUSEMOVE:
-			imgui.MousePos.x = LOWORD(_lparam);
-			imgui.MousePos.y = HIWORD(_lparam);
-			break;
-		case WM_SYSKEYDOWN:
-		case WM_SYSKEYUP:
-		case WM_KEYDOWN:
-		case WM_KEYUP: {
-			WPARAM vk = _wparam;
-			UINT sc = (_lparam & 0x00ff0000) >> 16;
-			bool e0 = (_lparam & 0x01000000) != 0;
-			if (vk == VK_SHIFT) {
-				vk = MapVirtualKey(sc, MAPVK_VSC_TO_VK_EX);
-			}
-			switch (vk) {
-			case VK_CONTROL:
-				imgui.KeyCtrl = _umsg == WM_KEYDOWN;
-				break;
-			case VK_MENU:
-				imgui.KeyAlt = _umsg == WM_KEYDOWN;
-				break;
-			case VK_LSHIFT:
-			case VK_RSHIFT:
-				imgui.KeyShift = _umsg == WM_KEYDOWN;
-				break;
-			case VK_ESCAPE:
-				PostQuitMessage(0);
-				break;
-			default:
-				if (vk < 512) {
-					imgui.KeysDown[vk] = _umsg == WM_KEYDOWN;
+			case WM_SIZING:
+			{
+				RECT* r = (RECT*)_lparam;
+				int w = (int)(r->right - r->left);
+				int h = (int)(r->bottom - r->top);
+				if (im3d->m_width != w || im3d->m_height != h)
+				{
+					im3d->m_width = w;
+					im3d->m_height = h;
 				}
 				break;
-			};
-			return 0;
-		}
-		case WM_CHAR:
-			if (_wparam > 0 && _wparam < 0x10000) {
-				imgui.AddInputCharacter((unsigned short)_wparam);
 			}
-			return 0;
-		case WM_PAINT:
-			//IM3D_ASSERT(false); // should be suppressed by calling ValidateRect()
-			break;
-		case WM_CLOSE:
-			PostQuitMessage(0);
-			return 0; // prevent DefWindowProc from destroying the window
-		default:
-			break;
+			case WM_LBUTTONDOWN:
+			case WM_LBUTTONUP:
+				imgui.MouseDown[0] = _umsg == WM_LBUTTONDOWN;
+				break;
+			case WM_MBUTTONDOWN:
+			case WM_MBUTTONUP:
+				imgui.MouseDown[2] = _umsg == WM_MBUTTONDOWN;
+				break;
+			case WM_RBUTTONDOWN:
+			case WM_RBUTTONUP:
+				imgui.MouseDown[1] = _umsg == WM_RBUTTONDOWN;
+				break;
+			case WM_MOUSEWHEEL:
+				imgui.MouseWheel = (float)(GET_WHEEL_DELTA_WPARAM(_wparam)) / (float)(WHEEL_DELTA); 
+				break;
+			case WM_MOUSEMOVE:
+				imgui.MousePos.x = LOWORD(_lparam);
+				imgui.MousePos.y = HIWORD(_lparam);
+				break;
+			case WM_SYSKEYDOWN:
+			case WM_SYSKEYUP:
+			case WM_KEYDOWN:
+			case WM_KEYUP:
+			{
+				WPARAM vk = _wparam;
+				UINT sc = (_lparam & 0x00ff0000) >> 16;
+				bool e0 = (_lparam & 0x01000000) != 0;
+				if (vk == VK_SHIFT)
+				{
+					vk = MapVirtualKey(sc, MAPVK_VSC_TO_VK_EX);
+				}
+				switch (vk)
+				{
+					case VK_CONTROL:
+						imgui.KeyCtrl = _umsg == WM_KEYDOWN;
+						break;
+					case VK_MENU:
+						imgui.KeyAlt = _umsg == WM_KEYDOWN;
+						break;
+					case VK_LSHIFT:
+					case VK_RSHIFT:
+						imgui.KeyShift = _umsg == WM_KEYDOWN;
+						break;
+					case VK_ESCAPE:
+						PostQuitMessage(0);
+						break;
+					default:
+						if (vk < 512)
+						{
+							imgui.KeysDown[vk] = _umsg == WM_KEYDOWN;
+						}
+						break;
+				};
+				return 0;
+			}
+			case WM_CHAR:
+				if (_wparam > 0 && _wparam < 0x10000)
+				{
+					imgui.AddInputCharacter((unsigned short)_wparam);
+				}
+				return 0;
+			case WM_PAINT:
+				//IM3D_ASSERT(false); // should be suppressed by calling ValidateRect()
+				break;
+			case WM_CLOSE:
+				PostQuitMessage(0);
+				return 0; // prevent DefWindowProc from destroying the window
+			default:
+				break;
 		};
+
 		return DefWindowProc(_hwnd, _umsg, _wparam, _lparam);
 	}
 	
 	static bool InitWindow(int& _width_, int& _height_, const char* _title)
 	{
 		static ATOM wndclassex = 0;
-		if (wndclassex == 0) {
+		if (wndclassex == 0)
+		{
 			WNDCLASSEX wc;
 			memset(&wc, 0, sizeof(wc));
 			wc.cbSize = sizeof(wc);
@@ -183,8 +196,9 @@ static const char* StripPath(const char* _path)
 		DWORD dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
 		DWORD dwStyle = WS_OVERLAPPEDWINDOW | WS_MINIMIZEBOX | WS_SYSMENU | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
 	
-		if (_width_ == -1 || _height_ == -1) {
-		// auto size; get the dimensions of the primary screen area and subtract the non-client area
+		if (_width_ == -1 || _height_ == -1)
+		{
+		 // auto size; get the dimensions of the primary screen area and subtract the non-client area
 			RECT r;
 			winAssert(SystemParametersInfo(SPI_GETWORKAREA, 0, &r, 0));
 			_width_  = r.right - r.left;
@@ -212,12 +226,14 @@ static const char* StripPath(const char* _path)
 			);
 		IM3D_ASSERT(g_Example->m_hwnd);
 		ShowWindow(g_Example->m_hwnd, SW_SHOW);
+
 		return true;
 	}
 	
 	static void ShutdownWindow()
 	{
-		if (g_Example->m_hwnd) {
+		if (g_Example->m_hwnd)
+		{
 			winAssert(DestroyWindow(g_Example->m_hwnd));
 		}
 	}
@@ -258,11 +274,12 @@ static const char* StripPath(const char* _path)
 			glAssert(glGetIntegerv(GL_MINOR_VERSION, &platformVMin));
 			_vmaj = _vmaj < 0 ? platformVMaj : _vmaj;
 			_vmin = _vmin < 0 ? platformVMin : _vmin;
-			if (platformVMaj < _vmaj || (platformVMaj >= _vmaj && platformVMin < _vmin)) {
+			if (platformVMaj < _vmaj || (platformVMaj >= _vmaj && platformVMin < _vmin))
+			{
 				fprintf(stderr, "OpenGL version %d.%d is not available (available version is %d.%d).", _vmaj, _vmin, platformVMaj, platformVMin);
 				fprintf(stderr, "This error may occur if the platform has an integrated GPU.");
+
 				return false;
-				return 0;
 			}
 			
 		 // load wgl extensions for true context creation
@@ -276,17 +293,19 @@ static const char* StripPath(const char* _path)
 		 // create true context
 			int profileBit = WGL_CONTEXT_CORE_PROFILE_BIT_ARB;
 			//profileBit = WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB;
-			int attr[] = {
-				WGL_CONTEXT_MAJOR_VERSION_ARB,	_vmaj,
-				WGL_CONTEXT_MINOR_VERSION_ARB,	_vmin,
-				WGL_CONTEXT_PROFILE_MASK_ARB,	profileBit,
-				0
-			};
+			int attr[] =
+				{
+					WGL_CONTEXT_MAJOR_VERSION_ARB,	_vmaj,
+					WGL_CONTEXT_MINOR_VERSION_ARB,	_vmin,
+					WGL_CONTEXT_PROFILE_MASK_ARB,	profileBit,
+					0
+				};
 			winAssert(g_Example->m_hglrc = wglCreateContextAttribs(hdc, 0, attr));
 			hglrc = g_Example->m_hglrc;
 		
 		// load extensions
-			if (!wglMakeCurrent(hdc, hglrc)) {
+			if (!wglMakeCurrent(hdc, hglrc))
+			{
 				fprintf(stderr, "wglMakeCurrent failed");
 				return false;
 			}
@@ -304,11 +323,13 @@ static const char* StripPath(const char* _path)
 				GlGetString(GL_RENDERER)
 				);
 
-			if (_vmaj == 3 && _vmin == 1) {
+			if (_vmaj == 3 && _vmin == 1)
+			{
 			 // check that the uniform blocks size is at least 64kb
 				GLint maxUniformBlockSize; 
 				glAssert(glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &maxUniformBlockSize));
-				if (maxUniformBlockSize < (64 * 1024)) {
+				if (maxUniformBlockSize < (64*1024))
+				{
 					IM3D_ASSERT(false);
 					fprintf(stderr, "GL_MAX_UNIFORM_BLOCK_SIZE is less than 64kb (%dkb)", maxUniformBlockSize / 1024);
 					return false;
@@ -366,7 +387,8 @@ static const char* StripPath(const char* _path)
 				&featureLevel, 
 				&g_Example->m_d3dDeviceCtx
 				));
-			if (!g_Example->m_dxgiSwapChain || !g_Example->m_d3dDevice || !g_Example->m_d3dDeviceCtx) {
+			if (!g_Example->m_dxgiSwapChain || !g_Example->m_d3dDevice || !g_Example->m_d3dDeviceCtx)
+			{
 				fprintf(stderr, "Error initializing DirectX");
 				return false;
 			}
@@ -399,7 +421,8 @@ static const char* StripPath(const char* _path)
 /******************************************************************************/
 static void Append(const char* _str, Vector<char>& _out_)
 {
-	while (*_str) {
+	while (*_str)
+	{
 		_out_.push_back(*_str);
 		++_str;
 	}
@@ -412,9 +435,11 @@ static void AppendLine(const char* _str, Vector<char>& _out_)
 static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _out_)
 {
 	fprintf(stdout, "Loading shader: '%s'", StripPath(_path));
-	if (_defines) {
+	if (_defines)
+	{
 		fprintf(stdout, " ");
-		while (*_defines != '\0') {
+		while (*_defines != '\0')
+		{
 			fprintf(stdout, " %s,", _defines);
 			Append("#define ", _out_);
 			AppendLine(_defines, _out_);
@@ -426,7 +451,8 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 	fprintf(stdout, "\n");
 	
 	FILE* fin = fopen(_path, "rb");
-	if (!fin) {
+	if (!fin)
+	{
 		fprintf(stderr, "Error opening '%s'\n", _path);
 		return false;
 	}
@@ -436,7 +462,8 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 	
 	int srcbeg = _out_.size();
 	_out_.resize(srcbeg + fsize, '\0');
-	if (fread(_out_.data() + srcbeg, 1, fsize, fin) != fsize) {
+	if (fread(_out_.data() + srcbeg, 1, fsize, fin) != fsize)
+	{
 		fclose(fin);
 		fprintf(stderr, "Error reading '%s'\n", _path);
 		return false;
@@ -452,7 +479,8 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 	{
 		Vector<char> src;
 		AppendLine("#version " IM3D_STRINGIFY(IM3D_OPENGL_VSHADER), src);
-		if (!LoadShader(_path, _defines, src)) {
+		if (!LoadShader(_path, _defines, src))
+		{
 			return 0;
 		}
 	
@@ -465,7 +493,8 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 		glAssert(glCompileShader(ret));
 		GLint compileStatus = GL_FALSE;
 		glAssert(glGetShaderiv(ret, GL_COMPILE_STATUS, &compileStatus));
-		if (compileStatus == GL_FALSE) {
+		if (compileStatus == GL_FALSE)
+		{
 			fprintf(stderr, "Error compiling '%s':\n\n", _path);
 			GLint len;
 			glAssert(glGetShaderiv(ret, GL_INFO_LOG_LENGTH, &len));
@@ -477,8 +506,10 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 			//fprintf(stderr, "\n\n%s", src.data());
 			fprintf(stderr, "\n");
 			glAssert(glDeleteShader(ret));
+
 			return 0;
 		}
+
 		return ret;
 	}
 	
@@ -489,7 +520,8 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 		glAssert(glLinkProgram(_handle));
 		GLint linkStatus = GL_FALSE;
 		glAssert(glGetProgramiv(_handle, GL_LINK_STATUS, &linkStatus));
-		if (linkStatus == GL_FALSE) {
+		if (linkStatus == GL_FALSE)
+		{
 			fprintf(stderr, "Error linking program:\n\n");
 			GLint len;
 			glAssert(glGetProgramiv(_handle, GL_INFO_LOG_LENGTH, &len));
@@ -501,6 +533,7 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 	
 			return false;
 		}
+
 		return true;
 	}
 
@@ -508,12 +541,14 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 	{
 		static GLuint vbQuad;
 		static GLuint vaQuad;
-		if (vbQuad == 0) {
-			float quadv[8] = {
-				-1.0f, -1.0f,
-				 1.0f, -1.0f,
-				-1.0f,  1.0f,
-				 1.0f,  1.0f,
+		if (vbQuad == 0)
+		{
+			float quadv[8] =
+				{
+					-1.0f, -1.0f,
+					 1.0f, -1.0f,
+					-1.0f,  1.0f,
+					 1.0f,  1.0f,
 				};
 			glAssert(glGenBuffers(1, &vbQuad));
 			glAssert(glGenVertexArrays(1, &vaQuad));	
@@ -535,22 +570,28 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 		static GLuint vbTeapot;
 		static GLuint ibTeapot;
 		static GLuint vaTeapot;
-		if (shTeapot == 0) {
+		if (shTeapot == 0)
+		{
 			GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "model.glsl", "VERTEX_SHADER\0");
 			GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "model.glsl", "FRAGMENT_SHADER\0");
-			if (vs && fs) {
+			if (vs && fs)
+			{
 				glAssert(shTeapot = glCreateProgram());
 				glAssert(glAttachShader(shTeapot, vs));
 				glAssert(glAttachShader(shTeapot, fs));
 				bool ret = LinkShaderProgram(shTeapot);
 				glAssert(glDeleteShader(vs));
 				glAssert(glDeleteShader(fs));
-				if (!ret) {
+				if (!ret)
+				{
 					return;
 				}
-			} else {
+			}
+			else
+			{
 				return;
 			}
+
 			glAssert(glGenBuffers(1, &vbTeapot));
 			glAssert(glGenBuffers(1, &ibTeapot));
 			glAssert(glGenVertexArrays(1, &vaTeapot));	
@@ -568,6 +609,7 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 			glAssert(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(s_teapotIndices), (GLvoid*)s_teapotIndices, GL_STATIC_DRAW));
 			glAssert(glBindVertexArray(0));
 		}
+
 		glAssert(glUseProgram(shTeapot));
 		glAssert(glUniformMatrix4fv(glGetUniformLocation(shTeapot, "uWorldMatrix"), 1, false, _world.m));
 		glAssert(glUniformMatrix4fv(glGetUniformLocation(shTeapot, "uViewProjMatrix"), 1, false, _viewProj.m));
@@ -584,7 +626,8 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 	const char* Im3d::GetGlEnumString(GLenum _enum)
 	{
 		#define CASE_ENUM(e) case e: return #e
-		switch (_enum) {
+		switch (_enum)
+		{
 		// errors
 			CASE_ENUM(GL_NONE);
 			CASE_ENUM(GL_INVALID_ENUM);
@@ -609,8 +652,9 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 	ID3DBlob* Im3d::LoadCompileShader(const char* _target, const char* _path, const char* _defines)
 	{
 		Vector<char> src;
-		if (!LoadShader(_path, _defines, src)) {
-			return 0;
+		if (!LoadShader(_path, _defines, src))
+		{
+			return nullptr;
 		}
 		ID3DBlob* ret = nullptr;
 		ID3DBlob* err = nullptr;
@@ -619,13 +663,16 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 	 // D3DCompile is not portable - linking with d3dcompiler.lib introdices a dependency on d3dcompiler_XX.lib
 	 // \todo get a ptr to D3DCompile at runtime via LoadLibrary/GetProcAddress
 		D3DCompile(src.data(), src.size(), nullptr, nullptr, nullptr, "main", _target, flags, 0, &ret, &err);
-		if (ret == nullptr) {
+		if (ret == nullptr)
+		{
 			fprintf(stderr, "Error compiling '%s':\n\n", _path);
-			if (err) {
+			if (err)
+			{
 				fprintf(stderr, (char*)err->GetBufferPointer());
 				err->Release();
 			}
 		}
+
 		return ret;
 	}
 
@@ -663,6 +710,7 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 		dxAssert(g_Example->m_d3dDeviceCtx->Map(_buffer, 0, _mapType, 0, &subRes));
 		return subRes.pData;
 	}
+
 	void  Im3d::UnmapBuffer(ID3D11Buffer* _buffer)
 	{
 		g_Example->m_d3dDeviceCtx->Unmap(_buffer, 0);
@@ -684,7 +732,8 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 
 		ID3D11Texture2D* ret = nullptr;
 		D3D11_SUBRESOURCE_DATA subRes = {};
-		if (_data) {
+		if (_data)
+		{
 			subRes.pSysMem = _data;
 			subRes.SysMemPitch = _width;
 			switch (_format) {
@@ -695,7 +744,8 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 		}
 		dxAssert(d3d->CreateTexture2D(&txDesc, _data ? &subRes : nullptr, &ret));
 
-		if (resView_) {
+		if (resView_)
+		{
 			dxAssert(d3d->CreateShaderResourceView(ret, nullptr, resView_));
 		}
 
@@ -742,7 +792,8 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 		ID3D11Device* d3d = g_Example->m_d3dDevice;
 		ID3D11DeviceContext* ctx = g_Example->m_d3dDeviceCtx;
 
-		if (s_vsBlob == 0) {
+		if (s_vsBlob == 0)
+		{
 			s_vsBlob = LoadCompileShader("vs_" IM3D_DX11_VSHADER, "model.hlsl", "VERTEX_SHADER\0");
 			dxAssert(d3d->CreateVertexShader((DWORD*)s_vsBlob->GetBufferPointer(), s_vsBlob->GetBufferSize(), nullptr, &s_vs));
 			s_psBlob = LoadCompileShader("ps_" IM3D_DX11_VSHADER, "model.hlsl", "PIXEL_SHADER\0");
@@ -751,10 +802,11 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 			s_vb = CreateVertexBuffer(sizeof(s_teapotVertices), D3D11_USAGE_IMMUTABLE, s_teapotVertices);
 			s_ib = CreateIndexBuffer(sizeof(s_teapotIndices), D3D11_USAGE_IMMUTABLE, s_teapotIndices); 
 		
-			D3D11_INPUT_ELEMENT_DESC inputDesc[] = {
-				{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,  0, 0,  D3D11_INPUT_PER_VERTEX_DATA, 0 },
-				{ "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT,  0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
-			};
+			D3D11_INPUT_ELEMENT_DESC inputDesc[] =
+				{
+					{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,  0, 0,  D3D11_INPUT_PER_VERTEX_DATA, 0 },
+					{ "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT,  0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+				};
 			dxAssert(d3d->CreateInputLayout(inputDesc, 2, s_vsBlob->GetBufferPointer(), s_vsBlob->GetBufferSize(), &s_inputLayout));
 		
 			s_cb = CreateConstantBuffer(sizeof(Mat4) * 2, D3D11_USAGE_DYNAMIC);
@@ -796,12 +848,15 @@ void Im3d::Assert(const char* _e, const char* _file, int _line, const char* _msg
 	const int kAssertMsgMax = 1024;
 
 	char buf[kAssertMsgMax];
-	if (_msg != nullptr) {
+	if (_msg != nullptr)
+	{
 		va_list args;
 		va_start(args, _msg);
 		vsnprintf(buf, kAssertMsgMax, _msg, args);
 		va_end(args);
-	} else {
+	}
+	else
+	{
 		buf[0] = '\0';
 	}
 	fprintf(stderr, "Assert (%s, line %d)\n\t'%s' %s", StripPath(_file), _line, _e ? _e : "", buf);
@@ -852,7 +907,8 @@ Color Im3d::RandColor(float _min, float _max)
 		int fbX, fbY;
 		fbX = (int)(io.DisplaySize.x * io.DisplayFramebufferScale.x);
 		fbY = (int)(io.DisplaySize.y * io.DisplayFramebufferScale.y);
-		if (fbX == 0  || fbY == 0) {
+		if (fbX == 0  || fbY == 0)
+		{
 			return;
 		}
 		_drawData->ScaleClipRects(io.DisplayFramebufferScale);
@@ -880,7 +936,8 @@ Color Im3d::RandColor(float _min, float _max)
 		glAssert(glUniformMatrix4fv(glGetUniformLocation(g_ImGuiShader, "uProjMatrix"), 1, transpose, (const GLfloat*)ortho));
 		glAssert(glBindVertexArray(g_ImGuiVertexArray));
 	
-		for (int i = 0; i < _drawData->CmdListsCount; ++i) {
+		for (int i = 0; i < _drawData->CmdListsCount; ++i)
+		{
 			const ImDrawList* drawList = _drawData->CmdLists[i];
 			const ImDrawIdx* indexOffset = 0;
 	
@@ -889,10 +946,14 @@ Color Im3d::RandColor(float _min, float _max)
 			glAssert(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_ImGuiIndexBuffer));
 			glAssert(glBufferData(GL_ELEMENT_ARRAY_BUFFER, drawList->IdxBuffer.Size * sizeof(ImDrawIdx), (GLvoid*)drawList->IdxBuffer.Data, GL_STREAM_DRAW));
 	
-			for (const ImDrawCmd* pcmd = drawList->CmdBuffer.begin(); pcmd != drawList->CmdBuffer.end(); ++pcmd) {
-				if (pcmd->UserCallback) {
+			for (const ImDrawCmd* pcmd = drawList->CmdBuffer.begin(); pcmd != drawList->CmdBuffer.end(); ++pcmd)
+			{
+				if (pcmd->UserCallback)
+				{
 					pcmd->UserCallback(drawList, pcmd);
-				} else {
+				}
+				else
+				{
 					glAssert(glBindTexture(GL_TEXTURE_2D, (GLuint)pcmd->TextureId));
 					glAssert(glScissor((int)pcmd->ClipRect.x, (int)(fbY - pcmd->ClipRect.w), (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y)));
 					glAssert(glDrawElements(GL_TRIANGLES, pcmd->ElemCount, GL_UNSIGNED_SHORT, (GLvoid*)indexOffset));
@@ -910,19 +971,24 @@ Color Im3d::RandColor(float _min, float _max)
 	{
 		GLuint vs = LoadCompileShader(GL_VERTEX_SHADER,   "imgui.glsl", "VERTEX_SHADER\0");
 		GLuint fs = LoadCompileShader(GL_FRAGMENT_SHADER, "imgui.glsl", "FRAGMENT_SHADER\0");
-		if (vs && fs) {
+		if (vs && fs)
+		{
 			glAssert(g_ImGuiShader = glCreateProgram());
 			glAssert(glAttachShader(g_ImGuiShader, vs));
 			glAssert(glAttachShader(g_ImGuiShader, fs));
 			bool ret = LinkShaderProgram(g_ImGuiShader);
 			glAssert(glDeleteShader(vs));
 			glAssert(glDeleteShader(fs));
-			if (!ret) {
+			if (!ret)
+			{
 				return false;
 			}
-		} else {
+		}
+		else
+		{
 			return false;
 		}
+
 		glAssert(glUseProgram(g_ImGuiShader));
 		glAssert(glUniform1i(glGetUniformLocation(g_ImGuiShader, "txTexture"), 0));
 		glAssert(glUseProgram(0));
@@ -991,8 +1057,10 @@ Color Im3d::RandColor(float _min, float _max)
 
 	 // (re)alloc vertex/index buffers
 		static int s_vertexBufferSize = 0;
-		if (!g_ImGuiVertexBuffer || s_vertexBufferSize < _drawData->TotalVtxCount) {
-			if (g_ImGuiVertexBuffer) { 
+		if (!g_ImGuiVertexBuffer || s_vertexBufferSize < _drawData->TotalVtxCount)
+		{
+			if (g_ImGuiVertexBuffer)
+			{ 
 				g_ImGuiVertexBuffer->Release(); 
 				g_ImGuiVertexBuffer = nullptr;	
 			}
@@ -1000,8 +1068,10 @@ Color Im3d::RandColor(float _min, float _max)
 			g_ImGuiVertexBuffer = CreateVertexBuffer(s_vertexBufferSize * sizeof(ImDrawVert), D3D11_USAGE_DYNAMIC);
 		}
 		static int s_indexBufferSize = 0;
-		if (!g_ImGuiIndexBuffer || s_indexBufferSize < _drawData->TotalIdxCount) {
-			if (g_ImGuiIndexBuffer) { 
+		if (!g_ImGuiIndexBuffer || s_indexBufferSize < _drawData->TotalIdxCount)
+		{
+			if (g_ImGuiIndexBuffer)
+			{ 
 				g_ImGuiIndexBuffer->Release(); 
 				g_ImGuiIndexBuffer = nullptr; 
 			}
@@ -1012,7 +1082,8 @@ Color Im3d::RandColor(float _min, float _max)
 	 // copy and convert all vertices into a single contiguous buffer
 		ImDrawVert* vtxDst = (ImDrawVert*)MapBuffer(g_ImGuiVertexBuffer, D3D11_MAP_WRITE_DISCARD);
 		ImDrawIdx* idxDst = (ImDrawIdx*)MapBuffer(g_ImGuiIndexBuffer, D3D11_MAP_WRITE_DISCARD);
-		for (int i = 0; i < _drawData->CmdListsCount; ++i) {
+		for (int i = 0; i < _drawData->CmdListsCount; ++i)
+		{
 			const ImDrawList* cmdList = _drawData->CmdLists[i];
 			memcpy(vtxDst, cmdList->VtxBuffer.Data, cmdList->VtxBuffer.Size * sizeof(ImDrawVert));
 			memcpy(idxDst, cmdList->IdxBuffer.Data, cmdList->IdxBuffer.Size * sizeof(ImDrawIdx));
@@ -1057,12 +1128,17 @@ Color Im3d::RandColor(float _min, float _max)
 	
 		int vtxOffset = 0;
 		int idxOffset = 0;
-		for (int i = 0; i < _drawData->CmdListsCount; ++i) {
+		for (int i = 0; i < _drawData->CmdListsCount; ++i)
+		{
 			const ImDrawList* cmdList = _drawData->CmdLists[i];
-			for (const ImDrawCmd* pcmd = cmdList->CmdBuffer.begin(); pcmd != cmdList->CmdBuffer.end(); ++pcmd) {
-				if (pcmd->UserCallback) {
+			for (const ImDrawCmd* pcmd = cmdList->CmdBuffer.begin(); pcmd != cmdList->CmdBuffer.end(); ++pcmd)
+			{
+				if (pcmd->UserCallback)
+				{
 					pcmd->UserCallback(cmdList, pcmd);
-				} else {
+				}
+				else
+				{
 					const D3D11_RECT r = { (LONG)pcmd->ClipRect.x, (LONG)pcmd->ClipRect.y, (LONG)pcmd->ClipRect.z, (LONG)pcmd->ClipRect.w };
 					ctx->PSSetShaderResources(0, 1, (ID3D11ShaderResourceView**)&pcmd->TextureId);
 					ctx->RSSetScissorRects(1, &r);
@@ -1079,47 +1155,44 @@ Color Im3d::RandColor(float _min, float _max)
 		ImGuiIO& io = ImGui::GetIO();
 		ID3D11Device* d3d = g_Example->m_d3dDevice;
 
-		{
-			g_ImGuiVertexShaderBlob = LoadCompileShader("vs_4_0", "imgui.hlsl", "VERTEX_SHADER\0");
-			if (!g_ImGuiVertexShaderBlob) {
+		{	g_ImGuiVertexShaderBlob = LoadCompileShader("vs_4_0", "imgui.hlsl", "VERTEX_SHADER\0");
+			if (!g_ImGuiVertexShaderBlob)
+			{
 				return false;
 			}
 			dxAssert(d3d->CreateVertexShader((DWORD*)g_ImGuiVertexShaderBlob->GetBufferPointer(), g_ImGuiVertexShaderBlob->GetBufferSize(), nullptr, &g_ImGuiVertexShader));
 		}
-		{
-			g_ImGuiPixelShaderBlob = LoadCompileShader("ps_4_0", "imgui.hlsl", "PIXEL_SHADER\0");
-			if (!g_ImGuiPixelShaderBlob) {
+		{	g_ImGuiPixelShaderBlob = LoadCompileShader("ps_4_0", "imgui.hlsl", "PIXEL_SHADER\0");
+			if (!g_ImGuiPixelShaderBlob)
+			{
 				return false;
 			}
 			dxAssert(d3d->CreatePixelShader((DWORD*)g_ImGuiPixelShaderBlob->GetBufferPointer(), g_ImGuiPixelShaderBlob->GetBufferSize(), nullptr, &g_ImGuiPixelShader));
 		}
-		{
-			D3D11_INPUT_ELEMENT_DESC desc[] = {
-				{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)offsetof(ImDrawVert, pos), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-				{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)offsetof(ImDrawVert, uv),  D3D11_INPUT_PER_VERTEX_DATA, 0 },
-				{ "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (UINT)offsetof(ImDrawVert, col), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			};
+		{	D3D11_INPUT_ELEMENT_DESC desc[] = 
+				{
+					{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)offsetof(ImDrawVert, pos), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+					{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)offsetof(ImDrawVert, uv),  D3D11_INPUT_PER_VERTEX_DATA, 0 },
+					{ "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (UINT)offsetof(ImDrawVert, col), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+				};
 			dxAssert(d3d->CreateInputLayout(desc, 3, g_ImGuiVertexShaderBlob->GetBufferPointer(), g_ImGuiVertexShaderBlob->GetBufferSize(), &g_ImGuiInputLayout));
 		}
 		g_ImGuiConstantBuffer = CreateConstantBuffer(sizeof(Mat4), D3D11_USAGE_DYNAMIC);
 		
-		{
-			D3D11_RASTERIZER_DESC desc = {};
+		{	D3D11_RASTERIZER_DESC desc = {};
 			desc.FillMode = D3D11_FILL_SOLID;
 			desc.CullMode = D3D11_CULL_NONE;
 			desc.ScissorEnable = true;
 			desc.DepthClipEnable = true;
 			dxAssert(d3d->CreateRasterizerState(&desc, &g_ImGuiRasterizerState));
 		}
-		{
-			D3D11_DEPTH_STENCIL_DESC desc = {};
+		{	D3D11_DEPTH_STENCIL_DESC desc = {};
 			desc.DepthEnable = false;
 			desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
 			desc.StencilEnable = false;
 			dxAssert(d3d->CreateDepthStencilState(&desc, &g_ImGuiDepthStencilState));
 		}
-		{
-			D3D11_BLEND_DESC desc = {};
+		{	D3D11_BLEND_DESC desc = {};
 			desc.RenderTarget[0].BlendEnable = true;
 			desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
 			desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
@@ -1131,8 +1204,7 @@ Color Im3d::RandColor(float _min, float _max)
 			dxAssert(d3d->CreateBlendState(&desc, &g_ImGuiBlendState));
 		}
 
-		{
-			D3D11_SAMPLER_DESC desc = {};
+		{	D3D11_SAMPLER_DESC desc = {};
 			desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 			desc.AddressU = desc.AddressV = desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 			dxAssert(d3d->CreateSamplerState(&desc, &g_ImGuiFontSampler));
@@ -1228,23 +1300,28 @@ bool Example::init(int _width, int _height, const char* _title)
 	m_width  = _width;
 	m_height = _height;
 	m_title  = _title;
-	if (!InitWindow(m_width, m_height, m_title)) {
+	if (!InitWindow(m_width, m_height, m_title))
+	{
 		goto Example_init_fail;
 	}
 	#if defined(IM3D_OPENGL) 
-		if (!InitOpenGL(IM3D_OPENGL_VMAJ, IM3D_OPENGL_VMIN)) {
+		if (!InitOpenGL(IM3D_OPENGL_VMAJ, IM3D_OPENGL_VMIN))
+		{
 			goto Example_init_fail;
 		}
 	#elif defined(IM3D_DX11)
-		if (!InitDx11()) {
+		if (!InitDx11())
+		{
 			goto Example_init_fail;
 		}
 	#endif
 
-	if (!ImGui_Init()) {
+	if (!ImGui_Init())
+	{
 		goto Example_init_fail;
 	}	
-	if (!Im3d_Init()) {	
+	if (!Im3d_Init())
+	{
 		goto Example_init_fail;
 	}
 
@@ -1287,7 +1364,8 @@ bool Example::update()
 		m_deltaTime = (float)(microseconds / 1000000.0);
 	
 		MSG msg;
-		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE) && msg.message != WM_QUIT) {
+		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE) && msg.message != WM_QUIT)
+		{
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
@@ -1296,8 +1374,6 @@ bool Example::update()
 		
 	ImGui_Update();
 
-
-
 	float kCamSpeed = 2.0f;
 	float kCamSpeedMul = 10.0f;
 	float kCamRotationMul = 10.0f;
@@ -1305,34 +1381,46 @@ bool Example::update()
 	m_camView = Inverse(m_camWorld);
 	#if defined(IM3D_PLATFORM_WIN)
 		Vec2 cursorPos = getWindowRelativeCursor();
-		if (hasFocus()) {
-			if (!ImGui::GetIO().WantCaptureKeyboard) {
-				if (GetAsyncKeyState(VK_LSHIFT) & 0x8000) {
+		if (hasFocus())
+		{
+			if (!ImGui::GetIO().WantCaptureKeyboard)
+			{
+				if (GetAsyncKeyState(VK_LSHIFT) & 0x8000)
+				{
 					kCamSpeed *= 10.0f;
 				}
-				if ((GetAsyncKeyState(VK_LCONTROL) & 0x8000) == 0 ) { // ctrl not pressed
-					if (GetAsyncKeyState(0x57) & 0x8000) { // W (forward)
+				if ((GetAsyncKeyState(VK_LCONTROL) & 0x8000) == 0 ) // ctrl not pressed
+				{
+					if (GetAsyncKeyState(0x57) & 0x8000) // W (forward)
+					{
 						m_camPos = m_camPos - m_camWorld.getCol(2) * (m_deltaTime * kCamSpeed);
 					}
-					if (GetAsyncKeyState(0x41) & 0x8000) { // A (left)
+					if (GetAsyncKeyState(0x41) & 0x8000) // A (left)
+					{
 						m_camPos = m_camPos - m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
 					}
-					if (GetAsyncKeyState(0x53) & 0x8000) { // S (backward)
+					if (GetAsyncKeyState(0x53) & 0x8000) // S (backward)
+					{
 						m_camPos = m_camPos + m_camWorld.getCol(2) * (m_deltaTime * kCamSpeed);
 					}
-					if (GetAsyncKeyState(0x44) & 0x8000) { // D (right)
+					if (GetAsyncKeyState(0x44) & 0x8000) // D (right)
+					{
 						m_camPos = m_camPos + m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
 					}
-					if (GetAsyncKeyState(0x51) & 0x8000) { // Q (down)
+					if (GetAsyncKeyState(0x51) & 0x8000) // Q (down)
+					{
 						m_camPos = m_camPos - m_camWorld.getCol(1)* (m_deltaTime * kCamSpeed);
 					}
-					if (GetAsyncKeyState(0x45) & 0x8000) { // D (up)
+					if (GetAsyncKeyState(0x45) & 0x8000) // D (up)
+					{
 						m_camPos = m_camPos + m_camWorld.getCol(1) * (m_deltaTime * kCamSpeed);
 					}
 				}
 			}
-			if (!ImGui::GetIO().WantCaptureMouse) {
-				if (GetAsyncKeyState(VK_RBUTTON) & 0x8000) {
+			if (!ImGui::GetIO().WantCaptureMouse)
+			{
+				if (GetAsyncKeyState(VK_RBUTTON) & 0x8000)
+				{
 					Vec2 cursorDelta = ((cursorPos - m_prevCursorPos) / Vec2((float)m_width, (float)m_height)) * kCamRotationMul;
 					m_camDir = Rotation(Vec3(0.0f, 1.0f, 0.0f), -cursorDelta.x) * m_camDir;
 					m_camDir = Rotation(m_camWorld.getCol(0), -cursorDelta.y) * m_camDir;
@@ -1349,7 +1437,8 @@ bool Example::update()
 	float scale = tanf(m_camFovRad * 0.5f) * n;
 	float viewZ = -1.0f;
 	
-	if (m_camOrtho) {
+	if (m_camOrtho)
+	{
 	 // ortho proj
 		scale = 5.0f;
 		float r = scale * a;
@@ -1369,7 +1458,9 @@ bool Example::update()
 			0.0f,                0.0f,                 0.0f,               1.0f
 		#endif
 			);
-	} else {
+	}
+	else
+	{
 	 // infinite perspective proj
 		float r = a * scale;
 		float l = -r;
@@ -1474,14 +1565,14 @@ void Example::drawTextDrawListsImGui(const Im3d::TextDrawList _textDrawLists[], 
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, IM_COL32_BLACK_TRANS);
 	ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
 	ImGui::SetNextWindowSize(ImVec2((float)m_width, (float)m_height));
-	ImGui::Begin("Invisible", nullptr,
-		ImGuiWindowFlags_NoTitleBar |
-		ImGuiWindowFlags_NoResize |
-		ImGuiWindowFlags_NoScrollbar |
-		ImGuiWindowFlags_NoInputs |
-		ImGuiWindowFlags_NoSavedSettings |
-		ImGuiWindowFlags_NoFocusOnAppearing |
-		ImGuiWindowFlags_NoBringToFrontOnFocus
+	ImGui::Begin("Invisible", nullptr, 0
+		| ImGuiWindowFlags_NoTitleBar
+		| ImGuiWindowFlags_NoResize
+		| ImGuiWindowFlags_NoScrollbar
+		| ImGuiWindowFlags_NoInputs
+		| ImGuiWindowFlags_NoSavedSettings
+		| ImGuiWindowFlags_NoFocusOnAppearing
+		| ImGuiWindowFlags_NoBringToFrontOnFocus
 		);
 
 	ImDrawList* imDrawList = ImGui::GetWindowDrawList();
