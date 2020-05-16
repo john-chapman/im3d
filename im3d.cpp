@@ -2026,13 +2026,13 @@ void Context::sort()
 		 // if draw list is empty or the layer or primitive changed, start a new draw list
 			if (false
 				|| first
-				|| (m_drawLists.back().m_layerId  != layer)
+				|| (m_drawLists.back().m_layerId  != m_layerIdMap[layer])
 				|| (m_drawLists.back().m_primType != mxprim)
 				) 
 			{
 				cprim = mxprim;
 				DrawList dl;
-				dl.m_layerId     = layer;
+				dl.m_layerId     = m_layerIdMap[layer];
 				dl.m_primType    = (DrawPrimitiveType)cprim;
 				dl.m_vertexData  = m_vertexData[1][layer * DrawPrimitive_Count + cprim]->data() + (search[cprim] - sortData[cprim].data()) * VertsPerDrawPrimitive[cprim];
 				dl.m_vertexCount = 0;
