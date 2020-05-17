@@ -1,6 +1,8 @@
 /*	CHANGE LOG
 	==========
-	2020-05-12 (v1.16) - Text API.
+	2020-05-17 (v1.16) - Text API.
+	                   - Flip gizmo axes when viewed from behind (AppData::m_flipGizmoWhenBehind).
+	                   - Minor gizmo rendering improvements.
 	2020-01-18 (v1.15) - Added IM3D_API macro.
 	2018-12-09 (v1.14) - Fixed memory leak in context dtor.
 	2018-07-29 (v1.13) - Deprecated Draw(), instead use EndFrame() followed by GetDrawListCount() + GetDrawLists() to access draw data directly.
@@ -70,13 +72,13 @@
 	#define if_unlikely(e) if(!!(e))
 #endif
 
-// Internal config/debugging
-#define IM3D_RELATIVE_SNAP 0          // snap relative to the gizmo stored position/rotation/scale (else snap is absolute)
-#define IM3D_GIZMO_DEBUG   0          // draw debug bounds for gizmo intersections
+// Internal config/debugging.
+#define IM3D_RELATIVE_SNAP 0  // Snap relative to the gizmo stored position/rotation/scale (else snap is absolute).
+#define IM3D_GIZMO_DEBUG   0  // Draw debug bounds for gizmo intersections.
 
 using namespace Im3d;
 
-constexpr Color Color_GizmoHighlight = Color(0xffc745ff);
+constexpr Color Color_GizmoHighlight = Im3d::Color_Gold;
 
 static const int VertsPerDrawPrimitive[DrawPrimitive_Count] =
 {
@@ -729,6 +731,7 @@ bool Im3d::GizmoTranslation(Id _id, float _translation_[3], bool _local)
 	bool ret = false;
 	Vec3* outVec3 = (Vec3*)_translation_;
 	Vec3 drawAt = *outVec3;
+	const AppData& appData = ctx.getAppData();
 
 	float worldHeight = ctx.pixelsToWorldSize(drawAt, ctx.m_gizmoHeightPixels);
 	#if IM3D_CULL_GIZMOS
@@ -770,19 +773,25 @@ bool Im3d::GizmoTranslation(Id _id, float _translation_[3], bool _local)
 		};
 
  // invert axes if viewing from behind
-	const AppData& appData = ctx.getAppData();
-	/*Vec3 viewDir = appData.m_viewOrigin - *outVec3;
-	for (int i = 0; i < 3; ++i)
+	if (appData.m_flipGizmoWhenBehind)
 	{
-		if (Dot(axes[i].m_axis, viewDir) < 0.0f)
+		const Vec3 viewDir = appData.m_projOrtho
+			? -appData.m_viewDirection
+			: Normalize(appData.m_viewOrigin - *outVec3)
+			;
+		for (int i = 0; i < 3; ++i)
 		{
-			axes[i].m_axis = -axes[i].m_axis;
-			for (int j = 0; j < 3; ++j)
+			const Vec3 axis = _local ? Vec3(ctx.getMatrix().getCol(i)) : axes[i].m_axis;
+			if (Dot(axis, viewDir) < 0.0f)
 			{
-				planes[j].m_origin[i] = -planes[j].m_origin[i];
+				axes[i].m_axis = -axes[i].m_axis;
+				for (int j = 0; j < 3; ++j)
+				{
+					planes[j].m_origin[i] = -planes[j].m_origin[i];
+				}
 			}
 		}
-	}*/
+	}
 
  	Sphere boundingSphere(*outVec3, worldHeight * 1.5f); // expand the bs to catch the planar subgizmos
 	Ray ray(appData.m_cursorRayOrigin, appData.m_cursorRayDirection);
@@ -797,13 +806,12 @@ bool Im3d::GizmoTranslation(Id _id, float _translation_[3], bool _local)
 		{
 			const PlaneG& plane = planes[i];
 			ctx.gizmoPlaneTranslation_Draw(plane.m_id, plane.m_origin, axes[i].m_axis, planeSize, Color_GizmoHighlight);
-			axes[i].m_axis = Normalize(Vec3(ctx.getMatrix().getCol(i))); // if local, extract axes from the pushed matrix
+			axes[i].m_axis = Mat3(ctx.getMatrix()) * axes[i].m_axis;
 			if (intersects)
 			{
 				ret |= ctx.gizmoPlaneTranslation_Behavior(plane.m_id, ctx.getMatrix() * plane.m_origin, axes[i].m_axis, appData.m_snapTranslation, planeSize, outVec3);
 			}
 		}
-
 	} 
 	else
 	{
@@ -888,6 +896,7 @@ bool Im3d::GizmoTranslation(Id _id, float _translation_[3], bool _local)
 
 	return ret;
 }
+
 bool Im3d::GizmoRotation(Id _id, float _rotation_[3*3], bool _local)
 {
 	Context& ctx = GetContext();
@@ -960,8 +969,9 @@ bool Im3d::GizmoRotation(Id _id, float _rotation_[3*3], bool _local)
 		}
 
 		AxisG& axis = axes[i];
-		ctx.gizmoAxislAngle_Draw(axis.m_id, origin, axis.m_axis, worldRadius * 0.9f, euler[i], axis.m_color);
-		if (intersects && ctx.gizmoAxislAngle_Behavior(axis.m_id, origin, axis.m_axis, appData.m_snapRotation, worldRadius * 0.9f, worldSize, &euler[i])) {
+		ctx.gizmoAxislAngle_Draw(axis.m_id, origin, axis.m_axis, worldRadius * 0.9f, euler[i], axis.m_color, 0.0f);
+		if (intersects && ctx.gizmoAxislAngle_Behavior(axis.m_id, origin, axis.m_axis, appData.m_snapRotation, worldRadius * 0.9f, worldSize, &euler[i]))
+		{
 			*outMat3 = Rotation(axis.m_axis, euler[i] - ctx.m_gizmoStateFloat) * storedRotation;
 			ret = true;
 		}
@@ -975,7 +985,7 @@ bool Im3d::GizmoRotation(Id _id, float _rotation_[3*3], bool _local)
 			*outMat3 = Rotation(viewNormal, angle) * storedRotation;
 			ret = true;
 		}
-		ctx.gizmoAxislAngle_Draw(viewId, origin, viewNormal, worldRadius, angle, viewId == ctx.m_activeId ? Color_GizmoHighlight : Color_White);
+		ctx.gizmoAxislAngle_Draw(viewId, origin, viewNormal, worldRadius, angle, viewId == ctx.m_activeId ? Color_GizmoHighlight : Color_White, 1.0f);
 	}
 	ctx.popMatrix();
 
@@ -1005,6 +1015,7 @@ bool Im3d::GizmoScale(Id _id, float _scale_[3])
 
 	bool ret = false;
 	Vec3* outVec3 = (Vec3*)_scale_;
+	const AppData& appData = ctx.getAppData();
 
 	float planeSize = worldHeight * (0.5f * 0.5f);
 	float planeOffset = worldHeight * 0.5f;
@@ -1019,15 +1030,20 @@ bool Im3d::GizmoScale(Id _id, float _scale_[3])
 		};
 
  // invert axes if viewing from behind
-	const AppData& appData = ctx.getAppData();
-	/*Vec3 viewDir = appData.m_viewOrigin - *outVec3;
-	for (int i = 0; i < 3; ++i)
+	if (appData.m_flipGizmoWhenBehind)
 	{
-		if (Dot(axes[i].m_axis, viewDir) < 0.0f)
+		const Vec3 viewDir = appData.m_projOrtho
+			? appData.m_viewDirection
+			: Normalize(appData.m_viewOrigin - *outVec3)
+			;
+		for (int i = 0; i < 3; ++i)
 		{
-			axes[i].m_axis = -axes[i].m_axis;
+			if (Dot(axes[i].m_axis, viewDir) < 0.0f)
+			{
+				axes[i].m_axis = -axes[i].m_axis;
+			}
 		}
-	}*/
+	}
 
 	Sphere boundingSphere(origin, worldHeight);
 	Ray ray(appData.m_cursorRayOrigin, appData.m_cursorRayDirection);
@@ -1872,7 +1888,6 @@ Context::Context()
 	m_gizmoHeightPixels = 64.0f;
 	m_gizmoSizePixels = 5.0f;
 
-	memset(&m_appData, 0, sizeof(m_appData));
 	memset(&m_keyDownCurr, 0, sizeof(m_keyDownCurr));
 	memset(&m_keyDownPrev, 0, sizeof(m_keyDownPrev));
 
@@ -2498,7 +2513,7 @@ bool Context::gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& 
 	}
 	return false;
 }
-void Context::gizmoAxislAngle_Draw(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldRadius, float _angle, Color _color)
+void Context::gizmoAxislAngle_Draw(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldRadius, float _angle, Color _color, float _minAlpha)
 {
 	Vec3 viewDir = m_appData.m_projOrtho
 		? m_appData.m_viewDirection
@@ -2520,7 +2535,7 @@ void Context::gizmoAxislAngle_Draw(Id _id, const Vec3& _origin, const Vec3& _axi
 			Vec3 intersection = ray.m_origin + ray.m_direction * tr;
 			Vec3 delta = Normalize(intersection - _origin);
 
-			pushAlpha(Remap(aligned, 1.0f, 0.99f));
+			pushAlpha(Max(_minAlpha, Remap(aligned, 1.0f, 0.99f)));
 			pushEnableSorting(false);
 			begin(PrimitiveMode_Lines);
 				vertex(_origin - _axis * 999.0f, m_gizmoSizePixels * 0.5f, _color);
@@ -2555,7 +2570,7 @@ void Context::gizmoAxislAngle_Draw(Id _id, const Vec3& _origin, const Vec3& _axi
 	pushSize(m_gizmoSizePixels);
 	pushMatrix(getMatrix() * LookAt(_origin, _origin + _axis, m_appData.m_worldUp));
 	begin(PrimitiveMode_LineLoop);
-		const int detail = estimateLevelOfDetail(_origin, _worldRadius, 16, 128);
+		const int detail = estimateLevelOfDetail(_origin, _worldRadius, 32, 128);
 		for (int i = 0; i < detail; ++i)
 		{
 			float rad = TwoPi * ((float)i / (float)detail);
@@ -2565,7 +2580,7 @@ void Context::gizmoAxislAngle_Draw(Id _id, const Vec3& _origin, const Vec3& _axi
 			VertexData& vd = getCurrentVertexList()->back();
 			Vec3 v = vd.m_positionSize;
 			float d = Dot(Normalize(_origin - v), m_appData.m_viewDirection);
-			d = Max(Remap(d, 0.1f, 0.2f), aligned);
+			d = Max(_minAlpha, Max(Remap(d, 0.1f, 0.2f), aligned));
 			vd.m_color.setA(vd.m_color.getA() * d);
 		}
 	end();

@@ -507,23 +507,24 @@ enum FrustumPlane
 
 struct AppData
 {
-	bool   m_keyDown[Key_Count];               // Key states.
-	Vec4   m_cullFrustum[FrustumPlane_Count];  // Frustum planes for culling (if culling enabled).
-	Vec3   m_cursorRayOrigin;                  // World space cursor ray origin.
-	Vec3   m_cursorRayDirection;               // World space cursor ray direction.
-	Vec3   m_worldUp;                          // World space 'up' vector.
-	Vec3   m_viewOrigin;                       // World space render origin (camera position).
-	Vec3   m_viewDirection;                    // World space view direction.
-	Vec2   m_viewportSize;                     // Viewport size (pixels).
-	float  m_projScaleY;                       // Scale factor used to convert from pixel size -> world scale; use tan(fov) for perspective projections, far plane height for ortho.
-	bool   m_projOrtho;                        // If the projection matrix is orthographic.
-	float  m_deltaTime;                        // Time since previous frame (seconds).
-	float  m_snapTranslation;                  // Snap value for translation gizmos (world units). 0 = disabled.
-	float  m_snapRotation;                     // Snap value for rotation gizmos (radians). 0 = disabled.
-	float  m_snapScale;                        // Snap value for scale gizmos. 0 = disabled.
-	void*  m_appData;                          // App-specific data.
+	bool   m_keyDown[Key_Count]              = { false };               // Key states.
+	Vec4   m_cullFrustum[FrustumPlane_Count] = { Vec4(0.0f) };          // Frustum planes for culling (if culling enabled).
+	Vec3   m_cursorRayOrigin                 = Vec3(0.0f);              // World space cursor ray origin.
+	Vec3   m_cursorRayDirection              = Vec3(0.0f);              // World space cursor ray direction.
+	Vec3   m_worldUp                         = Vec3(0.0f, 1.0f, 0.0f);  // World space 'up' vector.
+	Vec3   m_viewOrigin                      = Vec3(0.0f);              // World space render origin (camera position).
+	Vec3   m_viewDirection                   = Vec3(0.0f);              // World space view direction.
+	Vec2   m_viewportSize                    = Vec2(0.0f);              // Viewport size (pixels).
+	float  m_projScaleY                      = 1.0f;                    // Scale factor used to convert from pixel size -> world scale; use tan(fov) for perspective projections, far plane height for ortho.
+	bool   m_projOrtho                       = false;                   // If the projection matrix is orthographic.
+	float  m_deltaTime                       = 0.0f;                    // Time since previous frame (seconds).
+	float  m_snapTranslation                 = 0.0f;                    // Snap value for translation gizmos (world units). 0 = disabled.
+	float  m_snapRotation                    = 0.0f;                    // Snap value for rotation gizmos (radians). 0 = disabled.
+	float  m_snapScale                       = 0.0f;                    // Snap value for scale gizmos. 0 = disabled.
+	bool   m_flipGizmoWhenBehind             = true;                    // Flip gizmo axes when viewed from behind.
+	void*  m_appData                         = nullptr;                 // App-specific data.
 
-	DrawPrimitivesCallback* drawCallback; // e.g. void Im3d_Draw(const DrawList& _drawList)
+	DrawPrimitivesCallback* drawCallback     = nullptr; // e.g. void Im3d_Draw(const DrawList& _drawList)
 
 	// Extract cull frustum planes from the view-projection matrix.
 	// Set _ndcZNegativeOneToOne = true if the proj matrix maps z from [-1,1] (OpenGL style).
@@ -665,7 +666,7 @@ struct IM3D_API Context
 	void                gizmoPlaneTranslation_Draw(Id _id, const Vec3& _origin, const Vec3& _normal, float _worldSize, Color _color);
 
 	bool                gizmoAxislAngle_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _snap, float _worldRadius, float _worldSize, float* _out_);
-	void                gizmoAxislAngle_Draw(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldRadius, float _angle, Color _color);
+	void                gizmoAxislAngle_Draw(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldRadius, float _angle, Color _color, float _minAlpha);
 
 	bool                gizmoAxisScale_Behavior(Id _id, const Vec3& _origin, const Vec3& _axis, float _snap, float _worldHeight, float _worldSize, float *_out_);
 	void                gizmoAxisScale_Draw(Id _id, const Vec3& _origin, const Vec3& _axis, float _worldHeight, float _worldSize, Color _color);
