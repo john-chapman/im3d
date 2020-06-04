@@ -1398,6 +1398,9 @@ void Vector<T>::swap(Vector<T>& _a_, Vector<T>& _b_)
 	_b_.m_size     = size;
 }
 
+namespace Im3d
+{
+
 template struct Vector<bool>;
 template struct Vector<char>;
 template struct Vector<float>;
@@ -1405,6 +1408,8 @@ template struct Vector<Id>;
 template struct Vector<Mat4>;
 template struct Vector<Color>;
 template struct Vector<DrawList>;
+
+}
 
 /*******************************************************************************
 
