@@ -1034,7 +1034,7 @@ bool Im3d::GizmoScale(Id _id, float _scale_[3])
 	{
 		const Vec3 viewDir = appData.m_projOrtho
 			? appData.m_viewDirection
-			: Normalize(appData.m_viewOrigin - *outVec3)
+			: Normalize(appData.m_viewOrigin - origin)
 			;
 		for (int i = 0; i < 3; ++i)
 		{
