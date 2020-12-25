@@ -29,13 +29,13 @@ inline Vec3  operator*(const Vec3& _lhs, const Vec3& _rhs) { return Vec3(_lhs.x 
 inline Vec3  operator/(const Vec3& _lhs, const Vec3& _rhs) { return Vec3(_lhs.x / _rhs.x, _lhs.y / _rhs.y, _lhs.z / _rhs.z); }
 inline Vec3  operator*(const Vec3& _lhs, float _rhs)       { return Vec3(_lhs.x * _rhs, _lhs.y * _rhs, _lhs.z * _rhs);       }
 inline Vec3  operator/(const Vec3& _lhs, float _rhs)       { return Vec3(_lhs.x / _rhs, _lhs.y / _rhs, _lhs.z / _rhs);       }
-inline Vec3  operator-(const Vec3& _v)                     { return Vec3(-_v.x, -_v.y, -_v.z);                               } 
+inline Vec3  operator-(const Vec3& _v)                     { return Vec3(-_v.x, -_v.y, -_v.z);                               }
 inline float Dot(const Vec3& _lhs, const Vec3& _rhs)       { return _lhs.x * _rhs.x + _lhs.y * _rhs.y + _lhs.z * _rhs.z;     }
 inline float Length(const Vec3& _v)                        { return sqrtf(Dot(_v, _v));                                      }
 inline float Length2(const Vec3& _v)                       { return Dot(_v, _v);                                             }
 inline Vec3  Abs(const Vec3& _v)                           { return Vec3(fabs(_v.x), fabs(_v.y), fabs(_v.z));                }
 inline Vec3  Normalize(const Vec3& _v)                     { return _v / Length(_v);                                         }
-inline Vec3  Cross(const Vec3& _a, const Vec3& _b)         
+inline Vec3  Cross(const Vec3& _a, const Vec3& _b)
 {
 	return Vec3(
 		_a.y * _b.z - _b.y * _a.z,
@@ -165,7 +165,7 @@ struct LineSegment
 	Vec3 m_end;
 
 	LineSegment() {}
-	LineSegment(const Vec3& _start, const Vec3& _end);	
+	LineSegment(const Vec3& _start, const Vec3& _end);
 };
 struct Sphere
 {
@@ -173,7 +173,7 @@ struct Sphere
 	float m_radius;
 
 	Sphere() {}
-	Sphere(const Vec3& _origin, float _radius);	
+	Sphere(const Vec3& _origin, float _radius);
 };
 struct Plane
 {
@@ -189,7 +189,7 @@ struct Capsule
 	Vec3  m_start;
 	Vec3  m_end;
 	float m_radius;
-	
+
 	Capsule() {}
 	Capsule(const Vec3& _start, const Vec3& _end, float _radius);
 };
