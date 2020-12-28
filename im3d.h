@@ -364,14 +364,14 @@ struct IM3D_API Color
 	          Color(const Vec4& _rgba);
 	          Color(const Vec3& _rgb, float _alpha);
 	          Color(float _r, float _g, float _b, float _a = 1.0f);
-	
+
 	operator U32() const                                                     { return v; }
 
 	void set(int _i, float _val)
 	{
 		_i *= 8;
 		U32 mask = 0xff << _i;
-		v = (v & ~mask) | ((U32)(_val * 255.0f) << _i);
+		v = (v & ~mask) | (U32(_val * 255.0f) << _i);
 	}
 	void setR(float _val)                                                    { set(3, _val); }
 	void setG(float _val)                                                    { set(2, _val); }
@@ -382,7 +382,7 @@ struct IM3D_API Color
 	{
 		_i *= 8;
 		U32 mask = 0xff << _i;
-		return (float)((v & mask) >> _i) / 255.0f;
+		return float((v & mask) >> _i) / 255.0f;
 	}
 	float getR() const                                                       { return get(3); }
 	float getG() const                                                       { return get(2); }

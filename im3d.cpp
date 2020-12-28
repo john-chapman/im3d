@@ -812,7 +812,7 @@ bool Im3d::GizmoTranslation(Id _id, float _translation_[3], bool _local)
 				ret |= ctx.gizmoPlaneTranslation_Behavior(plane.m_id, ctx.getMatrix() * plane.m_origin, axes[i].m_axis, appData.m_snapTranslation, planeSize, outVec3);
 			}
 		}
-	} 
+	}
 	else
 	{
 		ctx.pushMatrix(Mat4(1.0f));
@@ -1617,7 +1617,7 @@ void Context::text(const Vec3& _position, float _size, Color _color, TextFlags _
 	td.m_flags = _flags;
 	td.m_textBufferOffset = m_textBuffer.size();
 	td.m_textLength = (U32)(_textEnd - _textStart);
-	
+
 	const U32 copyOffset = m_textBuffer.size();
 	m_textBuffer.resize(copyOffset + td.m_textLength + 1);
 	memcpy(m_textBuffer.data() + copyOffset, _textStart, (size_t)td.m_textLength);
@@ -1637,7 +1637,6 @@ void Context::text(const Vec3& _position, float _size, Color _color, TextFlags _
 	td.m_color.setA(td.m_color.getA() * m_alphaStack.back());
 	td.m_flags = _flags;
 	td.m_textBufferOffset = m_textBuffer.size();
-	
 
 	va_list argsCopy;
 	va_copy(argsCopy, _args);
@@ -1677,7 +1676,7 @@ void Context::reset()
 	}
 	m_textDrawLists.clear();
 	m_textBuffer.clear();
-	
+
 	m_sortCalled = false;
 	m_endFrameCalled = false;
 
@@ -1733,7 +1732,7 @@ void Context::merge(const Context& _src)
  // layer IDs
 	for (Id id : _src.m_layerIdMap)
 	{
-		pushLayerId(id); // add a new layer if id doesn't alrady exist 
+		pushLayerId(id); // add a new layer if id doesn't alrady exist
 		popLayerId();
 	}
 
@@ -2043,7 +2042,7 @@ void Context::sort()
 				|| first
 				|| (m_drawLists.back().m_layerId  != m_layerIdMap[layer])
 				|| (m_drawLists.back().m_primType != mxprim)
-				) 
+				)
 			{
 				cprim = mxprim;
 				DrawList dl;
