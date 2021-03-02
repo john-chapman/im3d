@@ -2862,9 +2862,9 @@ Mat3 Im3d::FromEulerXYZ(Vec3& _euler)
 	float cx = cosf(_euler.x);
 	float sx = sinf(_euler.x);
 	float cy = cosf(_euler.y);
-	float sy = cosf(_euler.y);
+	float sy = sinf(_euler.y);
 	float cz = cosf(_euler.z);
-	float sz = cosf(_euler.z);
+	float sz = sinf(_euler.z);
 	return Mat3(
 		cy * cz, sz * sy * cz - cx * sz, cx * sy * cz + sx * sz,
 		cy * sz, sx * sy * sz + cx * cz, cx * sy * sz - sx * cz,
