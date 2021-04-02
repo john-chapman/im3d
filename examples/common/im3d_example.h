@@ -11,22 +11,28 @@
 	#error im3d: Compiler not defined
 #endif
 
-// Platform 
+// Platform
 #if defined(_WIN32) || defined(_WIN64)
  // Windows
 	#define IM3D_PLATFORM_WIN
-	
+
 	#define NOMINMAX 1
 	#define WIN32_LEAN_AND_MEAN 1
 	#define VC_EXTRALEAN 1
 	#include <Windows.h>
 
 	#define winAssert(e) IM3D_VERIFY_MSG(e, Im3d::GetPlatformErrorString(GetLastError()))
-	
+
 	namespace Im3d {
 		const char* GetPlatformErrorString(DWORD _err);
 	}
-	
+
+#elif defined(__linux__)
+ // Linux
+	#define IM3D_PLATFORM_LINUX
+
+	#include <GL/glew.h>
+	#include <GLFW/glfw3.h>
 #else
 	#error im3d: Platform not defined
 #endif
@@ -37,7 +43,7 @@
 	//#define IM3D_OPENGL_VMAJ    3
 	//#define IM3D_OPENGL_VMIN    3
 	//#define IM3D_OPENGL_VSHADER "#version 150"
- 
+
 	#include "GL/glew.h"
 	#define glAssert(call) \
 		do { \
@@ -48,17 +54,17 @@
 				IM3D_BREAK(); \
 			} \
 		} while (0)
-		
+
 	namespace Im3d {
 		// Return 0 on failure (prints log info to stderr). _defines is a list of null-separated strings e.g. "DEFINE1 1\0DEFINE2 1\0"
 		GLuint LoadCompileShader(GLenum _stage, const char* _path, const char* _defines = 0);
 		// Return false on failure (prints log info to stderr).
 		bool LinkShaderProgram(GLuint _handle);
-		
+
 		const char* GetGlEnumString(GLenum _enum);
 		const char* GlGetString(GLenum _name);
 	}
-	
+
 #elif defined(IM3D_DX11)
  // DirectX 11
 	#include <d3d11.h>
@@ -73,7 +79,7 @@
 				IM3D_BREAK(); \
 			} \
 		} while (0)
-	
+
 	namespace Im3d {
 		// Return 0 on failure (prints log info to stderr). _defines is a list of null-separated strings e.g. "DEFINE1 1\0DEFINE2 1\0"
 		ID3DBlob* LoadCompileShader(const char* _target, const char* _path, const char* _defines = 0);
@@ -147,15 +153,15 @@ struct Example
 	void shutdown();
 	bool update();
 	void draw();
- 
- // window 
+
+ // window
 	int m_width, m_height;
 	const char* m_title;
 	Vec2  m_prevCursorPos;
-	
+
 	bool hasFocus() const;
 	Vec2 getWindowRelativeCursor() const;
-	
+
  // 3d camera
 	bool  m_camOrtho;
     Vec3  m_camPos;
@@ -166,18 +172,18 @@ struct Example
 	Mat4  m_camView;
 	Mat4  m_camProj;
 	Mat4  m_camViewProj;
-	
+
 	float m_deltaTime;
 
  // platform/graphics specifics
 	#if defined(IM3D_PLATFORM_WIN)
 		HWND m_hwnd;
 		LARGE_INTEGER m_currTime, m_prevTime;
-		
+
 		#if defined(IM3D_OPENGL)
 			HDC   m_hdc;
 			HGLRC m_hglrc;
-		
+
 		#elif defined(IM3D_DX11)
 			ID3D11Device*           m_d3dDevice;
 			ID3D11DeviceContext*    m_d3dDeviceCtx;
@@ -185,7 +191,10 @@ struct Example
 			ID3D11RenderTargetView* m_d3dRenderTarget;
 			ID3D11DepthStencilView* m_d3dDepthStencil;
 		#endif
-	#endif
+	#elif defined(IM3D_PLATFORM_LINUX)
+		GLFWwindow* m_Window;
+		double m_currTime, m_prevTime;
+    #endif
 
  // text rendering
 	void drawTextDrawListsImGui(const Im3d::TextDrawList _textDrawLists[], U32 _count);

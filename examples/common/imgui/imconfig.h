@@ -61,7 +61,6 @@
         ImVec4(const Im3d::Vec4& f) { x = f.x; y = f.y; z = f.z; w = f.w; }     \
         operator Im3d::Vec4() const { return Im3d::Vec4(x,y,z,w); }
 
-
 //---- Use 32-bit vertex indices (default is 16-bit) to allow meshes with more than 64K vertices. Render function needs to support it.
 //#define ImDrawIdx unsigned int
 

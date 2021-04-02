@@ -6,7 +6,7 @@ filter { "configurations:debug" }
 	targetsuffix "_debug"
 	symbols "On"
 	optimize "Off"
-	
+
 filter { "configurations:release" }
 	symbols "On"
 	optimize "Full"
@@ -21,7 +21,7 @@ workspace "im3d_opengl31"
 	platforms { "Win32", "Win64" }
 	cppdialect "C++11"
 	staticruntime "On"
-	
+
 	filter { "platforms:Win32 or platforms:Win64" }
 		system "windows"
 
@@ -33,29 +33,29 @@ workspace "im3d_opengl31"
 		architecture "x86"
 	filter { "platforms:Win64" }
 		architecture "x86_64"
-		
+
 	filter {}
-	
+
 	vpaths({
 		["im3d"]   = { IM3D_DIR .. "*.h", IM3D_DIR .. "*.cpp" },
 		["imgui"]  = EXAMPLE_COMMON_DIR .. "imgui/**",
 		["common"] = { EXAMPLE_COMMON_DIR .. "*.h", EXAMPLE_COMMON_DIR .. "*.cpp" },
 		["*"]      = "*.cpp"
 		})
-	
-	files({ 
-		IM3D_DIR .. "*.h", 
+
+	files({
+		IM3D_DIR .. "*.h",
 		IM3D_DIR .. "*.cpp",
 		})
-	
+
 	project "im3d_opengl31"
 		kind "ConsoleApp"
 		language "C++"
 		targetdir ""
-	
+
 		defines { "IM3D_OPENGL_VMAJ=3", "IM3D_OPENGL_VMIN=1", "IM3D_OPENGL_VSHADER=140" }
 		defines { "IM3D_VERTEX_ALIGNMENT=16" } -- can also do this via im3d_config.h
-		
+
 		includedirs({
 			IM3D_DIR,
 			EXAMPLE_COMMON_DIR,

@@ -17,7 +17,13 @@ using namespace Im3d;
 	#pragma warning(disable: 4312) //    "
 #endif
 
-static const char* StripPath(const char* _path) 
+#ifdef IM3D_PLATFORM_LINUX
+#include <linux/limits.h>
+#include <stdlib.h>
+#include <unistd.h>
+#endif
+
+static const char* StripPath(const char* _path)
 {
 	int i = 0, last = 0;
 	while (_path[i] != '\0') {
@@ -46,23 +52,23 @@ static const char* StripPath(const char* _path)
 		buf[0] = '\0';
 		IM3D_VERIFY(
 			FormatMessage(
-				FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, 
-				nullptr, 
+				FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+				nullptr,
 				_err,
 				MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-				(LPTSTR)buf, 
-				kErrMsgMax, 
+				(LPTSTR)buf,
+				kErrMsgMax,
 				nullptr
 			) != 0
 		);
 		return buf;
 	}
-	
+
 	static LRESULT CALLBACK WindowProc(HWND _hwnd, UINT _umsg, WPARAM _wparam, LPARAM _lparam)
 	{
 		ImGuiIO& imgui = ImGui::GetIO();
 		Example* im3d = g_Example;
-		
+
 		switch (_umsg)
 		{
 			case WM_SIZE:
@@ -116,7 +122,7 @@ static const char* StripPath(const char* _path)
 				imgui.MouseDown[1] = _umsg == WM_RBUTTONDOWN;
 				break;
 			case WM_MOUSEWHEEL:
-				imgui.MouseWheel = (float)(GET_WHEEL_DELTA_WPARAM(_wparam)) / (float)(WHEEL_DELTA); 
+				imgui.MouseWheel = (float)(GET_WHEEL_DELTA_WPARAM(_wparam)) / (float)(WHEEL_DELTA);
 				break;
 			case WM_MOUSEMOVE:
 				imgui.MousePos.x = LOWORD(_lparam);
@@ -176,7 +182,7 @@ static const char* StripPath(const char* _path)
 
 		return DefWindowProc(_hwnd, _umsg, _wparam, _lparam);
 	}
-	
+
 	static bool InitWindow(int& _width_, int& _height_, const char* _title)
 	{
 		static ATOM wndclassex = 0;
@@ -192,10 +198,10 @@ static const char* StripPath(const char* _path)
 			wc.hCursor = LoadCursor(0, IDC_ARROW);
 			winAssert(wndclassex = RegisterClassEx(&wc));
 		}
-	
+
 		DWORD dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
 		DWORD dwStyle = WS_OVERLAPPEDWINDOW | WS_MINIMIZEBOX | WS_SYSMENU | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
-	
+
 		if (_width_ == -1 || _height_ == -1)
 		{
 		 // auto size; get the dimensions of the primary screen area and subtract the non-client area
@@ -203,25 +209,25 @@ static const char* StripPath(const char* _path)
 			winAssert(SystemParametersInfo(SPI_GETWORKAREA, 0, &r, 0));
 			_width_  = r.right - r.left;
 			_height_ = r.bottom - r.top;
-	
+
 			RECT wr = {};
 			winAssert(AdjustWindowRectEx(&wr, dwStyle, FALSE, dwExStyle));
 			_width_  -= wr.right - wr.left;
 			_height_ -= wr.bottom - wr.top;
 		}
-	
+
 		RECT r; r.top = 0; r.left = 0; r.bottom = _height_; r.right = _width_;
 		winAssert(AdjustWindowRectEx(&r, dwStyle, FALSE, dwExStyle));
 		g_Example->m_hwnd = CreateWindowEx(
-			dwExStyle, 
-			MAKEINTATOM(wndclassex), 
-			_title, 
-			dwStyle, 
-			0, 0, 
-			r.right - r.left, r.bottom - r.top, 
-			nullptr, 
-			nullptr, 
-			GetModuleHandle(0), 
+			dwExStyle,
+			MAKEINTATOM(wndclassex),
+			_title,
+			dwStyle,
+			0, 0,
+			r.right - r.left, r.bottom - r.top,
+			nullptr,
+			nullptr,
+			GetModuleHandle(0),
 			nullptr
 			);
 		IM3D_ASSERT(g_Example->m_hwnd);
@@ -229,7 +235,7 @@ static const char* StripPath(const char* _path)
 
 		return true;
 	}
-	
+
 	static void ShutdownWindow()
 	{
 		if (g_Example->m_hwnd)
@@ -237,13 +243,13 @@ static const char* StripPath(const char* _path)
 			winAssert(DestroyWindow(g_Example->m_hwnd));
 		}
 	}
-	
+
 	#if defined(IM3D_OPENGL)
 		#include "GL/wglew.h"
 		static PFNWGLCHOOSEPIXELFORMATARBPROC    wglChoosePixelFormat    = 0;
 		static PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs = 0;
 
-		
+
 		static bool InitOpenGL(int _vmaj, int _vmin)
 		{
 			HWND hwnd = g_Example->m_hwnd;
@@ -262,12 +268,12 @@ static const char* StripPath(const char* _path)
 			int pformat = 0;
 			winAssert(pformat = ChoosePixelFormat(hdc, &pfd));
 			winAssert(SetPixelFormat(hdc, pformat, &pfd));
-			
+
 		 // create dummy context to load wgl extensions
 			HGLRC hglrc = 0;
 			winAssert(hglrc = wglCreateContext(hdc));
 			winAssert(wglMakeCurrent(hdc, hglrc));
-		
+
 		 // check the platform supports the requested GL version
 			GLint platformVMaj, platformVMin;
 			glAssert(glGetIntegerv(GL_MAJOR_VERSION, &platformVMaj));
@@ -281,15 +287,15 @@ static const char* StripPath(const char* _path)
 
 				return false;
 			}
-			
+
 		 // load wgl extensions for true context creation
 			static PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs;
 			winAssert(wglCreateContextAttribs = (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB"));
-		
+
 		 // delete the dummy context
 			winAssert(wglMakeCurrent(0, 0));
 			winAssert(wglDeleteContext(hglrc));
-		
+
 		 // create true context
 			int profileBit = WGL_CONTEXT_CORE_PROFILE_BIT_ARB;
 			//profileBit = WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB;
@@ -302,7 +308,7 @@ static const char* StripPath(const char* _path)
 				};
 			winAssert(g_Example->m_hglrc = wglCreateContextAttribs(hdc, 0, attr));
 			hglrc = g_Example->m_hglrc;
-		
+
 		// load extensions
 			if (!wglMakeCurrent(hdc, hglrc))
 			{
@@ -326,7 +332,7 @@ static const char* StripPath(const char* _path)
 			if (_vmaj == 3 && _vmin == 1)
 			{
 			 // check that the uniform blocks size is at least 64kb
-				GLint maxUniformBlockSize; 
+				GLint maxUniformBlockSize;
 				glAssert(glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &maxUniformBlockSize));
 				if (maxUniformBlockSize < (64*1024))
 				{
@@ -338,16 +344,16 @@ static const char* StripPath(const char* _path)
 
 			return true;
 		}
-		
+
 		static void ShutdownOpenGL()
 		{
 			winAssert(wglMakeCurrent(0, 0));
 			winAssert(wglDeleteContext(g_Example->m_hglrc));
 			winAssert(ReleaseDC(g_Example->m_hwnd, g_Example->m_hdc) != 0);
 		}
-		
+
 	#elif defined(IM3D_DX11)
-		#include <d3dcompiler.h>	
+		#include <d3dcompiler.h>
 
 		static bool InitDx11()
 		{
@@ -374,17 +380,17 @@ static const char* StripPath(const char* _path)
 			D3D_FEATURE_LEVEL featureLevel;
 			const D3D_FEATURE_LEVEL featureLevelArray[1] = { D3D_FEATURE_LEVEL_11_0, };
 			dxAssert(D3D11CreateDeviceAndSwapChain(
-				nullptr, 
-				D3D_DRIVER_TYPE_HARDWARE, 
-				nullptr, 
-				createDeviceFlags, 
-				featureLevelArray, 
-				1, 
-				D3D11_SDK_VERSION, 
+				nullptr,
+				D3D_DRIVER_TYPE_HARDWARE,
+				nullptr,
+				createDeviceFlags,
+				featureLevelArray,
+				1,
+				D3D11_SDK_VERSION,
 				&swapChainDesc,
 				&g_Example->m_dxgiSwapChain,
-				&g_Example->m_d3dDevice, 
-				&featureLevel, 
+				&g_Example->m_d3dDevice,
+				&featureLevel,
 				&g_Example->m_d3dDeviceCtx
 				));
 			if (!g_Example->m_dxgiSwapChain || !g_Example->m_d3dDevice || !g_Example->m_d3dDeviceCtx)
@@ -401,10 +407,10 @@ static const char* StripPath(const char* _path)
 			g_Example->m_d3dDepthStencil = CreateDepthStencil(backBufferDesc.Width, backBufferDesc.Height, DXGI_FORMAT_D24_UNORM_S8_UINT);
 			g_Example->m_d3dDeviceCtx->OMSetRenderTargets(1, &g_Example->m_d3dRenderTarget, g_Example->m_d3dDepthStencil);
 			backBuffer->Release();
-			
+
 			return true;
 		}
-		
+
 		static void ShutdownDx11()
 		{
 			if (g_Example->m_d3dDepthStencil) g_Example->m_d3dDepthStencil->Release();
@@ -413,9 +419,105 @@ static const char* StripPath(const char* _path)
 			if (g_Example->m_d3dDeviceCtx)    g_Example->m_d3dDeviceCtx->Release();
 			if (g_Example->m_d3dDevice)       g_Example->m_d3dDevice->Release();
 		}
-		
+
 	#endif // graphics
-	
+
+#endif // platform
+
+/******************************************************************************/
+#if defined(IM3D_PLATFORM_LINUX)
+	static const int ImGuiMouseButton_COUNT = 3; // TODO: update ImGui!
+	static bool g_MouseJustPressed[ImGuiMouseButton_COUNT] = {};
+
+	static void ImGui_ImplGlfw_MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+	{
+		if (action == GLFW_PRESS && button >= 0 && button < IM_ARRAYSIZE(g_MouseJustPressed))
+			g_MouseJustPressed[button] = true;
+	}
+
+	static void ImGui_ImplGlfw_ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
+	{
+		ImGuiIO& io = ImGui::GetIO();
+		io.MouseWheelH += (float)xoffset;
+		io.MouseWheel += (float)yoffset;
+	}
+
+	static void ImGui_ImplGlfw_KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+	{
+		ImGuiIO& io = ImGui::GetIO();
+		if (action == GLFW_PRESS)
+			io.KeysDown[key] = true;
+		if (action == GLFW_RELEASE)
+			io.KeysDown[key] = false;
+
+		// Modifiers are not reliable across systems
+		io.KeyCtrl = io.KeysDown[GLFW_KEY_LEFT_CONTROL] || io.KeysDown[GLFW_KEY_RIGHT_CONTROL];
+		io.KeyShift = io.KeysDown[GLFW_KEY_LEFT_SHIFT] || io.KeysDown[GLFW_KEY_RIGHT_SHIFT];
+		io.KeyAlt = io.KeysDown[GLFW_KEY_LEFT_ALT] || io.KeysDown[GLFW_KEY_RIGHT_ALT];
+#ifdef _WIN32
+		io.KeySuper = false;
+#else
+		io.KeySuper = io.KeysDown[GLFW_KEY_LEFT_SUPER] || io.KeysDown[GLFW_KEY_RIGHT_SUPER];
+#endif
+	}
+
+	void ImGui_ImplGlfw_CharCallback(GLFWwindow* window, unsigned int c)
+	{
+		ImGuiIO& io = ImGui::GetIO();
+		io.AddInputCharacter(c);
+	}
+
+	static bool InitWindow(int& _width_, int& _height_, const char* _title) {
+		if(!glfwInit()) {
+			fprintf(stderr, "Failed to initialize GLFW\n");
+			return false;
+		}
+
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // We want OpenGL 3.3
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // We don't want the old OpenGL
+
+		// Open a window and create its OpenGL context
+		GLFWwindow* window; // (In the accompanying source code, this variable is global for simplicity)
+		// TODO: pass better width, height
+		window = glfwCreateWindow(800, 600, _title, NULL, NULL);
+		if(window == NULL){
+			fprintf(stderr, "Failed to open GLFW window\n");
+			glfwTerminate();
+			return false;
+		}
+		glfwMakeContextCurrent(window); // Initialize GLEW
+		glewExperimental = true; // Needed in core profile
+		if (glewInit() != GLEW_OK) {
+			fprintf(stderr, "Failed to initialize GLEW\n");
+			return false;
+		}
+		g_Example->m_Window = window;
+
+		glfwSetMouseButtonCallback(window, ImGui_ImplGlfw_MouseButtonCallback);
+		glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
+		glfwSetKeyCallback(window, ImGui_ImplGlfw_KeyCallback);
+		glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
+
+		return true;
+	}
+
+	static void ShutdownWindow()
+	{
+	}
+
+	#if defined(IM3D_OPENGL)
+		static bool InitOpenGL(int _vmaj, int _vmin)
+		{
+			// initialized in InitWindow
+			return true;
+		}
+
+		static void ShutdownOpenGL()
+		{
+		}
+	#endif // graphics
+
 #endif // platform
 
 /******************************************************************************/
@@ -449,7 +551,7 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 		}
 	}
 	fprintf(stdout, "\n");
-	
+
 	FILE* fin = fopen(_path, "rb");
 	if (!fin)
 	{
@@ -459,7 +561,7 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 	IM3D_VERIFY(fseek(fin, 0, SEEK_END) == 0); // not portable but should work almost everywhere
 	long fsize = ftell(fin);
 	IM3D_VERIFY(fseek(fin, 0, SEEK_SET) == 0);
-	
+
 	int srcbeg = _out_.size();
 	_out_.resize(srcbeg + fsize, '\0');
 	if (fread(_out_.data() + srcbeg, 1, fsize, fin) != fsize)
@@ -483,13 +585,13 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 		{
 			return 0;
 		}
-	
+
 		GLuint ret = 0;
 		glAssert(ret = glCreateShader(_stage));
 		const GLchar* pd = src.data();
 		GLint ps = src.size();
 		glAssert(glShaderSource(ret, 1, &pd, &ps));
-	
+
 		glAssert(glCompileShader(ret));
 		GLint compileStatus = GL_FALSE;
 		glAssert(glGetShaderiv(ret, GL_COMPILE_STATUS, &compileStatus));
@@ -502,7 +604,7 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 			glAssert(glGetShaderInfoLog(ret, len, 0, log));
 			fprintf(stderr, log);
 			delete[] log;
-	
+
 			//fprintf(stderr, "\n\n%s", src.data());
 			fprintf(stderr, "\n");
 			glAssert(glDeleteShader(ret));
@@ -512,11 +614,11 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 
 		return ret;
 	}
-	
+
 	bool Im3d::LinkShaderProgram(GLuint _handle)
 	{
 		IM3D_ASSERT(_handle != 0);
-	
+
 		glAssert(glLinkProgram(_handle));
 		GLint linkStatus = GL_FALSE;
 		glAssert(glGetProgramiv(_handle, GL_LINK_STATUS, &linkStatus));
@@ -530,7 +632,7 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 			fprintf(stderr, log);
 			fprintf(stderr, "\n");
 			delete[] log;
-	
+
 			return false;
 		}
 
@@ -551,13 +653,13 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 					 1.0f,  1.0f,
 				};
 			glAssert(glGenBuffers(1, &vbQuad));
-			glAssert(glGenVertexArrays(1, &vaQuad));	
+			glAssert(glGenVertexArrays(1, &vaQuad));
 			glAssert(glBindVertexArray(vaQuad));
 			glAssert(glBindBuffer(GL_ARRAY_BUFFER, vbQuad));
 			glAssert(glEnableVertexAttribArray(0));
 			glAssert(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vec2), (GLvoid*)0));
 			glAssert(glBufferData(GL_ARRAY_BUFFER, sizeof(quadv), (GLvoid*)quadv, GL_STATIC_DRAW));
-			glAssert(glBindVertexArray(0));	
+			glAssert(glBindVertexArray(0));
 		}
 		glAssert(glBindVertexArray(vaQuad));
 		glAssert(glDrawArrays(GL_TRIANGLE_STRIP, 0, 4));
@@ -594,7 +696,7 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 
 			glAssert(glGenBuffers(1, &vbTeapot));
 			glAssert(glGenBuffers(1, &ibTeapot));
-			glAssert(glGenVertexArrays(1, &vaTeapot));	
+			glAssert(glGenVertexArrays(1, &vaTeapot));
 			glAssert(glBindVertexArray(vaTeapot));
 			glAssert(glBindBuffer(GL_ARRAY_BUFFER, vbTeapot));
 			glAssert(glEnableVertexAttribArray(0));
@@ -622,7 +724,7 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 		glAssert(glBindVertexArray(0));
 		glAssert(glUseProgram(0));
 	}
-	
+
 	const char* Im3d::GetGlEnumString(GLenum _enum)
 	{
 		#define CASE_ENUM(e) case e: return #e
@@ -635,12 +737,12 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 			CASE_ENUM(GL_INVALID_OPERATION);
 			CASE_ENUM(GL_INVALID_FRAMEBUFFER_OPERATION);
 			CASE_ENUM(GL_OUT_OF_MEMORY);
-	
+
 			default: return "Unknown GLenum";
 		};
 		#undef CASE_ENUM
 	}
-	
+
 	const char* Im3d::GlGetString(GLenum _name)
 	{
 		const char* ret;
@@ -690,7 +792,7 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 		dxAssert(g_Example->m_d3dDevice->CreateBuffer(&desc, _data ? &subRes : nullptr, &ret));
 		return ret;
 	}
-	
+
 	ID3D11Buffer* Im3d::CreateConstantBuffer(UINT _size, D3D11_USAGE _usage, const void* _data)
 	{
 		return CreateBuffer(_size, _usage, D3D11_BIND_CONSTANT_BUFFER, _data);
@@ -772,11 +874,11 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 		dxAssert(d3d->CreateDepthStencilView(tx, nullptr, &ret));
 		return ret;
 	}
-	
+
 	void Im3d::DrawNdcQuad()
 	{
 	}
-	
+
 	void Im3d::DrawTeapot(const Mat4& _world, const Mat4& _viewProj)
 	{
 		static ID3DBlob*              s_vsBlob;
@@ -800,15 +902,15 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 			dxAssert(d3d->CreatePixelShader((DWORD*)s_psBlob->GetBufferPointer(), s_psBlob->GetBufferSize(), nullptr, &s_ps));
 
 			s_vb = CreateVertexBuffer(sizeof(s_teapotVertices), D3D11_USAGE_IMMUTABLE, s_teapotVertices);
-			s_ib = CreateIndexBuffer(sizeof(s_teapotIndices), D3D11_USAGE_IMMUTABLE, s_teapotIndices); 
-		
+			s_ib = CreateIndexBuffer(sizeof(s_teapotIndices), D3D11_USAGE_IMMUTABLE, s_teapotIndices);
+
 			D3D11_INPUT_ELEMENT_DESC inputDesc[] =
 				{
 					{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,  0, 0,  D3D11_INPUT_PER_VERTEX_DATA, 0 },
 					{ "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT,  0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
 				};
 			dxAssert(d3d->CreateInputLayout(inputDesc, 2, s_vsBlob->GetBufferPointer(), s_vsBlob->GetBufferSize(), &s_inputLayout));
-		
+
 			s_cb = CreateConstantBuffer(sizeof(Mat4) * 2, D3D11_USAGE_DYNAMIC);
 
 			D3D11_RASTERIZER_DESC rasterizerDesc = {};
@@ -839,7 +941,7 @@ static bool LoadShader(const char* _path, const char* _defines, Vector<char>& _o
 
 		ctx->DrawIndexed(sizeof(s_teapotIndices) / sizeof(unsigned), 0, 0);
 	}
-	
+
 #endif // graphics
 
 /******************************************************************************/
@@ -903,7 +1005,7 @@ Color Im3d::RandColor(float _min, float _max)
 	static void ImGui_Draw(ImDrawData* _drawData)
 	{
 		ImGuiIO& io = ImGui::GetIO();
-	
+
 		int fbX, fbY;
 		fbX = (int)(io.DisplaySize.x * io.DisplayFramebufferScale.x);
 		fbY = (int)(io.DisplaySize.y * io.DisplayFramebufferScale.y);
@@ -912,7 +1014,7 @@ Color Im3d::RandColor(float _min, float _max)
 			return;
 		}
 		_drawData->ScaleClipRects(io.DisplayFramebufferScale);
-	
+
 		glAssert(glViewport(0, 0, (GLsizei)fbX, (GLsizei)fbY));
 		glAssert(glEnable(GL_BLEND));
 		glAssert(glBlendEquation(GL_FUNC_ADD));
@@ -921,31 +1023,31 @@ Color Im3d::RandColor(float _min, float _max)
 		glAssert(glDisable(GL_DEPTH_TEST));
 		glAssert(glEnable(GL_SCISSOR_TEST));
 		glAssert(glActiveTexture(GL_TEXTURE0));
-		
+
 		Mat4 ortho = Mat4(
 			2.0f/io.DisplaySize.x, 0.0f,                   0.0f, -1.0f,
 			0.0f,                  2.0f/-io.DisplaySize.y, 0.0f,  1.0f,
 			0.0f,                  0.0f,                   1.0f,  0.0f
 			);
 		glAssert(glUseProgram(g_ImGuiShader));
-	
+
 		bool transpose = false;
 		#ifdef IM3D_MATRIX_ROW_MAJOR
 			transpose = true;
 		#endif
 		glAssert(glUniformMatrix4fv(glGetUniformLocation(g_ImGuiShader, "uProjMatrix"), 1, transpose, (const GLfloat*)ortho));
 		glAssert(glBindVertexArray(g_ImGuiVertexArray));
-	
+
 		for (int i = 0; i < _drawData->CmdListsCount; ++i)
 		{
 			const ImDrawList* drawList = _drawData->CmdLists[i];
 			const ImDrawIdx* indexOffset = 0;
-	
+
 			glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_ImGuiVertexBuffer));
 			glAssert(glBufferData(GL_ARRAY_BUFFER, drawList->VtxBuffer.size() * sizeof(ImDrawVert), (GLvoid*)&drawList->VtxBuffer.front(), GL_STREAM_DRAW));
 			glAssert(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_ImGuiIndexBuffer));
 			glAssert(glBufferData(GL_ELEMENT_ARRAY_BUFFER, drawList->IdxBuffer.Size * sizeof(ImDrawIdx), (GLvoid*)drawList->IdxBuffer.Data, GL_STREAM_DRAW));
-	
+
 			for (const ImDrawCmd* pcmd = drawList->CmdBuffer.begin(); pcmd != drawList->CmdBuffer.end(); ++pcmd)
 			{
 				if (pcmd->UserCallback)
@@ -954,14 +1056,14 @@ Color Im3d::RandColor(float _min, float _max)
 				}
 				else
 				{
-					glAssert(glBindTexture(GL_TEXTURE_2D, (GLuint)pcmd->TextureId));
+					glAssert(glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId));
 					glAssert(glScissor((int)pcmd->ClipRect.x, (int)(fbY - pcmd->ClipRect.w), (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y)));
 					glAssert(glDrawElements(GL_TRIANGLES, pcmd->ElemCount, GL_UNSIGNED_SHORT, (GLvoid*)indexOffset));
 				}
 				indexOffset += pcmd->ElemCount;
 			}
 		}
-	
+
 		glAssert(glDisable(GL_SCISSOR_TEST));
 		glAssert(glDisable(GL_BLEND));
 		glAssert(glUseProgram(0));
@@ -995,7 +1097,7 @@ Color Im3d::RandColor(float _min, float _max)
 
 		glAssert(glGenBuffers(1, &g_ImGuiVertexBuffer));
 		glAssert(glGenBuffers(1, &g_ImGuiIndexBuffer));
-		glAssert(glGenVertexArrays(1, &g_ImGuiVertexArray));	
+		glAssert(glGenVertexArrays(1, &g_ImGuiVertexArray));
 		glAssert(glBindVertexArray(g_ImGuiVertexArray));
 		glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_ImGuiVertexBuffer));
 		glAssert(glEnableVertexAttribArray(0));
@@ -1005,7 +1107,7 @@ Color Im3d::RandColor(float _min, float _max)
 		glAssert(glEnableVertexAttribArray(2));
 		glAssert(glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ImDrawVert), (GLvoid*)offsetof(ImDrawVert, col)));
 		glAssert(glBindVertexArray(0));
-	
+
 		unsigned char* txbuf;
 		int txX, txY;
 		ImGuiIO& io = ImGui::GetIO();
@@ -1015,8 +1117,8 @@ Color Im3d::RandColor(float _min, float _max)
 		glAssert(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
 		glAssert(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
 		glAssert(glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, txX, txY, 0, GL_RED, GL_UNSIGNED_BYTE, (const GLvoid*)txbuf));
-		io.Fonts->TexID = (void*)g_ImGuiFontTexture;
-	
+		io.Fonts->TexID = (void*)(intptr_t)g_ImGuiFontTexture;
+
 		io.RenderDrawListsFn = &ImGui_Draw;
 
 		ImGui::StyleColorsDark();
@@ -1029,7 +1131,7 @@ Color Im3d::RandColor(float _min, float _max)
 	{
 		glAssert(glDeleteVertexArrays(1, &g_ImGuiVertexArray));
 		glAssert(glDeleteBuffers(1, &g_ImGuiVertexBuffer));
-		glAssert(glDeleteBuffers(1, &g_ImGuiIndexBuffer));		
+		glAssert(glDeleteBuffers(1, &g_ImGuiIndexBuffer));
 		glAssert(glDeleteProgram(g_ImGuiShader));
 		glAssert(glDeleteTextures(1, &g_ImGuiFontTexture));
 	}
@@ -1060,9 +1162,9 @@ Color Im3d::RandColor(float _min, float _max)
 		if (!g_ImGuiVertexBuffer || s_vertexBufferSize < _drawData->TotalVtxCount)
 		{
 			if (g_ImGuiVertexBuffer)
-			{ 
-				g_ImGuiVertexBuffer->Release(); 
-				g_ImGuiVertexBuffer = nullptr;	
+			{
+				g_ImGuiVertexBuffer->Release();
+				g_ImGuiVertexBuffer = nullptr;
 			}
 			s_vertexBufferSize = _drawData->TotalVtxCount;
 			g_ImGuiVertexBuffer = CreateVertexBuffer(s_vertexBufferSize * sizeof(ImDrawVert), D3D11_USAGE_DYNAMIC);
@@ -1071,9 +1173,9 @@ Color Im3d::RandColor(float _min, float _max)
 		if (!g_ImGuiIndexBuffer || s_indexBufferSize < _drawData->TotalIdxCount)
 		{
 			if (g_ImGuiIndexBuffer)
-			{ 
-				g_ImGuiIndexBuffer->Release(); 
-				g_ImGuiIndexBuffer = nullptr; 
+			{
+				g_ImGuiIndexBuffer->Release();
+				g_ImGuiIndexBuffer = nullptr;
 			}
 			s_indexBufferSize = _drawData->TotalIdxCount;
 			g_ImGuiIndexBuffer = CreateIndexBuffer(s_indexBufferSize * sizeof(ImDrawIdx), D3D11_USAGE_DYNAMIC);
@@ -1092,7 +1194,7 @@ Color Im3d::RandColor(float _min, float _max)
 		}
 		UnmapBuffer(g_ImGuiVertexBuffer);
 		UnmapBuffer(g_ImGuiIndexBuffer);
-		
+
 	 // update constant buffer
 		*(Mat4*)MapBuffer(g_ImGuiConstantBuffer, D3D11_MAP_WRITE_DISCARD)
 			= Mat4(
@@ -1101,7 +1203,7 @@ Color Im3d::RandColor(float _min, float _max)
 				0.0f,                  0.0f,                   1.0f,  0.0f
 				);
 		UnmapBuffer(g_ImGuiConstantBuffer);
-		
+
 	 // set state
 		D3D11_VIEWPORT viewport = {};
 		viewport.Width = ImGui::GetIO().DisplaySize.x;
@@ -1125,7 +1227,7 @@ Color Im3d::RandColor(float _min, float _max)
 		ctx->OMSetBlendState(g_ImGuiBlendState, nullptr, 0xffffffff);
 		ctx->OMSetDepthStencilState(g_ImGuiDepthStencilState, 0);
 		ctx->RSSetState(g_ImGuiRasterizerState);
-	
+
 		int vtxOffset = 0;
 		int idxOffset = 0;
 		for (int i = 0; i < _drawData->CmdListsCount; ++i)
@@ -1149,7 +1251,7 @@ Color Im3d::RandColor(float _min, float _max)
 			vtxOffset += cmdList->VtxBuffer.Size;
 		}
 	}
-	
+
 	static bool ImGui_Init()
 	{
 		ImGuiIO& io = ImGui::GetIO();
@@ -1169,7 +1271,7 @@ Color Im3d::RandColor(float _min, float _max)
 			}
 			dxAssert(d3d->CreatePixelShader((DWORD*)g_ImGuiPixelShaderBlob->GetBufferPointer(), g_ImGuiPixelShaderBlob->GetBufferSize(), nullptr, &g_ImGuiPixelShader));
 		}
-		{	D3D11_INPUT_ELEMENT_DESC desc[] = 
+		{	D3D11_INPUT_ELEMENT_DESC desc[] =
 				{
 					{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)offsetof(ImDrawVert, pos), D3D11_INPUT_PER_VERTEX_DATA, 0 },
 					{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)offsetof(ImDrawVert, uv),  D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -1178,7 +1280,7 @@ Color Im3d::RandColor(float _min, float _max)
 			dxAssert(d3d->CreateInputLayout(desc, 3, g_ImGuiVertexShaderBlob->GetBufferPointer(), g_ImGuiVertexShaderBlob->GetBufferSize(), &g_ImGuiInputLayout));
 		}
 		g_ImGuiConstantBuffer = CreateConstantBuffer(sizeof(Mat4), D3D11_USAGE_DYNAMIC);
-		
+
 		{	D3D11_RASTERIZER_DESC desc = {};
 			desc.FillMode = D3D11_FILL_SOLID;
 			desc.CullMode = D3D11_CULL_NONE;
@@ -1214,7 +1316,7 @@ Color Im3d::RandColor(float _min, float _max)
 		int txX, txY;
 		io.Fonts->GetTexDataAsAlpha8(&txbuf, &txX, &txY);
 		CreateTexture2D(txX, txY, DXGI_FORMAT_R8_UNORM, &g_ImGuiFontResourceView, txbuf)->Release();
-		
+
 		io.Fonts->TexID = (void*)g_ImGuiFontResourceView;
 		io.RenderDrawListsFn = &ImGui_Draw;
 
@@ -1273,6 +1375,55 @@ Color Im3d::RandColor(float _min, float _max)
 	}
 #endif
 
+#if defined(IM3D_PLATFORM_LINUX)
+	static void ImGui_Update()
+	{
+		ImGuiIO& io = ImGui::GetIO();
+
+		// Keyboard mapping. Dear ImGui will use those indices to peek into the io.KeysDown[] array.
+		io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;
+		io.KeyMap[ImGuiKey_LeftArrow] = GLFW_KEY_LEFT;
+		io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;
+		io.KeyMap[ImGuiKey_UpArrow] = GLFW_KEY_UP;
+		io.KeyMap[ImGuiKey_DownArrow] = GLFW_KEY_DOWN;
+		io.KeyMap[ImGuiKey_PageUp] = GLFW_KEY_PAGE_UP;
+		io.KeyMap[ImGuiKey_PageDown] = GLFW_KEY_PAGE_DOWN;
+		io.KeyMap[ImGuiKey_Home] = GLFW_KEY_HOME;
+		io.KeyMap[ImGuiKey_End] = GLFW_KEY_END;
+		io.KeyMap[ImGuiKey_Insert] = GLFW_KEY_INSERT;
+		io.KeyMap[ImGuiKey_Delete] = GLFW_KEY_DELETE;
+		io.KeyMap[ImGuiKey_Backspace] = GLFW_KEY_BACKSPACE;
+		io.KeyMap[ImGuiKey_Space] = GLFW_KEY_SPACE;
+		io.KeyMap[ImGuiKey_Enter] = GLFW_KEY_ENTER;
+		io.KeyMap[ImGuiKey_Escape] = GLFW_KEY_ESCAPE;
+		io.KeyMap[ImGuiKey_A] = GLFW_KEY_A;
+		io.KeyMap[ImGuiKey_C] = GLFW_KEY_C;
+		io.KeyMap[ImGuiKey_V] = GLFW_KEY_V;
+		io.KeyMap[ImGuiKey_X] = GLFW_KEY_X;
+		io.KeyMap[ImGuiKey_Y] = GLFW_KEY_Y;
+		io.KeyMap[ImGuiKey_Z] = GLFW_KEY_Z;
+
+		// Setup display size (every frame to accommodate for window resizing)
+		int w, h;
+		int display_w, display_h;
+		glfwGetWindowSize(g_Example->m_Window, &w, &h);
+		glfwGetFramebufferSize(g_Example->m_Window, &display_w, &display_h);
+		io.DisplaySize = ImVec2((float)w, (float)h);
+		if (w > 0 && h > 0)
+			io.DisplayFramebufferScale = ImVec2((float)display_w / w, (float)display_h / h);
+
+		g_Example->m_width = w;
+		g_Example->m_height = h;
+
+
+		// Setup time step
+		double current_time = glfwGetTime();
+		io.DeltaTime = g_Example->m_deltaTime;
+
+		ImGui::NewFrame();
+	}
+#endif
+
 /******************************************************************************/
 Example* Im3d::g_Example;
 
@@ -1290,9 +1441,21 @@ bool Example::init(int _width, int _height, const char* _title)
 		*(++pathend) = '\0';
 		winAssert(SetCurrentDirectory(buf));
 		fprintf(stdout, "Set current directory: '%s'\n", buf);
-		
+
 		winAssert(QueryPerformanceFrequency(&g_SysTimerFreq));
 		winAssert(QueryPerformanceCounter(&m_currTime));
+	#endif
+
+	#if defined(IM3D_PLATFORM_LINUX)
+	 // force the current working directory to the exe location
+		char result[ PATH_MAX ];
+		readlink( "/proc/self/exe", result, PATH_MAX );
+		char* pathend = strrchr(result, (int)'/');
+		*(++pathend) = '\0';
+		chdir(result);
+
+		m_currTime = 0.f;
+		m_prevTime = 0.f;
 	#endif
 
 	ImGui::SetCurrentContext(ImGui::CreateContext()); // can't call this in ImGui_Init() because creating the window ends up calling ImGui::GetIO()
@@ -1304,7 +1467,7 @@ bool Example::init(int _width, int _height, const char* _title)
 	{
 		goto Example_init_fail;
 	}
-	#if defined(IM3D_OPENGL) 
+	#if defined(IM3D_OPENGL)
 		if (!InitOpenGL(IM3D_OPENGL_VMAJ, IM3D_OPENGL_VMIN))
 		{
 			goto Example_init_fail;
@@ -1319,7 +1482,7 @@ bool Example::init(int _width, int _height, const char* _title)
 	if (!ImGui_Init())
 	{
 		goto Example_init_fail;
-	}	
+	}
 	if (!Im3d_Init())
 	{
 		goto Example_init_fail;
@@ -1329,10 +1492,11 @@ bool Example::init(int _width, int _height, const char* _title)
 	m_camPos = Vec3(0.0f, 2.0f, 3.0f);
 	m_camDir = Normalize(Vec3(0.0f, -0.5f, -1.0f));
 	m_camFovDeg = 50.0f;
-	
+
 	return true;
 
 Example_init_fail:
+	fprintf(stderr, "Failed to open window\n");
 	shutdown();
 	return false;
 }
@@ -1342,12 +1506,12 @@ void Example::shutdown()
 	ImGui_Shutdown();
 	Im3d_Shutdown();
 
-	#if defined(IM3D_OPENGL) 
+	#if defined(IM3D_OPENGL)
 		ShutdownOpenGL();
 	#elif defined(IM3D_DX11)
 		ShutdownDx11();
 	#endif
-	
+
 	ShutdownWindow();
 
 	ImGui::EndFrame(); // prevent assert due to locked font atlas in DestroyContext() call below
@@ -1362,7 +1526,7 @@ bool Example::update()
 		winAssert(QueryPerformanceCounter(&m_currTime));
 		double microseconds = (double)((g_Example->m_currTime.QuadPart - g_Example->m_prevTime.QuadPart) * 1000000ll / g_SysTimerFreq.QuadPart);
 		m_deltaTime = (float)(microseconds / 1000000.0);
-	
+
 		MSG msg;
 		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE) && msg.message != WM_QUIT)
 		{
@@ -1371,7 +1535,48 @@ bool Example::update()
 		}
 		ret = msg.message != WM_QUIT;
 	#endif
-		
+
+	#if defined(IM3D_PLATFORM_LINUX)
+		g_Example->m_prevTime = m_currTime;
+		m_currTime = glfwGetTime();
+		m_deltaTime = m_currTime - m_prevTime;
+
+		ImGuiIO& io = ImGui::GetIO();
+		glfwPollEvents();
+		if(glfwWindowShouldClose(m_Window) != 0) {
+			return false;
+		}
+
+		for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
+			{
+				// If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
+				io.MouseDown[i] = g_MouseJustPressed[i] || glfwGetMouseButton(m_Window, i) != 0;
+				g_MouseJustPressed[i] = false;
+			}
+
+			// Update mouse position
+			const ImVec2 mouse_pos_backup = io.MousePos;
+			io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+#ifdef __EMSCRIPTEN__
+			const bool focused = true; // Emscripten
+#else
+			const bool focused = glfwGetWindowAttrib(m_Window, GLFW_FOCUSED) != 0;
+#endif
+			if (focused)
+			{
+				if (io.WantSetMousePos)
+				{
+					glfwSetCursorPos(m_Window, (double)mouse_pos_backup.x, (double)mouse_pos_backup.y);
+				}
+				else
+				{
+					double mouse_x, mouse_y;
+					glfwGetCursorPos(m_Window, &mouse_x, &mouse_y);
+					io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);
+				}
+			}
+	#endif
+
 	ImGui_Update();
 
 	float kCamSpeed = 2.0f;
@@ -1379,56 +1584,119 @@ bool Example::update()
 	float kCamRotationMul = 10.0f;
 	m_camWorld = LookAt(m_camPos, m_camPos - m_camDir);
 	m_camView = Inverse(m_camWorld);
-	#if defined(IM3D_PLATFORM_WIN)
-		Vec2 cursorPos = getWindowRelativeCursor();
-		if (hasFocus())
+
+	Vec2 cursorPos = getWindowRelativeCursor();
+	if (hasFocus())
+	{
+		if (!ImGui::GetIO().WantCaptureKeyboard)
 		{
-			if (!ImGui::GetIO().WantCaptureKeyboard)
+			bool ctrlDown = false;
+			#if defined(IM3D_PLATFORM_WIN)
+				ctrlDown = ((GetAsyncKeyState(VK_LCONTROL) & 0x8000) != 0);
+			#elif defined(IM3D_PLATFORM_LINUX)
+				ctrlDown = (glfwGetKey(m_Window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS);
+			#endif
+
+			bool shiftDown = false;
+			#if defined(IM3D_PLATFORM_WIN)
+				shiftDown = ((GetAsyncKeyState(VK_LSHIFT) & 0x8000) != 0);
+			#elif defined(IM3D_PLATFORM_LINUX)
+				shiftDown = (glfwGetKey(m_Window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS);
+			#endif
+
+			bool wDown = false;
+			#if defined(IM3D_PLATFORM_WIN)
+				wDown = ((GetAsyncKeyState(0x57) & 0x8000) != 0);
+			#elif defined(IM3D_PLATFORM_LINUX)
+				wDown = (glfwGetKey(m_Window, GLFW_KEY_W) == GLFW_PRESS);
+			#endif
+
+			bool aDown = false;
+			#if defined(IM3D_PLATFORM_WIN)
+				aDown = ((GetAsyncKeyState(0x41) & 0x8000) != 0);
+			#elif defined(IM3D_PLATFORM_LINUX)
+				aDown = (glfwGetKey(m_Window, GLFW_KEY_A) == GLFW_PRESS);
+			#endif
+
+			bool sDown = false;
+			#if defined(IM3D_PLATFORM_WIN)
+				sDown = ((GetAsyncKeyState(0x53) & 0x8000) != 0);
+			#elif defined(IM3D_PLATFORM_LINUX)
+				sDown = (glfwGetKey(m_Window, GLFW_KEY_S) == GLFW_PRESS);
+			#endif
+
+			bool dDown = false;
+			#if defined(IM3D_PLATFORM_WIN)
+				dDown = ((GetAsyncKeyState(0x44) & 0x8000) != 0);
+			#elif defined(IM3D_PLATFORM_LINUX)
+				dDown = (glfwGetKey(m_Window, GLFW_KEY_D) == GLFW_PRESS);
+			#endif
+
+			bool qDown = false;
+			#if defined(IM3D_PLATFORM_WIN)
+				qDown = ((GetAsyncKeyState(0x51) & 0x8000) != 0);
+			#elif defined(IM3D_PLATFORM_LINUX)
+				qDown = (glfwGetKey(m_Window, GLFW_KEY_Q) == GLFW_PRESS);
+			#endif
+
+			bool eDown = false;
+			#if defined(IM3D_PLATFORM_WIN)
+				eDown = ((GetAsyncKeyState(0x45) & 0x8000) != 0);
+			#elif defined(IM3D_PLATFORM_LINUX)
+				eDown = (glfwGetKey(m_Window, GLFW_KEY_E) == GLFW_PRESS);
+			#endif
+
+			if (shiftDown)
 			{
-				if (GetAsyncKeyState(VK_LSHIFT) & 0x8000)
-				{
-					kCamSpeed *= 10.0f;
-				}
-				if ((GetAsyncKeyState(VK_LCONTROL) & 0x8000) == 0 ) // ctrl not pressed
-				{
-					if (GetAsyncKeyState(0x57) & 0x8000) // W (forward)
-					{
-						m_camPos = m_camPos - m_camWorld.getCol(2) * (m_deltaTime * kCamSpeed);
-					}
-					if (GetAsyncKeyState(0x41) & 0x8000) // A (left)
-					{
-						m_camPos = m_camPos - m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
-					}
-					if (GetAsyncKeyState(0x53) & 0x8000) // S (backward)
-					{
-						m_camPos = m_camPos + m_camWorld.getCol(2) * (m_deltaTime * kCamSpeed);
-					}
-					if (GetAsyncKeyState(0x44) & 0x8000) // D (right)
-					{
-						m_camPos = m_camPos + m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
-					}
-					if (GetAsyncKeyState(0x51) & 0x8000) // Q (down)
-					{
-						m_camPos = m_camPos - m_camWorld.getCol(1)* (m_deltaTime * kCamSpeed);
-					}
-					if (GetAsyncKeyState(0x45) & 0x8000) // D (up)
-					{
-						m_camPos = m_camPos + m_camWorld.getCol(1) * (m_deltaTime * kCamSpeed);
-					}
-				}
+				kCamSpeed *= 10.0f;
 			}
-			if (!ImGui::GetIO().WantCaptureMouse)
+			if (!ctrlDown)
 			{
-				if (GetAsyncKeyState(VK_RBUTTON) & 0x8000)
+				if (wDown) // W (forward)
 				{
-					Vec2 cursorDelta = ((cursorPos - m_prevCursorPos) / Vec2((float)m_width, (float)m_height)) * kCamRotationMul;
-					m_camDir = Rotation(Vec3(0.0f, 1.0f, 0.0f), -cursorDelta.x) * m_camDir;
-					m_camDir = Rotation(m_camWorld.getCol(0), -cursorDelta.y) * m_camDir;
+					m_camPos = m_camPos - m_camWorld.getCol(2) * (m_deltaTime * kCamSpeed);
+				}
+				if (aDown) // A (left)
+				{
+					m_camPos = m_camPos - m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
+				}
+				if (sDown) // S (backward)
+				{
+					m_camPos = m_camPos + m_camWorld.getCol(2) * (m_deltaTime * kCamSpeed);
+				}
+				if (dDown) // D (right)
+				{
+					m_camPos = m_camPos + m_camWorld.getCol(0) * (m_deltaTime * kCamSpeed);
+				}
+				if (qDown) // Q (down)
+				{
+					m_camPos = m_camPos - m_camWorld.getCol(1) * (m_deltaTime * kCamSpeed);
+				}
+				if (eDown) // E (up)
+				{
+					m_camPos = m_camPos + m_camWorld.getCol(1) * (m_deltaTime * kCamSpeed);
 				}
 			}
 		}
-		m_prevCursorPos = cursorPos;
-	#endif
+		if (!ImGui::GetIO().WantCaptureMouse)
+		{
+			bool mouseRightDown = false;
+			#if defined(IM3D_PLATFORM_WIN)
+				mouseRightDown = ((GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0);
+			#elif defined(IM3D_PLATFORM_LINUX)
+				mouseRightDown = (glfwGetMouseButton(m_Window, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS);
+			#endif
+
+			if (mouseRightDown)
+			{
+				Vec2 cursorDelta = ((cursorPos - m_prevCursorPos) / Vec2((float)m_width, (float)m_height)) * kCamRotationMul;
+				m_camDir = Rotation(Vec3(0.0f, 1.0f, 0.0f), -cursorDelta.x) * m_camDir;
+				m_camDir = Rotation(m_camWorld.getCol(0), -cursorDelta.y) * m_camDir;
+			}
+		}
+	}
+	m_prevCursorPos = cursorPos;
+
 
 	m_camFovRad = Im3d::Radians(m_camFovDeg);
 	float n = 0.1f;
@@ -1436,7 +1704,7 @@ bool Example::update()
 	float a = (float)m_width / (float)m_height;
 	float scale = tanf(m_camFovRad * 0.5f) * n;
 	float viewZ = -1.0f;
-	
+
 	if (m_camOrtho)
 	{
 	 // ortho proj
@@ -1488,7 +1756,7 @@ bool Example::update()
 
 	ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
 	ImGui::Begin(
-		"Frame Info", 0, 
+		"Frame Info", 0,
 		ImGuiWindowFlags_NoTitleBar |
 		ImGuiWindowFlags_NoResize |
 		ImGuiWindowFlags_NoMove |
@@ -1504,7 +1772,7 @@ bool Example::update()
 	ImGui::End();
 
 	Im3d_NewFrame();
-	
+
 	return ret;
 }
 
@@ -1518,14 +1786,18 @@ void Example::draw()
 
 	#if defined(IM3D_PLATFORM_WIN)
 		winAssert(ValidateRect(m_hwnd, 0)); // suppress WM_PAINT
-		
+
 		#if defined(IM3D_OPENGL)
 			winAssert(SwapBuffers(m_hdc));
 		#elif defined(IM3D_DX11)
 			m_dxgiSwapChain->Present(0, 0);
 		#endif
 	#endif
-	
+
+	#if defined(IM3D_PLATFORM_LINUX)
+		glfwSwapBuffers(m_Window);
+	#endif
+
  // reset state & clear backbuffer for next frame
 	#if defined(IM3D_OPENGL)
 		glAssert(glBindVertexArray(0));
@@ -1533,10 +1805,10 @@ void Example::draw()
 		glAssert(glViewport(0, 0, m_width, m_height));
 		glAssert(glClearColor(kClearColor.x, kClearColor.y, kClearColor.z, kClearColor.w));
 		glAssert(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
-	
+
 	#elif defined (IM3D_DX11)
 		m_d3dDeviceCtx->ClearRenderTargetView(m_d3dRenderTarget, kClearColor);
-		m_d3dDeviceCtx->ClearDepthStencilView(m_d3dDepthStencil, D3D11_CLEAR_DEPTH, 1.0f, 0xff); 
+		m_d3dDeviceCtx->ClearDepthStencilView(m_d3dDepthStencil, D3D11_CLEAR_DEPTH, 1.0f, 0xff);
 	#endif
 }
 
@@ -1544,7 +1816,10 @@ bool Example::hasFocus() const
 {
 	#if defined(IM3D_PLATFORM_WIN)
 		return m_hwnd == GetFocus();
+	#elif defined(IM3D_PLATFORM_LINUX)
+		return glfwGetWindowAttrib(m_Window, GLFW_FOCUSED) != 0;
 	#endif
+		return false;
 }
 
 Vec2 Example::getWindowRelativeCursor() const
@@ -1555,6 +1830,12 @@ Vec2 Example::getWindowRelativeCursor() const
 		winAssert(ScreenToClient(m_hwnd, &p));
 		return Vec2((float)p.x, (float)p.y);
 	#endif
+	#if defined(IM3D_PLATFORM_LINUX)
+		double mouse_x, mouse_y;
+		glfwGetCursorPos(m_Window, &mouse_x, &mouse_y);
+		return Vec2((float)mouse_x, (float)mouse_y);
+	#endif
+		return {};
 }
 
 void Example::drawTextDrawListsImGui(const Im3d::TextDrawList _textDrawLists[], U32 _count)
@@ -1577,11 +1858,11 @@ void Example::drawTextDrawListsImGui(const Im3d::TextDrawList _textDrawLists[], 
 
 	ImDrawList* imDrawList = ImGui::GetWindowDrawList();
 	const Mat4 viewProj = m_camViewProj;
-	for (U32 i = 0; i < _count; ++i) 
+	for (U32 i = 0; i < _count; ++i)
 	{
 		const TextDrawList& textDrawList = Im3d::GetTextDrawLists()[i];
-		
-		if (textDrawList.m_layerId == Im3d::MakeId("NamedLayer")) 
+
+		if (textDrawList.m_layerId == Im3d::MakeId("NamedLayer"))
 		{
 			// The application may group primitives into layers, which can be used to change the draw state (e.g. enable depth testing, use a different shader)
 		}
@@ -1597,7 +1878,7 @@ void Example::drawTextDrawListsImGui(const Im3d::TextDrawList _textDrawLists[], 
 			// Project world -> screen space.
 			Vec4 clip = viewProj * Vec4(textData.m_positionSize.x, textData.m_positionSize.y, textData.m_positionSize.z, 1.0f);
 			Vec2 screen = Vec2(clip.x / clip.w, clip.y / clip.w);
-	
+
 			// Cull text which falls offscreen. Note that this doesn't take into account text size but works well enough in practice.
 			if (clip.w < 0.0f || screen.x >= 1.0f || screen.y >= 1.0f)
 			{

@@ -480,6 +480,7 @@ enum Key
 	Key_R,
 	Key_S,
 	Key_T,
+	Key_LControl,
 
 	Key_Count,
 

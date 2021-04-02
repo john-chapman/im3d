@@ -12,4 +12,4 @@
 !**/vs*/*.filters
 
 # GNU Makefiles
-**/gmake/obj/**
+**/gmake/**

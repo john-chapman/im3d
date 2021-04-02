@@ -28,7 +28,7 @@ bool Im3d_Init()
 			if (!ret)
 			{
 				return false;
-			}			
+			}
 		}
 		else
 		{
@@ -73,7 +73,7 @@ bool Im3d_Init()
 			if (!ret)
 			{
 				return false;
-			}		
+			}
 		}
 		else
 		{
@@ -82,7 +82,7 @@ bool Im3d_Init()
 	}
 
 	glAssert(glGenBuffers(1, &g_Im3dVertexBuffer));;
-	glAssert(glGenVertexArrays(1, &g_Im3dVertexArray));	
+	glAssert(glGenVertexArrays(1, &g_Im3dVertexArray));
 	glAssert(glBindVertexArray(g_Im3dVertexArray));
 	glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_Im3dVertexBuffer));
 	glAssert(glEnableVertexAttribArray(0));
@@ -103,6 +103,56 @@ void Im3d_Shutdown()
 	glAssert(glDeleteProgram(g_Im3dShaderTriangles));
 }
 
+namespace {
+    bool isKeyDown(Im3d::Key key) {
+        switch (key) {
+            case Im3d::Key_LControl:
+            #if defined(IM3D_PLATFORM_WIN)
+                return (GetAsyncKeyState(VK_LCONTROL) & 0x8000) != 0;
+            #elif defined(IM3D_PLATFORM_LINUX)
+                return glfwGetKey(g_Example->m_Window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS;
+            #endif
+            case Im3d::Key_L:
+            #if defined(IM3D_PLATFORM_WIN)
+                return (GetAsyncKeyState(0x4c) & 0x8000) != 0;
+            #elif defined(IM3D_PLATFORM_LINUX)
+                return glfwGetKey(g_Example->m_Window, GLFW_KEY_L) == GLFW_PRESS;
+            #endif
+            case Im3d::Key_T:
+            #if defined(IM3D_PLATFORM_WIN)
+                return (GetAsyncKeyState(0x54) & 0x8000) != 0;
+            #elif defined(IM3D_PLATFORM_LINUX)
+                return glfwGetKey(g_Example->m_Window, GLFW_KEY_T) == GLFW_PRESS;
+            #endif
+            case Im3d::Key_R:
+            #if defined(IM3D_PLATFORM_WIN)
+                return (GetAsyncKeyState(0x52) & 0x8000) != 0;
+            #elif defined(IM3D_PLATFORM_LINUX)
+                return glfwGetKey(g_Example->m_Window, GLFW_KEY_R) == GLFW_PRESS;
+            #endif
+            case Im3d::Key_S:
+            #if defined(IM3D_PLATFORM_WIN)
+                return (GetAsyncKeyState(0x53) & 0x8000) != 0;
+            #elif defined(IM3D_PLATFORM_LINUX)
+                return glfwGetKey(g_Example->m_Window, GLFW_KEY_S) == GLFW_PRESS;
+            #endif
+        }
+        return false;
+    }
+
+    bool isMouseButtonDown(Im3d::Key key) {
+        switch (key) {
+            case Im3d::Mouse_Left:
+	        #if defined(IM3D_PLATFORM_WIN)
+                return (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+            #elif defined(IM3D_PLATFORM_LINUX)
+                return glfwGetMouseButton(g_Example->m_Window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS;
+            #endif
+        }
+        return false;
+    }
+}
+
 // At the top of each frame, the application must fill the Im3d::AppData struct and then call Im3d::NewFrame().
 // The example below shows how to do this, in particular how to generate the 'cursor ray' from a mouse position
 // which is necessary for interacting with gizmos.
@@ -115,13 +165,13 @@ void Im3d_NewFrame()
 	ad.m_viewOrigin    = g_Example->m_camPos; // for VR use the head position
 	ad.m_viewDirection = g_Example->m_camDir;
 	ad.m_worldUp       = Vec3(0.0f, 1.0f, 0.0f); // used internally for generating orthonormal bases
-	ad.m_projOrtho     = g_Example->m_camOrtho; 
-	
+	ad.m_projOrtho     = g_Example->m_camOrtho;
+
  // m_projScaleY controls how gizmos are scaled in world space to maintain a constant screen height
 	ad.m_projScaleY = g_Example->m_camOrtho
 		? 2.0f / g_Example->m_camProj(1, 1) // use far plane height for an ortho projection
 		: tanf(g_Example->m_camFovRad * 0.5f) * 2.0f // or vertical fov for a perspective projection
-		;  
+		;
 
  // World space cursor ray from mouse position; for VR this might be the position/orientation of the HMD or a tracked controller.
 	Vec2 cursorPos = g_Example->getWindowRelativeCursor();
@@ -135,7 +185,7 @@ void Im3d_NewFrame()
 		rayOrigin.z  = 0.0f;
 		rayOrigin    = g_Example->m_camWorld * Vec4(rayOrigin, 1.0f);
 		rayDirection = g_Example->m_camWorld * Vec4(0.0f, 0.0f, -1.0f, 0.0f);
-		 
+
 	}
 	else
 	{
@@ -154,15 +204,15 @@ void Im3d_NewFrame()
 
  // Fill the key state array; using GetAsyncKeyState here but this could equally well be done via the window proc.
  // All key states have an equivalent (and more descriptive) 'Action_' enum.
-	ad.m_keyDown[Im3d::Mouse_Left/*Im3d::Action_Select*/] = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+	ad.m_keyDown[Im3d::Mouse_Left/*Im3d::Action_Select*/] = isMouseButtonDown(Im3d::Mouse_Left);
 
  // The following key states control which gizmo to use for the generic Gizmo() function. Here using the left ctrl
  // key as an additional predicate.
-	bool ctrlDown = (GetAsyncKeyState(VK_LCONTROL) & 0x8000) != 0;
-	ad.m_keyDown[Im3d::Key_L/*Action_GizmoLocal*/]       = ctrlDown && (GetAsyncKeyState(0x4c) & 0x8000) != 0;
-	ad.m_keyDown[Im3d::Key_T/*Action_GizmoTranslation*/] = ctrlDown && (GetAsyncKeyState(0x54) & 0x8000) != 0;
-	ad.m_keyDown[Im3d::Key_R/*Action_GizmoRotation*/]    = ctrlDown && (GetAsyncKeyState(0x52) & 0x8000) != 0;
-	ad.m_keyDown[Im3d::Key_S/*Action_GizmoScale*/]       = ctrlDown && (GetAsyncKeyState(0x53) & 0x8000) != 0;
+	bool ctrlDown = isKeyDown(Im3d::Key_LControl);
+	ad.m_keyDown[Im3d::Key_L/*Action_GizmoLocal*/]       = ctrlDown && isKeyDown(Im3d::Key_L);
+	ad.m_keyDown[Im3d::Key_T/*Action_GizmoLocal*/]       = ctrlDown && isKeyDown(Im3d::Key_T);
+	ad.m_keyDown[Im3d::Key_R/*Action_GizmoLocal*/]       = ctrlDown && isKeyDown(Im3d::Key_R);
+	ad.m_keyDown[Im3d::Key_S/*Action_GizmoLocal*/]       = ctrlDown && isKeyDown(Im3d::Key_S);
 
  // Enable gizmo snapping by setting the translation/rotation/scale increments to be > 0
 	ad.m_snapTranslation = ctrlDown ? 0.5f : 0.0f;
@@ -174,7 +224,7 @@ void Im3d_NewFrame()
 
 // After all Im3d calls have been made for a frame, the user must call Im3d::EndFrame() to finalize draw data, then
 // access the draw lists for rendering. Draw lists are only valid between calls to EndFrame() and NewFrame().
-// The example below shows the simplest approach to rendering draw lists; variations on this are possible. See the 
+// The example below shows the simplest approach to rendering draw lists; variations on this are possible. See the
 // shader source file for more details.
 void Im3d_EndFrame()
 {
@@ -187,16 +237,16 @@ void Im3d_EndFrame()
 	glAssert(glBlendEquation(GL_FUNC_ADD));
 	glAssert(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 	glAssert(glEnable(GL_PROGRAM_POINT_SIZE));
-		
+
 	for (U32 i = 0, n = Im3d::GetDrawListCount(); i < n; ++i)
 	{
 		const Im3d::DrawList& drawList = Im3d::GetDrawLists()[i];
- 
+
 		if (drawList.m_layerId == Im3d::MakeId("NamedLayer"))
 		{
 		 // The application may group primitives into layers, which can be used to change the draw state (e.g. enable depth testing, use a different shader)
 		}
-	
+
 		GLenum prim;
 		GLuint sh;
 		switch (drawList.m_primType)
@@ -220,11 +270,11 @@ void Im3d_EndFrame()
 				IM3D_ASSERT(false);
 				return;
 		};
-	
+
 		glAssert(glBindVertexArray(g_Im3dVertexArray));
 		glAssert(glBindBuffer(GL_ARRAY_BUFFER, g_Im3dVertexBuffer));
 		glAssert(glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)drawList.m_vertexCount * sizeof(Im3d::VertexData), (GLvoid*)drawList.m_vertexData, GL_STREAM_DRAW));
-	
+
 		AppData& ad = GetAppData();
 		glAssert(glUseProgram(sh));
 		glAssert(glUniform2f(glGetUniformLocation(sh, "uViewport"), ad.m_viewportSize.x, ad.m_viewportSize.y));
