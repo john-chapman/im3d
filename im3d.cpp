@@ -352,13 +352,13 @@ void Im3d::DrawSphereFilled(const Vec3& _origin, float _radius, int _detail)
 				float z = sinf(x);
 				x = cosf(x);
 
-				ctx.vertex(Vec3(xp * rp, yp, zp * rp));
-				ctx.vertex(Vec3(xp * r,  y,  zp * r));
-				ctx.vertex(Vec3(x  * r,  y,  z  * r));
+				ctx.vertex(Vec3(xp * rp + _origin.x, yp + _origin.y, zp * rp + _origin.z));
+				ctx.vertex(Vec3(xp * r  + _origin.x, y  + _origin.y, zp * r  + _origin.z));
+				ctx.vertex(Vec3(x  * r  + _origin.x, y  + _origin.y, z  * r  + _origin.z));
 
-				ctx.vertex(Vec3(xp * rp, yp, zp * rp));
-				ctx.vertex(Vec3(x  * r,  y,  z  * r));
-				ctx.vertex(Vec3(x  * rp, yp, z  * rp));
+				ctx.vertex(Vec3(xp * rp + _origin.x, yp + _origin.y, zp * rp + _origin.z));
+				ctx.vertex(Vec3(x  * r  + _origin.x, y  + _origin.y, z  * r  + _origin.z));
+				ctx.vertex(Vec3(x  * rp + _origin.x, yp + _origin.y, z  * rp + _origin.z));
 
 				xp = x;
 				zp = z;
