@@ -45,9 +45,8 @@ Integration is fairly straightforward:
 At runtime, the application should then proceed as follows:
 
 - At startup, load the graphics resources (shaders, etc.) required to actually draw the Im3d vertex buffers.
-- Disable depth test, disable culling, enable blending, use front face counter-clockwise winding.
 - Each frame, fill the `Im3d::AppData` struct, providing user input and other context data, then call `Im3d::NewFrame()`.
-- Towards the end of the frame, call `Im3d::Draw()` once for each view/projection to be rendered. Im3d calls an application-defined callback to actually execute rendering commands and draw the points/lines/triangles pushed during the frame.
+- Towards the end of the frame, call `Im3d::Draw()` once for each view/projection to be rendered. Im3d calls an application-defined callback to actually execute rendering commands and draw the points/lines/triangles pushed during the frame. Make sure to disable depth test, disable culling, enable blending, use front face counter-clockwise winding.
 
 More detailed and API-specific integration examples are available in [examples/](https://github.com/john-chapman/im3d/tree/master/examples).
 
