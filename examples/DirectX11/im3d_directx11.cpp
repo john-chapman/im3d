@@ -111,16 +111,9 @@ bool Im3d_Init()
 		dxAssert(d3d->CreateInputLayout(desc, 2, g_Im3dShaderPoints.m_vsBlob->GetBufferPointer(), g_Im3dShaderPoints.m_vsBlob->GetBufferSize(), &g_Im3dInputLayout));
 	}
 
-	{	D3D11_RASTERIZER_DESC desc = {};
-		desc.FillMode = D3D11_FILL_SOLID;
-		desc.CullMode = D3D11_CULL_NONE; // culling invalid for points/lines (they are view-aligned), valid but optional for triangles
-		dxAssert(d3d->CreateRasterizerState(&desc, &g_Im3dRasterizerState));
-	}
+	g_Im3dConstantBuffer = CreateConstantBuffer(sizeof(Mat4) + sizeof(Vec4), D3D11_USAGE_DYNAMIC);
 
-	{	D3D11_DEPTH_STENCIL_DESC desc = {};
-		dxAssert(d3d->CreateDepthStencilState(&desc, &g_Im3dDepthStencilState));
-	}
-
+	// Typical pipeline states: enable alpha blending, disable depth test and backface culling.
 	{	D3D11_BLEND_DESC desc = {};
 		desc.RenderTarget[0].BlendEnable = true;
 		desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
@@ -132,8 +125,14 @@ bool Im3d_Init()
 		desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 		dxAssert(d3d->CreateBlendState(&desc, &g_Im3dBlendState));
 	}
-
-	g_Im3dConstantBuffer = CreateConstantBuffer(sizeof(Mat4) + sizeof(Vec4), D3D11_USAGE_DYNAMIC);
+	{	D3D11_RASTERIZER_DESC desc = {};
+		desc.FillMode = D3D11_FILL_SOLID;
+		desc.CullMode = D3D11_CULL_NONE;
+		dxAssert(d3d->CreateRasterizerState(&desc, &g_Im3dRasterizerState));
+	}
+	{	D3D11_DEPTH_STENCIL_DESC desc = {};
+		dxAssert(d3d->CreateDepthStencilState(&desc, &g_Im3dDepthStencilState));
+	}
 
 	return true;
 }
@@ -235,6 +234,10 @@ void Im3d_EndFrame()
 
 	ID3D11Device* d3d = g_Example->m_d3dDevice;
 	ID3D11DeviceContext* ctx = g_Example->m_d3dDeviceCtx;
+
+	ctx->OMSetBlendState(g_Im3dBlendState, nullptr, 0xffffffff);
+	ctx->OMSetDepthStencilState(g_Im3dDepthStencilState, 0);
+	ctx->RSSetState(g_Im3dRasterizerState);
 	
 	D3D11_VIEWPORT viewport =
 		{
@@ -243,9 +246,6 @@ void Im3d_EndFrame()
 			0.0f, 1.0f // MinDepth, MaxDepth
 		};
 	ctx->RSSetViewports(1, &viewport);
-	ctx->OMSetBlendState(g_Im3dBlendState, nullptr, 0xffffffff);
-	ctx->OMSetDepthStencilState(g_Im3dDepthStencilState, 0);
-	ctx->RSSetState(g_Im3dRasterizerState);
 
 	for (U32 i = 0, n = Im3d::GetDrawListCount(); i < n; ++i)
 	{

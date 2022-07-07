@@ -182,11 +182,15 @@ void Im3d_EndFrame()
 
  // Primitive rendering.
 
-	glAssert(glViewport(0, 0, (GLsizei)g_Example->m_width, (GLsizei)g_Example->m_height));
+	// Typical pipeline state: enable alpha blending, disable depth test and backface culling.
 	glAssert(glEnable(GL_BLEND));
 	glAssert(glBlendEquation(GL_FUNC_ADD));
 	glAssert(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 	glAssert(glEnable(GL_PROGRAM_POINT_SIZE));
+	glAssert(glDisable(GL_DEPTH_TEST));
+	glAssert(glDisable(GL_CULL_FACE));
+
+	glAssert(glViewport(0, 0, (GLsizei)g_Example->m_width, (GLsizei)g_Example->m_height));
 		
 	for (U32 i = 0, n = Im3d::GetDrawListCount(); i < n; ++i)
 	{
