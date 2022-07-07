@@ -37,16 +37,16 @@ See [here](https://github.com/john-chapman/im3d/blob/master/examples/common/main
 ### Integration
 Im3d has no dependencies other than the C standard lib. A C++11 compatible compiler is required.
 
-Integration is fairly straightforward:
+Integration is straightforward:
 
 - Copy the files from the root of this repo and add them to the application project.
-- Modify `im3d_config.h` if necessary (provide a custom `malloc`/`free`, set the vertex data alignment, matrix layout, etc.).
+- Modify `im3d_config.h` if necessary (e.g. provide a custom `malloc`/`free`, set the vertex data alignment, matrix layout, etc.). It's also possible to `#define IM3D_CONFIG "myfilename.h"` from your build system to avoid modifying this file directly.
 
 At runtime, the application should then proceed as follows:
 
-- At startup, load the graphics resources (shaders, etc.) required to actually draw the Im3d vertex buffers.
+- At startup, initialize the graphics resources (shaders, etc.) required to actually draw the Im3d vertex buffers.
 - Each frame, fill the `Im3d::AppData` struct, providing user input and other context data, then call `Im3d::NewFrame()`.
-- Towards the end of the frame, call `Im3d::Draw()` once for each view/projection to be rendered. Im3d calls an application-defined callback to actually execute rendering commands and draw the points/lines/triangles pushed during the frame.
+- Towards the end of the frame, call `Im3d::EndFrame()` to finalize draw lists, then access the draw lists for rendering via `Im3d::GetDrawListCount()`, `Im3d::GetDrawLists()[i]`.
 
 More detailed and API-specific integration examples are available in [examples/](https://github.com/john-chapman/im3d/tree/master/examples).
 
@@ -56,7 +56,8 @@ More detailed and API-specific integration examples are available in [examples/]
 
 - [im3d.h](https://github.com/john-chapman/im3d/tree/master/im3d.h) contains the main API documentation.
 - [examples/common/main.cpp](https://github.com/john-chapman/im3d/tree/master/examples/common/main.cpp) contains usage examples for most features, especially how to use the `Gizmo*()` API.
-- [examples/](https://github.com/john-chapman/im3d/tree/master/examples) contain reference implementations with lots of comments.
+- [examples/](https://github.com/john-chapman/im3d/tree/master/examples) contains reference implementations with lots of comments.
+- [Im3d wiki](https://github.com/john-chapman/im3d/wiki) provides overviews and additional detail for specific/advanced functionality.
 
 
 **Are geometry shaders required?**
@@ -72,8 +73,8 @@ No, the application is free to render the vertex data in any conceivable manner.
 
 - Check which version you currently have; `IM3D_VERSION` is defined at the top of [im3d.h](https://github.com/john-chapman/im3d/tree/master/im3d.h).
 - Examine the change log in the latest version of [im3d.cpp](https://github.com/john-chapman/im3d/tree/master/im3d.cpp) to see if there have been any API-breaking changes which require modifications on the application side.
-- Overwrite everything *except* `im3d_config.h` if you have made any changes to your copy.
+- Overwrite everything, but don't forget to merge changes into `im3d_config.h` if you have made any modifications to your copy.
 
 **Is Im3d thread safe?**
 
-Im3d provides no thread safety mechanism per se, however per-thread contexts are fully supported and can be used to achieve thread safety.
+Im3d provides no thread safety mechanism per se, however per-thread contexts are fully supported and can be used to make Im3d API calls from multiple threads. See [wiki/Multiple-Contexts](https://github.com/john-chapman/im3d/wiki/Multiple-Contexts) for more info.
