@@ -236,7 +236,9 @@ int main(int, char**)
 				Shape_Cylinder,
 				Shape_Capsule,
 				Shape_Prism,
-				Shape_Arrow
+				Shape_Arrow,
+				Shape_Cone,
+				Shape_ConeFilled
 			};
 			static const char* shapeList = 
 				"Quad\0"
@@ -251,6 +253,8 @@ int main(int, char**)
 				"Capsule\0"
 				"Prism\0"
 				"Arrow\0"
+				"Cone\0"
+				"ConeFilled\0"
 				;
 			static int currentShape = Shape_Capsule;
 			ImGui::Combo("Shape", &currentShape, shapeList);
@@ -369,6 +373,24 @@ int main(int, char**)
 					ImGui::SliderFloat("Head Length",     &headLength,    0.0f, 1.0f);
 					ImGui::SliderFloat("Head Thickness",  &headThickness, 0.0f, 1.0f);
 					Im3d::DrawArrow(Im3d::Vec3(0.0f), Im3d::Vec3(0.0f, arrowLength, 0.0f), headLength, headThickness);
+					break;
+				}
+				case Shape_Cone:
+				case Shape_ConeFilled:
+				{
+					static float coneHeight   = 1.0f;
+					static float coneRadius   = 1.0f;
+					ImGui::SliderFloat("Height",    &coneHeight,   0.0f, 10.0f);
+					ImGui::SliderFloat("Radius",    &coneRadius,   0.0f, 10.0f);
+					ImGui::SliderInt("Detail", &detail, -1, 128);
+					if (currentShape == Shape_Cone)
+					{
+						Im3d::DrawCone(Im3d::Vec3(0.0f),Im3d::Vec3(0.0f, 1.0f, 0.0f),coneHeight,coneRadius,detail);
+					}else
+					{
+						Im3d::DrawConeFilled(Im3d::Vec3(0.0f),Im3d::Vec3(0.0f, 1.0f, 0.0f),coneHeight,coneRadius,detail);
+					}
+					
 					break;
 				}
 				default:
