@@ -623,7 +623,7 @@ void Im3d::DrawCone(const Vec3& _origin, const Vec3& _normal,float height, float
 
     Context& ctx = GetContext();
     #if IM3D_CULL_PRIMITIVES
-        if (!ctx.isVisible(_origin, _radius))
+        if (!ctx.isVisible(_origin + _normal * height / 2, height / 2))
         {
             return;
         }
@@ -632,7 +632,7 @@ void Im3d::DrawCone(const Vec3& _origin, const Vec3& _normal,float height, float
 
     if (_detail < 0)
     {
-        _detail = ctx.estimateLevelOfDetail(_origin, _radius, 8, 48);
+        _detail = ctx.estimateLevelOfDetail(_origin + _normal * height / 2, height / 2, 8, 48);
     }
     _detail = Max(_detail, 3);
 
@@ -663,7 +663,7 @@ void Im3d::DrawConeFilled(const Vec3& _origin, const Vec3& _normal,float height,
 
     Context& ctx = GetContext();
     #if IM3D_CULL_PRIMITIVES
-        if (!ctx.isVisible(_origin, _radius))
+        if (!ctx.isVisible(_origin + _normal * height / 2, height / 2))
         {
             return;
         }
@@ -672,7 +672,7 @@ void Im3d::DrawConeFilled(const Vec3& _origin, const Vec3& _normal,float height,
 
     if (_detail < 0)
     {
-        _detail = ctx.estimateLevelOfDetail(_origin, _radius, 8, 48);
+        _detail = ctx.estimateLevelOfDetail(_origin + _normal * height / 2, height / 2, 8, 48);
     }
     _detail = Max(_detail, 3);
 
