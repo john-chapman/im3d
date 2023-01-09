@@ -619,6 +619,86 @@ void Im3d::DrawArrow(const Vec3& _start, const Vec3& _end, float _headLength, fl
 	ctx.end();
 }
 
+void Im3d::DrawCone(const Vec3& _origin, const Vec3& _normal,float height, float _radius, int _detail){
+
+    Context& ctx = GetContext();
+    #if IM3D_CULL_PRIMITIVES
+        if (!ctx.isVisible(_origin + _normal * height / 2, height / 2))
+        {
+            return;
+        }
+    #endif
+
+
+    if (_detail < 0)
+    {
+        _detail = ctx.estimateLevelOfDetail(_origin + _normal * height / 2, height / 2, 8, 48);
+    }
+    _detail = Max(_detail, 3);
+
+    //cone bottom face
+    DrawCircle(_origin,_normal,_radius,_detail);
+
+    //cone side face
+    ctx.pushMatrix(ctx.getMatrix() * LookAt(_origin, _origin + _normal, ctx.getAppData().m_worldUp));
+    ctx.begin(PrimitiveMode_LineLoop);
+        float cp = _radius;
+        float sp = 0.0f;
+        for (int i = 1; i <= _detail; ++i)
+        {
+            ctx.vertex(Vec3(0,0,1)*height);
+            ctx.vertex(Vec3(cp, sp, 0.0f));
+            float rad = TwoPi * ((float)i / (float)_detail);
+            float c = cosf(rad) * _radius;
+            float s = sinf(rad) * _radius;
+            ctx.vertex(Vec3(c, s, 0.0f));
+            cp = c;
+            sp = s;
+        }
+    ctx.end();
+    ctx.popMatrix();
+}
+
+void Im3d::DrawConeFilled(const Vec3& _origin, const Vec3& _normal,float height, float _radius, int _detail){
+
+    Context& ctx = GetContext();
+    #if IM3D_CULL_PRIMITIVES
+        if (!ctx.isVisible(_origin + _normal * height / 2, height / 2))
+        {
+            return;
+        }
+    #endif
+
+
+    if (_detail < 0)
+    {
+        _detail = ctx.estimateLevelOfDetail(_origin + _normal * height / 2, height / 2, 8, 48);
+    }
+    _detail = Max(_detail, 3);
+
+    //cone bottom face
+    DrawCircleFilled(_origin,_normal,_radius,_detail);
+
+    //cone side face
+    ctx.pushMatrix(ctx.getMatrix() * LookAt(_origin, _origin + _normal, ctx.getAppData().m_worldUp));
+    ctx.begin(PrimitiveMode_Triangles);
+        float cp = _radius;
+        float sp = 0.0f;
+        for (int i = 1; i <= _detail; ++i)
+        {
+            ctx.vertex(Vec3(0,0,1)*height);
+            ctx.vertex(Vec3(cp, sp, 0.0f));
+            float rad = TwoPi * ((float)i / (float)_detail);
+            float c = cosf(rad) * _radius;
+            float s = sinf(rad) * _radius;
+            ctx.vertex(Vec3(c, s, 0.0f));
+            cp = c;
+            sp = s;
+        }
+    ctx.end();
+    ctx.popMatrix();
+}
+
 
 void Im3d::Text(const Vec3& _position, U32 _textFlags, const char* _text, ...)
 {
