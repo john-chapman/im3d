@@ -22,6 +22,25 @@
 	#define IM3D_VERTEX_ALIGNMENT 4
 #endif
 
+#if defined(IM3D_MALLOC) && !defined(IM3D_FREE)
+#error im3d: IM3D_MALLOC defined without IM3D_FREE; define both or neither
+#endif
+#if defined(IM3D_FREE) && !defined(IM3D_MALLOC)
+#error im3d: IM3D_FREE defined without IM3D_MALLOC; define both or neither
+#endif
+#ifndef IM3D_MALLOC
+#define IM3D_MALLOC(size) malloc(size)
+#endif
+#ifndef IM3D_FREE
+#define IM3D_FREE(ptr) free(ptr)
+#endif
+#ifndef IM3D_CULL_PRIMITIVES
+#define IM3D_CULL_PRIMITIVES 0
+#endif
+#ifndef IM3D_CULL_GIZMOS
+#define IM3D_CULL_GIZMOS 0
+#endif
+
 #include <cstdarg> // va_list
 
 namespace Im3d {
