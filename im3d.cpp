@@ -2335,10 +2335,17 @@ bool Context::gizmoAxisTranslation_Behavior(Id _id, const Vec3& _origin, const V
 		{
 			float tr, tl;
 			Nearest(ray, axisLine, tr, tl);
+			const Vec3 delta = _axis * tl - storedPosition;
 			#if IM3D_RELATIVE_SNAP
-				*_out_ = *_out_ + Snap(_axis * tl - storedPosition, _snap);
+				const float dist = Dot(delta, _axis);
+				const float snappedDist = Snap(dist, _snap);
+				*_out_ = *_out_ + _axis * snappedDist;
 			#else
-				*_out_ = Snap(*_out_ + _axis * tl - storedPosition, _snap);
+				const Vec3 absPos = *_out_ + delta;
+				const float absDist = Dot(absPos, _axis);
+				const float snappedAbs = Snap(absDist, _snap);
+				const Vec3 perp = *_out_ - _axis * Dot(*_out_, _axis);
+				*_out_ = perp + _axis * snappedAbs;
 			#endif
 
 			return true;
