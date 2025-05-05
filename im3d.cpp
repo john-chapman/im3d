@@ -1,5 +1,8 @@
 /*	CHANGE LOG
 	==========
+	2025-05-05 (v1.17) - IM3D_GIZMO_LAYER_ID forces all gizmos to be drawn to a layer when defined.
+	                   - Fix for snapping with a non-empty matrix stack.
+	                   - DrawCone()/DrawConeFilled().
 	2020-05-17 (v1.16) - Text API.
 	                   - Flip gizmo axes when viewed from behind (AppData::m_flipGizmoWhenBehind).
 	                   - Minor gizmo rendering improvements.
@@ -619,7 +622,7 @@ void Im3d::DrawArrow(const Vec3& _start, const Vec3& _end, float _headLength, fl
 	ctx.end();
 }
 
-void Im3d::DrawCone(const Vec3& _origin, const Vec3& _normal,float height, float _radius, int _detail){
+void Im3d::DrawCone(const Vec3& _origin, const Vec3& _normal, float height, float _radius, int _detail){
 
     Context& ctx = GetContext();
     #if IM3D_CULL_PRIMITIVES
@@ -659,7 +662,7 @@ void Im3d::DrawCone(const Vec3& _origin, const Vec3& _normal,float height, float
     ctx.popMatrix();
 }
 
-void Im3d::DrawConeFilled(const Vec3& _origin, const Vec3& _normal,float height, float _radius, int _detail){
+void Im3d::DrawConeFilled(const Vec3& _origin, const Vec3& _normal, float height, float _radius, int _detail){
 
     Context& ctx = GetContext();
     #if IM3D_CULL_PRIMITIVES
@@ -878,6 +881,9 @@ bool Im3d::GizmoTranslation(Id _id, float _translation_[3], bool _local)
 	bool intersects = ctx.m_appHotId == ctx.m_appId || Intersects(ray, boundingSphere);
 
  // planes
+	#ifdef IM3D_GIZMO_LAYER_ID
+		ctx.pushLayerId(IM3D_GIZMO_LAYER_ID);
+	#endif
  	ctx.pushEnableSorting(true);
 	if (_local)
 	{
@@ -966,6 +972,9 @@ bool Im3d::GizmoTranslation(Id _id, float _translation_[3], bool _local)
 	}
 	ctx.popMatrix();
 	ctx.popEnableSorting();
+	#ifdef IM3D_GIZMO_LAYER_ID
+		ctx.popLayerId();
+	#endif
 
 	if (_local)
 	{
@@ -1032,6 +1041,9 @@ bool Im3d::GizmoRotation(Id _id, float _rotation_[3*3], bool _local)
 		}
 	}
 
+	#ifdef IM3D_GIZMO_LAYER_ID
+		ctx.pushLayerId(IM3D_GIZMO_LAYER_ID);
+	#endif
 	ctx.pushMatrix(Mat4(1.0f));
 	for (int i = 0; i < 3; ++i)
 	{
@@ -1068,6 +1080,9 @@ bool Im3d::GizmoRotation(Id _id, float _rotation_[3*3], bool _local)
 		ctx.gizmoAxislAngle_Draw(viewId, origin, viewNormal, worldRadius, angle, viewId == ctx.m_activeId ? Color_GizmoHighlight : Color_White, 1.0f);
 	}
 	ctx.popMatrix();
+	#ifdef IM3D_GIZMO_LAYER_ID
+		ctx.popLayerId();
+	#endif
 
 	if (currentId != ctx.m_activeId)
 	{
@@ -1129,6 +1144,9 @@ bool Im3d::GizmoScale(Id _id, float _scale_[3])
 	Ray ray(appData.m_cursorRayOrigin, appData.m_cursorRayDirection);
 	bool intersects = ctx.m_appHotId == ctx.m_appId || Intersects(ray, boundingSphere);
 
+	#ifdef IM3D_GIZMO_LAYER_ID
+		ctx.pushLayerId(IM3D_GIZMO_LAYER_ID);
+	#endif
  	ctx.pushEnableSorting(true);
 	ctx.pushMatrix(Mat4(1.0f));
 	{ // uniform scale
@@ -1218,6 +1236,9 @@ bool Im3d::GizmoScale(Id _id, float _scale_[3])
 
 	ctx.popMatrix();
 	ctx.popEnableSorting();
+	#ifdef IM3D_GIZMO_LAYER_ID
+		ctx.popLayerId();
+	#endif
 
 	ctx.popId();
 	return ret;

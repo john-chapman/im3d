@@ -25,6 +25,9 @@
 // Enable internal culling for gizmos. The application must set a culling frustum via AppData.
 //#define IM3D_CULL_GIZMOS 1
 
+// Set a layer ID for all gizmos to use internally.
+//#define IM3D_GIZMO_LAYER_ID 0xD4A1B5
+
 // Conversion to/from application math types.
 //#define IM3D_VEC2_APP
 //	Vec2(const glm::vec2& _v)          { x = _v.x; y = _v.y;     }
