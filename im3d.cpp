@@ -1824,6 +1824,8 @@ void Context::reset()
 		m_gizmoLocal = !m_gizmoLocal;
 		resetId();
 	}
+
+	m_appIdActivated = Id_Invalid;
 }
 
 void Context::merge(const Context& _src)
@@ -1833,7 +1835,7 @@ void Context::merge(const Context& _src)
  // layer IDs
 	for (Id id : _src.m_layerIdMap)
 	{
-		pushLayerId(id); // add a new layer if id doesn't alrady exist
+		pushLayerId(id); // add a new layer if id doesn't alrady exist 
 		popLayerId();
 	}
 
@@ -2823,11 +2825,12 @@ void Context::makeActive(Id _id)
 {
 	m_activeId = _id;
 	m_appActiveId = _id == Id_Invalid ? Id_Invalid : m_appId;
+	m_appIdActivated = m_appActiveId;
 }
 
 void Context::resetId()
 {
-	m_activeId = m_hotId = m_appActiveId = m_appHotId = Id_Invalid;
+	m_activeId = m_hotId = m_appActiveId = m_appHotId = m_appIdActivated = Id_Invalid;
 	m_hotDepth = FLT_MAX;
 }
 
