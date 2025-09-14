@@ -1,5 +1,8 @@
 #pragma once
 
+// Deprecated behavior.
+#define IM3D_USE_DEPRECATED_DRAW_CONE 1 // Enable deprecated DrawCone() and DrawConeFilled() API (deprecated v1.18).
+
 // User-defined assertion handler (default is cassert assert()).
 //#define IM3D_ASSERT(e) assert(e)
 

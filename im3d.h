@@ -7,7 +7,7 @@
 	#include "im3d_config.h"
 #endif
 
-#define IM3D_VERSION "1.17"
+#define IM3D_VERSION "1.18"
 
 #ifndef IM3D_API
 	#define IM3D_API
@@ -142,11 +142,20 @@ IM3D_API void DrawSphereFilled(const Vec3& _origin, float _radius, int _detail =
 IM3D_API void DrawAlignedBox(const Vec3& _min, const Vec3& _max);
 IM3D_API void DrawAlignedBoxFilled(const Vec3& _min, const Vec3& _max);
 IM3D_API void DrawCylinder(const Vec3& _start, const Vec3& _end, float _radius, int _detail = -1);
+IM3D_API void DrawCylinderFilled(const Vec3& _start, const Vec3& _end, float _radius, bool _drawCapStart = true, bool _drawCapEnd = true, int _detail = -1);
 IM3D_API void DrawCapsule(const Vec3& _start, const Vec3& _end, float _radius, int _detail = -1);
 IM3D_API void DrawPrism(const Vec3& _start, const Vec3& _end, float _radius, int _sides);
 IM3D_API void DrawArrow(const Vec3& _start, const Vec3& _end, float _headLength = -1.0f, float _headThickness = -1.0f);
-IM3D_API void DrawCone(const Vec3& _origin, const Vec3& _normal, float height, float _radius, int _detail);
-IM3D_API void DrawConeFilled(const Vec3& _origin, const Vec3& _normal, float height, float _radius, int _detail);
+
+IM3D_API void DrawCone2(const Vec3& _start, const Vec3& _end, float _radiusStart, float _radiusEnd, int _detail = -1);
+IM3D_API void DrawConeFilled2(const Vec3& _start, const Vec3& _end, float _radiusStart, float _radiusEnd, bool _drawCapStart = true, bool _drawCapEnd = true, int _detail = -1);
+#if IM3D_USE_DEPRECATED_DRAW_CONE
+	IM3D_API void DrawCone(const Vec3& _origin, const Vec3& _normal, float height, float _radius, int _detail = -1);
+	IM3D_API void DrawConeFilled(const Vec3& _origin, const Vec3& _normal, float height, float _radius, int _detail = -1);
+#else
+	IM3D_API inline void DrawCone(const Vec3& _start, const Vec3& _end, float _radiusStart, float _radiusEnd, int _detail = -1) { DrawCone2(_start, _end, _radiusStart, _radiusEnd, _detail); }
+	IM3D_API inline void DrawConeFilled(const Vec3& _start, const Vec3& _end, float _radiusStart, float _radiusEnd, bool _drawCapStart = true, bool _drawCapEnd = true, int _detail = -1) { DrawConeFilled2(_start, _end, _radiusStart, _radiusEnd, _drawCapStart, _drawCapEnd, _detail); }
+#endif // IM3D_USE_DEPRECATED_DRAW_CONE
 
 // Add text. See TextFlags_ enum for _textFlags. _size is a hint to the application-side text rendering.
 IM3D_API void Text(const Vec3& _position, U32 _textFlags, const char* _text, ...); // use the current draw state for size/color

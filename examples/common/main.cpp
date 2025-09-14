@@ -234,6 +234,7 @@ int main(int, char**)
 				Shape_AlignedBox,
 				Shape_AlignedBoxFilled,
 				Shape_Cylinder,
+				Shape_CylinderFilled,
 				Shape_Capsule,
 				Shape_Prism,
 				Shape_Arrow,
@@ -250,6 +251,7 @@ int main(int, char**)
 				"AlignedBox\0"
 				"AlignedBoxFilled\0"
 				"Cylinder\0"
+				"Cylinder Filled\0"
 				"Capsule\0"
 				"Prism\0"
 				"Arrow\0"
@@ -334,13 +336,27 @@ int main(int, char**)
 					break;
 				}
 				case Shape_Cylinder:
+				case Shape_CylinderFilled:
 				{
 					static float cylinderRadius = 1.0f;
 					static float cylinderLength = 1.0f;
+					static bool drawCapStart = true;
+					static bool drawCapEnd = true;
 					ImGui::SliderFloat("Radius", &cylinderRadius, 0.0f, 10.0f);
 					ImGui::SliderFloat("Length", &cylinderLength, 0.0f, 10.0f);
 					ImGui::SliderInt("Detail", &detail, -1, 128);
-					Im3d::DrawCylinder(Im3d::Vec3(0.0f, -cylinderLength, 0.0f), Im3d::Vec3(0.0f, cylinderLength, 0.0f), cylinderRadius, detail);
+
+					if (currentShape == Shape_Cylinder)
+					{
+						Im3d::DrawCylinder(Im3d::Vec3(0.0f, -cylinderLength, 0.0f), Im3d::Vec3(0.0f, cylinderLength, 0.0f), cylinderRadius, detail);
+					}
+					else
+					{
+						ImGui::Checkbox("Draw Cap Start", &drawCapStart);
+						ImGui::SameLine();
+						ImGui::Checkbox("Draw Cap End", &drawCapEnd);
+						Im3d::DrawCylinderFilled(Im3d::Vec3(0.0f, -cylinderLength, 0.0f), Im3d::Vec3(0.0f, cylinderLength, 0.0f), cylinderRadius, drawCapStart, drawCapEnd, detail);
+					}
 					break;
 				}
 				case Shape_Capsule:
@@ -378,17 +394,27 @@ int main(int, char**)
 				case Shape_Cone:
 				case Shape_ConeFilled:
 				{
-					static float coneHeight   = 1.0f;
-					static float coneRadius   = 1.0f;
-					ImGui::SliderFloat("Height",    &coneHeight,   0.0f, 10.0f);
-					ImGui::SliderFloat("Radius",    &coneRadius,   0.0f, 10.0f);
+					static float coneHeight       = 1.0f;
+					static float coneRadiusTop    = 0.0f;
+					static float coneRadiusBottom = 0.5f;
+					static bool drawCapTop        = true;
+					static bool drawCapBottom     = true;
+					ImGui::SliderFloat("Height",        &coneHeight,       0.0f, 10.0f);
+					ImGui::SliderFloat("Radius Top",    &coneRadiusTop,    0.0f, 10.0f);
+					ImGui::SliderFloat("Radius Bottom", &coneRadiusBottom, 0.0f, 10.0f);
 					ImGui::SliderInt("Detail", &detail, -1, 128);
+
+					// NB cone functions were improved in v1.18, the DrawCone*2() functions are a workaround for deprecation and should not be called directly.
 					if (currentShape == Shape_Cone)
 					{
-						Im3d::DrawCone(Im3d::Vec3(0.0f),Im3d::Vec3(0.0f, 1.0f, 0.0f),coneHeight,coneRadius,detail);
-					}else
+						Im3d::DrawCone2(Im3d::Vec3(0.0f, coneHeight, 0.0f), Im3d::Vec3(0.0f, 0.0f, 0.0f), coneRadiusTop, coneRadiusBottom, detail);
+					}
+					else
 					{
-						Im3d::DrawConeFilled(Im3d::Vec3(0.0f),Im3d::Vec3(0.0f, 1.0f, 0.0f),coneHeight,coneRadius,detail);
+						ImGui::Checkbox("Draw Cap Top", &drawCapTop);
+						ImGui::SameLine();
+						ImGui::Checkbox("Draw Cap Bottom", &drawCapBottom);
+						Im3d::DrawConeFilled2(Im3d::Vec3(0.0f, coneHeight, 0.0f), Im3d::Vec3(0.0f, 0.0f, 0.0f), coneRadiusTop, coneRadiusBottom, drawCapTop, drawCapBottom, detail);
 					}
 					
 					break;
