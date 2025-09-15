@@ -542,6 +542,7 @@ struct AppData
 	float  m_snapScale                       = 0.0f;                    // Snap value for scale gizmos. 0 = disabled.
 	bool   m_flipGizmoWhenBehind             = true;                    // Flip gizmo axes when viewed from behind.
 	void*  m_appData                         = nullptr;                 // App-specific data.
+	void* m_rendererData                     = nullptr;                 // Renderer-specific data.
 
 	DrawPrimitivesCallback* drawCallback     = nullptr; // e.g. void Im3d_Draw(const DrawList& _drawList)
 
